@@ -24,6 +24,21 @@
       .mobile-bottombar { display: none !important; }
     }
   </style>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2e7d5a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Mis Finanzas" />
+  <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/money-bag.png" />
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/mis-finanzas/sw.js").catch(() => {});
+      });
+    }
+  </script>
 </head>
 <body>
   <div id="root"></div>
@@ -31,8 +46,8 @@
   <script type="text/babel">
     // ─── CONFIG SUPABASE ────────────────────────────────────────────────────────
     // Reemplazá estos valores con los tuyos de Supabase
-    const SUPABASE_URL = "https://cvazbnthpsntqoatzswj.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2YXpibnRocHNudHFvYXR6c3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMzkyMTMsImV4cCI6MjA4NzgxNTIxM30.KLevD2MfnMD0lndOhvngaG5JR76VKTBg_ofCmerRCRg";
+    const SUPABASE_URL = "TU_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "TU_SUPABASE_ANON_KEY";
     // ───────────────────────────────────────────────────────────────────────────
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
