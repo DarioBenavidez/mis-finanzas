@@ -936,13 +936,14 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
   const saveEditTx = () => {
     if (!editTxForm.amount || isNaN(editTxForm.amount)) return;
+    const category = editTxForm.type === "gasto" ? editTxForm.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
     const transactions = data.transactions.map(t => t.id === editingTxId
-      ? { ...t, type: editTxForm.type, amount: parseFloat(editTxForm.amount), description: editTxForm.description, category: editTxForm.category, date: editTxForm.date }
+      ? { ...t, type: editTxForm.type, amount: parseFloat(editTxForm.amount), description: editTxForm.description, category, date: editTxForm.date }
       : t);
     save({ ...data, transactions });
     cancelEditTx();
   };
-  const needsCatEdit = editTxForm && (editTxForm.type === "gasto" || editTxForm.type === "ingreso");
+  const needsCatEdit = editTxForm && editTxForm.type === "gasto";
 
   return (
     <div className="inicio-layout">
@@ -1270,7 +1271,8 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
 
   const add = () => {
     if (!form.amount || isNaN(form.amount)) return;
-    const tx = { ...form, amount: parseFloat(form.amount), id: Date.now() };
+    const category = form.type === "gasto" ? form.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
+    const tx = { ...form, category, amount: parseFloat(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
     setForm({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
     setShowForm(false);
@@ -1282,13 +1284,17 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   const cancelEdit = () => { setEditingId(null); setEditForm(null); };
   const saveEdit = () => {
     if (!editForm.amount || isNaN(editForm.amount)) return;
+    const category = editForm.type === "gasto" ? editForm.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
     const transactions = data.transactions.map(t => t.id === editingId
-      ? { ...t, type: editForm.type, amount: parseFloat(editForm.amount), description: editForm.description, category: editForm.category, date: editForm.date }
+      ? { ...t, type: editForm.type, amount: parseFloat(editForm.amount), description: editForm.description, category, date: editForm.date }
       : t);
     save({ ...data, transactions });
     cancelEdit();
   };
-  const needsCatEdit = editForm && (editForm.type === "gasto" || editForm.type === "ingreso");
+  const needsCatEdit = editForm && editForm.type === "gasto";
+  // Ingreso/Sueldo no se categorizan: la categoría solo se usa para desglosar
+  // gastos (Presupuesto/Análisis), no tiene sentido pedirla para dinero que entra.
+  const needsCat = form.type === "gasto";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1299,10 +1305,10 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: needsCat ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso", "sueldo"]} />
             <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="number" prefix="$" placeholder="0" />
-            <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />
+            {needsCat && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Supermercado" />
