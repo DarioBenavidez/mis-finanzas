@@ -885,7 +885,11 @@ function FinanzasApp() {
 }
 
 // ---- INICIO (dashboard estilo app) ----
-const TX_TYPES = ["gasto", "ingreso", "sueldo", "ahorro_meta"];
+// "sueldo" no se ofrece como opción nueva: para el usuario es lo mismo que
+// "ingreso" (ambos se tratan como ingreso, ver isIncomeType), pero el bot/app
+// todavía puede crear transacciones con ese tipo — isIncomeType las sigue
+// reconociendo igual aunque acá no se puedan elegir ni crear nuevas.
+const TX_TYPES = ["gasto", "ingreso", "ahorro_meta"];
 
 function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel }) {
   const [hideBalance, setHideBalance] = useState(false);
@@ -1307,7 +1311,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
           <div style={{ display: "grid", gridTemplateColumns: needsCat ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso", "sueldo"]} />
+            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso"]} />
             <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="number" prefix="$" placeholder="0" />
             {needsCat && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
           </div>
