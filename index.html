@@ -16,6 +16,38 @@
     ::-webkit-scrollbar-track { background: #F2F7F5; }
     ::-webkit-scrollbar-thumb { background: #C8DDD6; border-radius: 3px; }
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* ── Layout responsive: app shell mobile-first, sidebar persistente desde 1024px ── */
+    .app-shell { display: flex; flex-direction: column; }
+    .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .desktop-sidebar { display: none; }
+    .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 110px; box-sizing: border-box; }
+    .inicio-layout { display: flex; flex-direction: column; gap: 20px; }
+    .inicio-primary { display: flex; flex-direction: column; gap: 20px; }
+    .inicio-rail { display: flex; flex-direction: column; gap: 20px; }
+    .panel-card { width: 100%; }
+
+    @media (min-width: 1024px) {
+      .app-shell { flex-direction: row; }
+      .desktop-sidebar {
+        display: flex; flex-direction: column; width: 264px; flex-shrink: 0;
+        background: #FFFFFF; border-right: 1px solid #C8DDD6; padding: 24px 16px;
+        position: sticky; top: 0; height: 100vh; overflow-y: auto; box-sizing: border-box;
+      }
+      /* !important: pisa el display:flex inline que estos elementos usan en mobile */
+      .bottom-nav { display: none !important; }
+      .topbar-brand { display: none !important; }
+      .topbar { justify-content: flex-end; }
+      .content-area { max-width: 1160px; padding: 32px 40px 40px; }
+      .narrow-col { max-width: 720px; margin: 0 auto; }
+      .inicio-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+      .inicio-primary { grid-column: 1; }
+      .inicio-rail { grid-column: 2; }
+      .inicio-tx { grid-column: 1 / -1; }
+      .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
+      .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
+      .panel-card-header { border-radius: 20px 20px 0 0; }
+    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -521,12 +553,60 @@ function LoginScreen({ onLogin }) {
 // ---- MAIN APP ----
 function PanelModal({ title, onClose, children }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
-      <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-        <button onClick={onClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 17 }}>{title}</div>
+    <div className="panel-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
+      <div className="panel-card" onClick={e => e.stopPropagation()}>
+        <div className="panel-card-header" style={{ position: "sticky", top: 0, background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+          <button onClick={onClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
+          <div style={{ color: "#fff", fontWeight: 700, fontSize: 17 }}>{title}</div>
+        </div>
+        <div style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>{children}</div>
       </div>
-      <div style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>{children}</div>
+    </div>
+  );
+}
+
+// ── Nav persistente de escritorio: reemplaza el bottom nav a partir de 1024px,
+// con acceso directo a todos los paneles de "Planificar" (en mobile viven detrás
+// de la grilla de Inicio) ──
+function DesktopSidebar({ mainTab, onSelectTab, panel, onOpenPanel, waPhone, onConnectWa }) {
+  const navBtnStyle = (active) => ({
+    display: "flex", alignItems: "center", gap: 10, width: "100%",
+    background: active ? COLORS.accentDim : "transparent",
+    border: "none", borderRadius: 10, padding: "9px 12px",
+    color: active ? COLORS.accent : COLORS.textMuted,
+    fontWeight: active ? 700 : 600, fontSize: 13, cursor: "pointer",
+    fontFamily: "inherit", textAlign: "left",
+  });
+
+  return (
+    <div className="desktop-sidebar">
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px", marginBottom: 24 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🌐</div>
+        <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
+      </div>
+
+      <button onClick={() => onOpenPanel("transacciones")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: COLORS.accent, border: "none", borderRadius: 10, padding: "10px 12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 20 }}>
+        <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nueva transacción
+      </button>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 20 }}>
+        <button onClick={() => onSelectTab("inicio")} style={navBtnStyle(mainTab === "inicio" && !panel)}>🏠 Inicio</button>
+        <button onClick={() => onSelectTab("analisis")} style={navBtnStyle(mainTab === "analisis" && !panel)}>📊 Análisis</button>
+      </div>
+
+      <div style={{ fontSize: 11, fontWeight: 700, color: COLORS.textDim, textTransform: "uppercase", letterSpacing: .5, padding: "0 12px", marginBottom: 6 }}>Planificar</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 20 }}>
+        {PLAN_PANELS.map(p => (
+          <button key={p.key} onClick={() => onOpenPanel(p.key)} style={navBtnStyle(panel === p.key)}>{p.icon} {p.label}</button>
+        ))}
+      </div>
+
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+        <button onClick={onConnectWa} style={{ ...navBtnStyle(false), color: waPhone ? COLORS.green : COLORS.textMuted, fontWeight: waPhone ? 700 : 600 }}>
+          💬 {waPhone ? `WhatsApp · ${waPhone}` : "Conectar WhatsApp"}
+        </button>
+        <button onClick={() => onSelectTab("perfil")} style={navBtnStyle(mainTab === "perfil" && !panel)}>👤 Perfil</button>
+      </div>
     </div>
   );
 }
@@ -696,47 +776,51 @@ function FinanzasApp() {
   const openWa = () => { setWaError(""); setWaCode(""); setWaModal(true); };
 
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text, display: "flex", flexDirection: "column" }}>
+    <div className="app-shell" style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text }}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-      {/* ── TOP HEADER (solo marca + mes/año, como el header fijo verde de la app) ── */}
-      <div style={{ background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", boxShadow: "0 1px 8px #00000008", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🌐</div>
-          <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
+      <DesktopSidebar mainTab={mainTab} onSelectTab={setMainTab} panel={panel} onOpenPanel={setPanel} waPhone={waPhone} onConnectWa={openWa} />
+
+      <div className="app-main-col">
+        {/* ── TOP HEADER (solo marca + mes/año, como el header fijo verde de la app) ── */}
+        <div className="topbar" style={{ background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", boxShadow: "0 1px 8px #00000008", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
+          <div className="topbar-brand" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🌐</div>
+            <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
+          </div>
+          <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
         </div>
-        <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
-      </div>
 
-      {/* ── CONTENIDO: una sola columna centrada, como la app ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 110px", width: "100%", maxWidth: 720, margin: "0 auto", boxSizing: "border-box" }}>
-        {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
-        {mainTab === "analisis" && <AnalisisTab data={data} />}
-        {mainTab === "perfil" && <PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} />}
-      </div>
+        {/* ── CONTENIDO: una sola columna centrada en mobile, dashboard ancho desde 1024px ── */}
+        <div className="content-area">
+          {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
+          {mainTab === "analisis" && <div className="narrow-col"><AnalisisTab data={data} /></div>}
+          {mainTab === "perfil" && <div className="narrow-col"><PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} /></div>}
+        </div>
 
-      {/* ── BOTTOM NAV estilo app: Inicio / Análisis / + / WhatsApp / Perfil ── */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px calc(8px + env(safe-area-inset-bottom))", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 60 }}>
-        {[["inicio", "Inicio", "🏠"], ["analisis", "Análisis", "📊"]].map(([key, label, icon]) => (
-          <button key={key} onClick={() => setMainTab(key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
-            <div style={{ fontSize: 20, filter: mainTab === key ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === key ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{icon}</div>
-            <div style={{ fontSize: 9, color: mainTab === key ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === key ? 700 : 400 }}>{label}</div>
+        {/* ── BOTTOM NAV estilo app: Inicio / Análisis / + / WhatsApp / Perfil (oculto desde 1024px, reemplazado por el sidebar) ── */}
+        <div className="bottom-nav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px calc(8px + env(safe-area-inset-bottom))", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 60 }}>
+          {[["inicio", "Inicio", "🏠"], ["analisis", "Análisis", "📊"]].map(([key, label, icon]) => (
+            <button key={key} onClick={() => setMainTab(key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+              <div style={{ fontSize: 20, filter: mainTab === key ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === key ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{icon}</div>
+              <div style={{ fontSize: 9, color: mainTab === key ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === key ? 700 : 400 }}>{label}</div>
+            </button>
+          ))}
+          <button onClick={() => setPanel("transacciones")} style={{ background: COLORS.accent, border: "none", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 16px ${COLORS.accent}50`, marginTop: -14, flexShrink: 0 }}>
+            <span style={{ color: "#fff", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>+</span>
           </button>
-        ))}
-        <button onClick={() => setPanel("transacciones")} style={{ background: COLORS.accent, border: "none", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 16px ${COLORS.accent}50`, marginTop: -14, flexShrink: 0 }}>
-          <span style={{ color: "#fff", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>+</span>
-        </button>
-        <button onClick={openWa} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
-          <div style={{ fontSize: 20, filter: waPhone ? "none" : "grayscale(1) opacity(0.4)" }}>💬</div>
-          <div style={{ fontSize: 9, color: waPhone ? COLORS.green : COLORS.textDim, fontWeight: 600 }}>WhatsApp</div>
-        </button>
-        <button onClick={() => setMainTab("perfil")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
-          <div style={{ fontSize: 20, filter: mainTab === "perfil" ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === "perfil" ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>👤</div>
-          <div style={{ fontSize: 9, color: mainTab === "perfil" ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === "perfil" ? 700 : 400 }}>Perfil</div>
-        </button>
+          <button onClick={openWa} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+            <div style={{ fontSize: 20, filter: waPhone ? "none" : "grayscale(1) opacity(0.4)" }}>💬</div>
+            <div style={{ fontSize: 9, color: waPhone ? COLORS.green : COLORS.textDim, fontWeight: 600 }}>WhatsApp</div>
+          </button>
+          <button onClick={() => setMainTab("perfil")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+            <div style={{ fontSize: 20, filter: mainTab === "perfil" ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === "perfil" ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>👤</div>
+            <div style={{ fontSize: 9, color: mainTab === "perfil" ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === "perfil" ? 700 : 400 }}>Perfil</div>
+          </button>
+        </div>
       </div>
 
-      {/* ── PANELES pantalla completa (Ahorros, Deudas, Presupuesto, etc.) ── */}
+      {/* ── PANELES: pantalla completa en mobile, card centrado en escritorio (Ahorros, Deudas, Presupuesto, etc.) ── */}
       {panel && (
         <PanelModal title={PANEL_LABELS[panel]} onClose={() => setPanel(null)}>
           {panel === "ahorros" && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
@@ -840,121 +924,127 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const delTx = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div>
-        <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 2 }}>{greeting},</div>
-        <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
-      </div>
+    <div className="inicio-layout">
+      <div className="inicio-primary">
+        <div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 2 }}>{greeting},</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
+        </div>
 
-      {/* Hero balance */}
-      <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "28px 26px 24px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance del mes</div>
-            <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
-            {hideBalance ? (
-              <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
-            ) : (
-              <>
-                <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>$</span>
-                <span style={{ fontSize: 52, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
-              </>
-            )}
-          </div>
-          <div style={{ fontSize: 13, color: "#ffffff70" }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 20, paddingTop: 16, borderTop: "1px solid #ffffff18" }}>
-            {[["↑ Ingresos", totalIncome], ["↓ Gastos", totalExpense], ["◆ Deudas", totalDebt], ["🐷 Ahorros", totalSavings]].map(([label, val]) => (
-              <div key={label}>
-                <div style={{ fontSize: 10, color: "#ffffff60", marginBottom: 4, textTransform: "uppercase", letterSpacing: .5 }}>{label}</div>
-                <div style={{ fontSize: 16, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>{hideBalance ? "••••" : formatFull(val)}</div>
-              </div>
-            ))}
+        {/* Hero balance */}
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "28px 26px 24px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance del mes</div>
+              <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+              {hideBalance ? (
+                <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
+              ) : (
+                <>
+                  <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>$</span>
+                  <span style={{ fontSize: 52, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
+                </>
+              )}
+            </div>
+            <div style={{ fontSize: 13, color: "#ffffff70" }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 20, paddingTop: 16, borderTop: "1px solid #ffffff18" }}>
+              {[["↑ Ingresos", totalIncome], ["↓ Gastos", totalExpense], ["◆ Deudas", totalDebt], ["🐷 Ahorros", totalSavings]].map(([label, val]) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, color: "#ffffff60", marginBottom: 4, textTransform: "uppercase", letterSpacing: .5 }}>{label}</div>
+                  <div style={{ fontSize: 16, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>{hideBalance ? "••••" : formatFull(val)}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+
+        {totalBudget > 0 && (
+          <Card style={{ padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
+              <span>Presupuesto del mes</span>
+              <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
+            </div>
+            <ProgressBar value={spentThisMonth} max={totalBudget} height={8} />
+          </Card>
+        )}
       </div>
 
-      {totalBudget > 0 && (
-        <Card style={{ padding: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
-            <span>Presupuesto del mes</span>
-            <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
-          </div>
-          <ProgressBar value={spentThisMonth} max={totalBudget} height={8} />
-        </Card>
-      )}
+      {/* Grilla de paneles + próximos turnos/vencimientos: columna lateral desde 1024px */}
+      <div className="inicio-rail">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+          {PLAN_PANELS.map(p => (
+            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
+              <span style={{ fontSize: 22 }}>{p.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
+            </button>
+          ))}
+        </div>
 
-      {/* Grilla de paneles, igual que el home de la app */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-        {PLAN_PANELS.map(p => (
-          <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
-            <span style={{ fontSize: 22 }}>{p.icon}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
-          </button>
-        ))}
+        {proximosTurnos.length > 0 && (
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
+              <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {proximosTurnos.map(t => (
+                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
+                  <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {proximosVencimientos.length > 0 && (
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
+              <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {proximosVencimientos.map(e => (
+                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                  <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
+                  <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
-
-      {proximosTurnos.length > 0 && (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
-            <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {proximosTurnos.map(t => (
-              <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
-                <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {proximosVencimientos.length > 0 && (
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
-            <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {proximosVencimientos.map(e => (
-              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
-                <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {/* Transacciones embebidas, con filtros y buscador como en la app */}
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Transacciones</div>
-          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-            {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
-              <button key={k} onClick={() => setTxFilter(k)} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
-            ))}
-          </div>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-        </div>
-        {listTxs.length === 0 ? (
-          <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
-        ) : listTxs.map(t => (
-          <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
-              <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+      <div className="inicio-tx">
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Transacciones</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
+                <button key={k} onClick={() => setTxFilter(k)} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+              ))}
             </div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
-            <button onClick={() => delTx(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
           </div>
-        ))}
-      </Card>
+          {listTxs.length === 0 ? (
+            <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
+          ) : listTxs.map(t => (
+            <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
+                <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+              <button onClick={() => delTx(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
+            </div>
+          ))}
+        </Card>
+      </div>
     </div>
   );
 }

@@ -31,8 +31,20 @@ y para el bot, y viceversa.
   (Inicio / Análisis / + / WhatsApp / Perfil) en vez del sidebar con 11 tabs de antes. Cada
   panel (Ahorros, Deudas, Presupuesto, etc.) se abre como pantalla completa con botón
   atrás, no como tab persistente. Pensada mobile-first, igual que la app.
-- Instalado el skill de diseño [Impeccable](https://impeccable.style) (`.claude/skills/impeccable`)
-  para el trabajo pendiente de abajo.
+- Instalado el skill de diseño [Impeccable](https://impeccable.style) (`.claude/skills/impeccable`).
+- **Rediseño del layout de escritorio** (vía `/impeccable init` + pedido de rediseño):
+  desde 1024px de ancho, el bottom nav se reemplaza por un sidebar persistente (marca,
+  "+ Nueva transacción", Inicio/Análisis, acceso directo a los 9 paneles de "Planificar",
+  WhatsApp, Perfil). El contenido deja de estar limitado a una columna de 720px: Inicio
+  pasa a un dashboard de 2 columnas (balance/presupuesto/transacciones a la izquierda,
+  grilla de paneles + próximos turnos/vencimientos como rail a la derecha) y
+  Análisis/Perfil quedan centrados en una columna de lectura cómoda. Los paneles
+  (Ahorros, Deudas, etc.) dejan de tomar toda la pantalla en escritorio: se abren como
+  card centrado con fondo atenuado, cerrable haciendo click afuera. Mobile (<1024px)
+  queda exactamente igual que antes — mismo bottom nav, misma columna única, mismos
+  paneles a pantalla completa. Verificado en Chrome a 390px, 800px y 1440px con datos
+  mock locales (sin tocar Supabase); documentado el contexto de producto en
+  `PRODUCT.md` para las próximas sesiones de Impeccable.
 
 Verificado con esbuild (sintaxis) y carga en Chrome sin errores de consola. **No se probó
 el flujo logueado completo con una cuenta real** — se evitó a propósito para no crear un
@@ -40,10 +52,6 @@ usuario de prueba en la base de producción que comparte con el bot.
 
 ## Pendiente
 
-- **Rediseño del layout de escritorio.** La reestructuración de navegación quedó pensada
-  para mobile (bottom nav + columna centrada angosta); en pantallas grandes se ve mal.
-  Para retomarlo: abrir una sesión de Claude Code con working directory en este repo,
-  correr `/impeccable init` una vez, y después pedir el rediseño de escritorio.
 - Probar el flujo logueado completo (login, cada panel, vinculación de WhatsApp) con una
   cuenta real.
 - Confirmar visualmente en un dispositivo real la grilla de paneles y el modal de
