@@ -16,13 +16,6 @@
     ::-webkit-scrollbar-track { background: #F2F7F5; }
     ::-webkit-scrollbar-thumb { background: #C8DDD6; border-radius: 3px; }
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
-    @media (max-width: 768px) {
-      .desktop-sidebar { display: none !important; }
-      .mobile-bottombar { display: flex !important; }
-    }
-    @media (min-width: 769px) {
-      .mobile-bottombar { display: none !important; }
-    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -314,8 +307,20 @@ function MonthYearPicker({ selectedMonth, selectedYear, onChangeMonth, onChangeY
   );
 }
 
-const TABS = ["Resumen", "Transacciones", "Presupuesto", "Ahorros", "Deudas", "Préstamos", "Gastos Fijos", "Suscripciones", "Turnos", "Calendario", "Proyección"];
-const TAB_ICONS = ["📊", "💸", "🏷️", "🐷", "💳", "🤝", "📌", "📺", "📅", "🗓️", "📈"];
+// Paneles de "Planear": igual que en la app, se abren como pantalla completa
+// desde una grilla de íconos en Inicio, no como tabs persistentes.
+const PLAN_PANELS = [
+  { key: "ahorros", label: "Ahorros", icon: "🐷" },
+  { key: "deudas", label: "Deudas", icon: "💳" },
+  { key: "prestamos", label: "Préstamos", icon: "🤝" },
+  { key: "turnos", label: "Turnos", icon: "📅" },
+  { key: "calendario", label: "Calendario", icon: "🗓️" },
+  { key: "proyeccion", label: "Proyección", icon: "📈" },
+  { key: "suscripciones", label: "Suscripciones", icon: "📺" },
+  { key: "gastosfijos", label: "Gastos Fijos", icon: "📌" },
+  { key: "presupuesto", label: "Presupuesto", icon: "🏷️" },
+];
+const PANEL_LABELS = { ...Object.fromEntries(PLAN_PANELS.map(p => [p.key, p.label])), transacciones: "Nueva transacción" };
 
 // ---- RESET PASSWORD SCREEN ----
 function ResetPasswordScreen({ onDone }) {
@@ -514,14 +519,26 @@ function LoginScreen({ onLogin }) {
 }
 
 // ---- MAIN APP ----
+function PanelModal({ title, onClose, children }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
+      <div style={{ position: "sticky", top: 0, background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+        <button onClick={onClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 17 }}>{title}</div>
+      </div>
+      <div style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>{children}</div>
+    </div>
+  );
+}
+
 function FinanzasApp() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [resetMode, setResetMode] = useState(false);
-  const [tab, setTab] = useState(0);
+  const [mainTab, setMainTab] = useState("inicio"); // inicio | analisis | perfil
+  const [panel, setPanel] = useState(null); // key de PLAN_PANELS, "transacciones", o null
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dolarRate, setDolarRate] = useState(null);
   const [waPhone, setWaPhone] = useState(null); // null=sin chequear, false=no vinculado, string=teléfono
   const [waModal, setWaModal] = useState(false);
@@ -667,7 +684,6 @@ function FinanzasApp() {
   );
   const totalIncome = monthTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
   const totalExpense = monthTxs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
-  const balance = totalIncome - totalExpense;
 
   const expByCat = {};
   monthTxs.filter(t => t.type === "gasto").forEach(t => {
@@ -677,97 +693,64 @@ function FinanzasApp() {
   const totalDebt = data.debts.reduce((s, d) => s + (d.currency === "usd" ? (d.remainingUSD || 0) * (dolarRate || d.arsRate || 0) : d.remaining), 0);
   const totalSavings = data.savings.reduce((s, g) => s + (g.currency === "usd" ? (g.current || 0) * (dolarRate || g.arsRate || 0) : (g.current || 0)), 0);
 
+  const openWa = () => { setWaError(""); setWaCode(""); setWaModal(true); };
+
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text, display: "flex", flexDirection: "column" }}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-      {/* ── TOP HEADER ── */}
+      {/* ── TOP HEADER (solo marca + mes/año, como el header fijo verde de la app) ── */}
       <div style={{ background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", boxShadow: "0 1px 8px #00000008", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 20, cursor: "pointer", padding: "4px 8px", borderRadius: 8, lineHeight: 1 }}>☰</button>
           <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🌐</div>
           <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
-          <button onClick={logout} title={user?.email} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, color: COLORS.textMuted, padding: "6px 12px", fontFamily: "inherit", fontSize: 12, cursor: "pointer", boxShadow: "0 1px 4px #0000000a" }}>Salir</button>
-        </div>
+        <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
       </div>
 
-      {/* ── SIDEBAR OVERLAY ── */}
-      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "#00000070", zIndex: 98 }} />}
-
-      {/* ── SIDEBAR ── */}
-      <div style={{ position: "fixed", top: 0, left: sidebarOpen ? 0 : "-260px", bottom: 0, width: 240, background: "#ffffff", zIndex: 99, transition: "left .28s cubic-bezier(.4,0,.2,1)", boxShadow: sidebarOpen ? "8px 0 32px #00000018" : "none", borderRight: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "52px 16px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🌐</div>
-            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 20, color: COLORS.text, fontWeight: 700 }}>Orbe</div>
-          </div>
-          <div style={{ fontSize: 12, color: COLORS.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {displayName}</div>
-        </div>
-        <div style={{ flex: 1, padding: "12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-          {TABS.map((t, i) => (
-            <button key={t} onClick={() => { setTab(i); setSidebarOpen(false); }} style={{ background: tab === i ? COLORS.accentDim : "transparent", border: `1px solid ${tab === i ? COLORS.accent + "30" : "transparent"}`, borderRadius: 14, cursor: "pointer", fontFamily: "inherit", color: tab === i ? COLORS.accent : COLORS.textMuted, padding: "11px 14px", fontSize: 14, fontWeight: tab === i ? 700 : 400, textAlign: "left", display: "flex", alignItems: "center", gap: 10, transition: "all .15s" }}>
-              <span style={{ fontSize: 17 }}>{TAB_ICONS[i]}</span> {t}
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
-          <button onClick={() => { setWaError(""); setWaCode(""); setWaModal(true); setSidebarOpen(false); }} style={{ width: "100%", background: waPhone ? COLORS.greenDim : COLORS.surface, border: `1px solid ${waPhone ? COLORS.green + "50" : COLORS.border}`, borderRadius: 12, color: waPhone ? COLORS.green : COLORS.textMuted, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            {waPhone ? "✅ WhatsApp vinculado" : "🔗 Conectar WhatsApp"}
-          </button>
-          <button onClick={logout} style={{ width: "100%", background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 12, color: COLORS.red, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🚪 Cerrar sesión</button>
-        </div>
+      {/* ── CONTENIDO: una sola columna centrada, como la app ── */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px 110px", width: "100%", maxWidth: 720, margin: "0 auto", boxSizing: "border-box" }}>
+        {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
+        {mainTab === "analisis" && <AnalisisTab data={data} />}
+        {mainTab === "perfil" && <PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} />}
       </div>
 
-      {/* ── MAIN BODY: sidebar + content ── */}
-      <div style={{ display: "flex", flex: 1 }}>
-
-        {/* Desktop sidebar (always visible, collapses) */}
-        <div className="desktop-sidebar" style={{ width: 220, background: "#ffffff", borderRight: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", flexShrink: 0, minHeight: "calc(100vh - 56px)", boxShadow: "2px 0 8px #00000006" }}>
-          <div style={{ padding: "20px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
-            <div style={{ fontSize: 11, color: COLORS.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "0 8px", marginBottom: 8 }}>Navegación</div>
-            {TABS.map((t, i) => (
-              <button key={t} onClick={() => setTab(i)} style={{ background: tab === i ? COLORS.accentDim : "transparent", border: `1px solid ${tab === i ? COLORS.accent + "30" : "transparent"}`, borderRadius: 14, cursor: "pointer", fontFamily: "inherit", color: tab === i ? COLORS.accent : COLORS.textMuted, padding: "11px 14px", fontSize: 14, fontWeight: tab === i ? 700 : 400, textAlign: "left", display: "flex", alignItems: "center", gap: 10, transition: "all .15s", whiteSpace: "nowrap" }}>
-                <span style={{ fontSize: 17 }}>{TAB_ICONS[i]}</span> {t}
-              </button>
-            ))}
-          </div>
-          <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {displayName}</div>
-            <button onClick={() => { setWaError(""); setWaCode(""); setWaModal(true); }} style={{ width: "100%", background: waPhone ? COLORS.greenDim : COLORS.bg, border: `1px solid ${waPhone ? COLORS.green + "50" : COLORS.border}`, borderRadius: 12, color: waPhone ? COLORS.green : COLORS.textMuted, padding: "9px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-              {waPhone ? "✅ WhatsApp vinculado" : "🔗 Conectar WhatsApp"}
-            </button>
-            <button onClick={logout} style={{ width: "100%", background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 12, color: COLORS.red, padding: "9px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🚪 Cerrar sesión</button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px 100px", minWidth: 0 }}>
-          {tab === 0 && <Resumen balance={balance} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} monthTxs={monthTxs} expByCat={expByCat} data={data} />}
-          {tab === 1 && <Transacciones data={data} save={save} monthTxs={monthTxs} />}
-          {tab === 2 && <Presupuesto data={data} save={save} expByCat={expByCat} />}
-          {tab === 3 && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
-          {tab === 4 && <Deudas data={data} save={save} dolarRate={dolarRate} />}
-          {tab === 5 && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
-          {tab === 6 && <GastosFijos data={data} />}
-          {tab === 7 && <Suscripciones data={data} />}
-          {tab === 8 && <Turnos data={data} save={save} />}
-          {tab === 9 && <Calendario data={data} save={save} />}
-          {tab === 10 && <Proyeccion data={data} save={save} />}
-        </div>
-      </div>
-
-      {/* ── MOBILE BOTTOM TAB BAR ── */}
-      <div className="mobile-bottombar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px 24px", justifyContent: "space-around", zIndex: 40, overflowX: "auto" }}>
-        {TABS.map((t, i) => (
-          <button key={t} onClick={() => setTab(i)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 6px", minWidth: 44, flexShrink: 0 }}>
-            <div style={{ fontSize: 20, filter: tab === i ? "none" : "grayscale(1) opacity(0.35)", transform: tab === i ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{TAB_ICONS[i]}</div>
-            <div style={{ fontSize: 8, color: tab === i ? COLORS.accent : COLORS.textDim, fontWeight: tab === i ? 700 : 400, transition: "all .2s", whiteSpace: "nowrap" }}>{t}</div>
+      {/* ── BOTTOM NAV estilo app: Inicio / Análisis / + / WhatsApp / Perfil ── */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px calc(8px + env(safe-area-inset-bottom))", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 60 }}>
+        {[["inicio", "Inicio", "🏠"], ["analisis", "Análisis", "📊"]].map(([key, label, icon]) => (
+          <button key={key} onClick={() => setMainTab(key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+            <div style={{ fontSize: 20, filter: mainTab === key ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === key ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{icon}</div>
+            <div style={{ fontSize: 9, color: mainTab === key ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === key ? 700 : 400 }}>{label}</div>
           </button>
         ))}
+        <button onClick={() => setPanel("transacciones")} style={{ background: COLORS.accent, border: "none", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 16px ${COLORS.accent}50`, marginTop: -14, flexShrink: 0 }}>
+          <span style={{ color: "#fff", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>+</span>
+        </button>
+        <button onClick={openWa} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+          <div style={{ fontSize: 20, filter: waPhone ? "none" : "grayscale(1) opacity(0.4)" }}>💬</div>
+          <div style={{ fontSize: 9, color: waPhone ? COLORS.green : COLORS.textDim, fontWeight: 600 }}>WhatsApp</div>
+        </button>
+        <button onClick={() => setMainTab("perfil")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+          <div style={{ fontSize: 20, filter: mainTab === "perfil" ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === "perfil" ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>👤</div>
+          <div style={{ fontSize: 9, color: mainTab === "perfil" ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === "perfil" ? 700 : 400 }}>Perfil</div>
+        </button>
       </div>
+
+      {/* ── PANELES pantalla completa (Ahorros, Deudas, Presupuesto, etc.) ── */}
+      {panel && (
+        <PanelModal title={PANEL_LABELS[panel]} onClose={() => setPanel(null)}>
+          {panel === "ahorros" && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
+          {panel === "deudas" && <Deudas data={data} save={save} dolarRate={dolarRate} />}
+          {panel === "prestamos" && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
+          {panel === "turnos" && <Turnos data={data} save={save} />}
+          {panel === "calendario" && <Calendario data={data} save={save} />}
+          {panel === "proyeccion" && <Proyeccion data={data} save={save} />}
+          {panel === "suscripciones" && <Suscripciones data={data} />}
+          {panel === "gastosfijos" && <GastosFijos data={data} />}
+          {panel === "presupuesto" && <Presupuesto data={data} save={save} expByCat={expByCat} />}
+          {panel === "transacciones" && <Transacciones data={data} save={save} monthTxs={monthTxs} startOpen />}
+        </PanelModal>
+      )}
 
       {/* ── MODAL: Conectar WhatsApp ── */}
       {waModal && (
@@ -813,105 +796,347 @@ function FinanzasApp() {
   );
 }
 
-// ---- RESUMEN ----
-function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, monthTxs, expByCat, data }) {
-  const topCats = Object.entries(expByCat).sort((a,b) => b[1]-a[1]).slice(0, 4);
+// ---- INICIO (dashboard estilo app) ----
+function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel }) {
+  const [hideBalance, setHideBalance] = useState(false);
+  const [txFilter, setTxFilter] = useState("mes");
+  const [search, setSearch] = useState("");
+
+  const balance = totalIncome - totalExpense;
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Buen día";
+    if (h < 20) return "Buenas tardes";
+    return "Buenas noches";
+  })();
+
+  const totalBudget = data.budgets.reduce((s, b) => s + b.limit, 0);
+  const spentThisMonth = monthTxs.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+
+  const today = todayStr();
+  const proximosTurnos = (data.turnos || []).filter(t => t.date >= today && !t.cancelled).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+
+  const isCurrentMonth = data.selectedMonth === currentMonth && data.selectedYear === currentYear;
+  const todayDay = new Date().getDate();
+  const proximosVencimientos = isCurrentMonth ? (data.events || []).filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 7).sort((a, b) => a.day - b.day) : [];
+
+  let filteredTxs;
+  if (txFilter === "semana") {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    filteredTxs = data.transactions.filter(t => new Date(t.date) >= weekAgo);
+  } else if (txFilter === "anterior") {
+    filteredTxs = data.transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getFullYear() < data.selectedYear || (d.getFullYear() === data.selectedYear && d.getMonth() < data.selectedMonth);
+    });
+  } else {
+    filteredTxs = monthTxs;
+  }
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    filteredTxs = filteredTxs.filter(t => (t.description || "").toLowerCase().includes(q) || (t.category || "").toLowerCase().includes(q));
+  }
+  const listTxs = [...filteredTxs].reverse().slice(0, 20);
+  const delTx = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 2 }}>{greeting},</div>
+        <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
+      </div>
 
-      {/* Hero balance card */}
-      <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "30px 32px 26px", boxShadow: `0 12px 48px ${COLORS.accent}28`, marginBottom: 4, position: "relative", overflow: "hidden" }}>
+      {/* Hero balance */}
+      <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "28px 26px 24px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 12 }}>Balance del mes</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance del mes</div>
+            <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
+          </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
-            <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>$</span>
-            <span style={{ fontSize: 58, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", {maximumFractionDigits:0})}</span>
+            {hideBalance ? (
+              <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
+            ) : (
+              <>
+                <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>$</span>
+                <span style={{ fontSize: 52, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
+              </>
+            )}
           </div>
           <div style={{ fontSize: 13, color: "#ffffff70" }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 28, marginTop: 22, paddingTop: 18, borderTop: "1px solid #ffffff18" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 20, paddingTop: 16, borderTop: "1px solid #ffffff18" }}>
             {[["↑ Ingresos", totalIncome], ["↓ Gastos", totalExpense], ["◆ Deudas", totalDebt], ["🐷 Ahorros", totalSavings]].map(([label, val]) => (
               <div key={label}>
                 <div style={{ fontSize: 10, color: "#ffffff60", marginBottom: 4, textTransform: "uppercase", letterSpacing: .5 }}>{label}</div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
-                  <span style={{ fontSize: 12, color: "#ffffffaa", fontFamily: "'Nunito', sans-serif" }}>$</span>
-                  <span style={{ fontSize: 20, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>{val.toLocaleString("es-AR", {maximumFractionDigits:0})}</span>
-                </div>
+                <div style={{ fontSize: 16, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>{hideBalance ? "••••" : formatFull(val)}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Top gastos */}
-        <Card>
-          <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>🔥 Top gastos del mes</div>
-          {topCats.length === 0 ? (
-            <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Sin gastos registrados aún.</div>
-          ) : topCats.map(([cat, amt]) => (
-            <div key={cat} style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
-                <span>{catIcon(data, cat)} {cat}</span>
-                <span style={{ color: COLORS.text, fontWeight: 600 }}>{formatFull(amt)}</span>
-              </div>
-              <ProgressBar value={amt} max={totalExpense || 1} color={COLORS.accent} />
-            </div>
-          ))}
+      {totalBudget > 0 && (
+        <Card style={{ padding: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
+            <span>Presupuesto del mes</span>
+            <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
+          </div>
+          <ProgressBar value={spentThisMonth} max={totalBudget} height={8} />
         </Card>
+      )}
 
-        {/* Últimas transacciones */}
-        <Card>
-          <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>🕐 Últimas transacciones</div>
-          {monthTxs.length === 0 ? (
-            <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Sin transacciones este mes.</div>
-          ) : [...monthTxs].reverse().slice(0, 6).map(t => (
-            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${COLORS.border}` }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{t.description || t.category}</div>
-                <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
-              </div>
-              <span style={{ fontWeight: 700, color: COLORS.text, fontSize: 14 }}>
-                {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
-              </span>
-            </div>
-          ))}
-        </Card>
+      {/* Grilla de paneles, igual que el home de la app */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        {PLAN_PANELS.map(p => (
+          <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
+            <span style={{ fontSize: 22 }}>{p.icon}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Savings goals preview */}
-      {data.savings.length > 0 && (
+      {proximosTurnos.length > 0 && (
         <Card>
-          <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>🎯 Metas de ahorro</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-            {data.savings.map(g => {
-              const pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
-              const fmt = g.currency === "usd" ? formatUSD : formatFull;
-              return (
-                <div key={g.id} style={{ background: COLORS.bg, borderRadius: 12, padding: 16, border: `1px solid ${COLORS.border}` }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{g.name}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>
-                    <span>{fmt(g.current)}</span>
-                    <span>{fmt(g.target)}</span>
-                  </div>
-                  <ProgressBar value={g.current} max={g.target} color={COLORS.accent} />
-                  <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 6, fontWeight: 600 }}>{pct.toFixed(0)}% completado</div>
-                </div>
-              );
-            })}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
+            <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {proximosTurnos.map(t => (
+              <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
+                <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
+              </div>
+            ))}
           </div>
         </Card>
       )}
+
+      {proximosVencimientos.length > 0 && (
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
+            <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {proximosVencimientos.map(e => (
+              <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
+                <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Transacciones embebidas, con filtros y buscador como en la app */}
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Transacciones</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+            {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
+              <button key={k} onClick={() => setTxFilter(k)} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        {listTxs.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
+        ) : listTxs.map(t => (
+          <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
+              <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+            <button onClick={() => delTx(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+// ---- ANÁLISIS ----
+function AnalisisTab({ data }) {
+  const months = Array.from({ length: 6 }, (_, i) => {
+    let m = currentMonth - 5 + i, y = currentYear;
+    if (m < 0) { m += 12; y--; }
+    const txs = data.transactions.filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
+    const inc = txs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
+    const exp = txs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+    return { m, y, label: MONTH_NAMES[m], inc, exp };
+  });
+  const maxVal = Math.max(...months.flatMap(mo => [mo.inc, mo.exp]), 1);
+
+  const selMonthTxs = data.transactions.filter(t => { const d = new Date(t.date); return d.getMonth() === data.selectedMonth && d.getFullYear() === data.selectedYear; });
+  const totalIncome = selMonthTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
+  const totalExpense = selMonthTxs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+  const expByCat = {};
+  selMonthTxs.filter(t => t.type === "gasto").forEach(t => { expByCat[t.category] = (expByCat[t.category] || 0) + t.amount; });
+  const topCats = Object.entries(expByCat).sort((a, b) => b[1] - a[1]);
+  const maxCat = Math.max(...topCats.map(([, v]) => v), 1);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ fontSize: 20, fontWeight: 700 }}>Análisis</div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <Card style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Ingresos</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.green, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalIncome)}</div>
+        </Card>
+        <Card style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>Gastos</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.red, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalExpense)}</div>
+        </Card>
+      </div>
+
+      <Card>
+        <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Últimos 6 meses</div>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 140 }}>
+          {months.map(mo => (
+            <div key={`${mo.m}-${mo.y}`} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%" }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 3, width: "100%", justifyContent: "center" }}>
+                <div style={{ width: 10, height: `${Math.max(4, (mo.inc / maxVal) * 100)}%`, background: COLORS.green, borderRadius: 3 }} />
+                <div style={{ width: 10, height: `${Math.max(4, (mo.exp / maxVal) * 100)}%`, background: COLORS.red, borderRadius: 3 }} />
+              </div>
+              <div style={{ fontSize: 10, color: COLORS.textMuted }}>{mo.label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 14, justifyContent: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: COLORS.textMuted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.green }} /> Ingresos</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: COLORS.textMuted }}><div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS.red }} /> Gastos</div>
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>🔥 Top gastos — {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+        {topCats.length === 0 ? (
+          <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Sin gastos registrados este mes.</div>
+        ) : topCats.map(([cat, amt]) => (
+          <div key={cat} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+              <span>{catIcon(data, cat)} {cat}</span>
+              <span style={{ color: COLORS.text, fontWeight: 600 }}>{formatFull(amt)}</span>
+            </div>
+            <ProgressBar value={amt} max={maxCat} color={COLORS.accent} />
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+// ---- PERFIL ----
+function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
+  const [editingName, setEditingName] = useState(false);
+  const [nombre, setNombre] = useState(user?.user_metadata?.nombre || "");
+  const [apellido, setApellido] = useState(user?.user_metadata?.apellido || "");
+  const [nameMsg, setNameMsg] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
+  const [changingPw, setChangingPw] = useState(false);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const saveName = async () => {
+    setSavingName(true); setNameMsg("");
+    const full_name = [nombre, apellido].filter(Boolean).join(" ");
+    const { error } = await supabaseClient.auth.updateUser({ data: { nombre, apellido, full_name } });
+    setSavingName(false);
+    if (error) { setNameMsg(error.message || "Error al guardar"); return; }
+    setNameMsg("¡Guardado!");
+    setTimeout(() => { setEditingName(false); setNameMsg(""); }, 1200);
+  };
+
+  const changePassword = async () => {
+    const err = validatePassword(pw1);
+    if (err) { setPwMsg(err); return; }
+    if (pw1 !== pw2) { setPwMsg("Las contraseñas no coinciden"); return; }
+    setPwLoading(true); setPwMsg("");
+    const { error } = await supabaseClient.auth.updateUser({ password: pw1 });
+    setPwLoading(false);
+    if (error) { setPwMsg(error.message || "Error al actualizar"); return; }
+    setPwMsg("¡Contraseña actualizada!");
+    setPw1(""); setPw2("");
+    setTimeout(() => { setChangingPw(false); setPwMsg(""); }, 1500);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Perfil</div>
+
+      <Card style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: COLORS.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, flexShrink: 0 }}>
+          {(displayName || "?").charAt(0).toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{displayName}</div>
+          <div style={{ fontSize: 12, color: COLORS.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</div>
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>✏️ Nombre</div>
+          {!editingName && <button onClick={() => setEditingName(true)} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Editar</button>}
+        </div>
+        {editingName && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+              <input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Apellido" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+            </div>
+            {nameMsg && <div style={{ fontSize: 12, color: nameMsg.includes("Guardado") ? COLORS.green : COLORS.red }}>{nameMsg}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button size="sm" onClick={saveName} disabled={savingName}>{savingName ? "Guardando..." : "Guardar"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>🔒 Contraseña</div>
+          {!changingPw && <button onClick={() => setChangingPw(true)} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cambiar</button>}
+        </div>
+        {changingPw && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+            <input type="password" value={pw1} onChange={e => setPw1(e.target.value)} placeholder="Nueva contraseña" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+            <input type="password" value={pw2} onChange={e => setPw2(e.target.value)} placeholder="Confirmar contraseña" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+            {pwMsg && <div style={{ fontSize: 12, color: pwMsg.includes("actualizada") ? COLORS.green : COLORS.red }}>{pwMsg}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button size="sm" onClick={changePassword} disabled={pwLoading}>{pwLoading ? "Guardando..." : "Guardar"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setChangingPw(false); setPw1(""); setPw2(""); setPwMsg(""); }}>Cancelar</Button>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <button onClick={onConnectWa} style={{ width: "100%", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>💬 WhatsApp</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: waPhone ? COLORS.green : COLORS.accent }}>{waPhone ? `Vinculado (${waPhone})` : "Conectar →"}</span>
+        </button>
+      </Card>
+
+      <Button variant="danger" onClick={onLogout} style={{ width: "100%" }}>🚪 Cerrar sesión</Button>
     </div>
   );
 }
 
 // ---- TRANSACCIONES ----
-function Transacciones({ data, save, monthTxs }) {
+function Transacciones({ data, save, monthTxs, startOpen = false }) {
   const catNames = Object.keys(data.categories);
   const [form, setForm] = useState({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(startOpen);
 
   const add = () => {
     if (!form.amount || isNaN(form.amount)) return;
