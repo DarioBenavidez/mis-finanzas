@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mis Finanzas</title>
+  <title>Orbe</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,10 +11,10 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #f0f4f1; }
+    html, body { background: #F2F7F5; }
     ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: #f0f4f1; }
-    ::-webkit-scrollbar-thumb { background: #c0d4c8; border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: #F2F7F5; }
+    ::-webkit-scrollbar-thumb { background: #C8DDD6; border-radius: 3px; }
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     @media (max-width: 768px) {
       .desktop-sidebar { display: none !important; }
@@ -26,12 +26,12 @@
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2e7d5a" />
+  <meta name="theme-color" content="#005247" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Mis Finanzas" />
-  <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/money-bag.png" />
+  <meta name="apple-mobile-web-app-title" content="Orbe" />
+  <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/globe-with-meridians.png" />
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -45,9 +45,12 @@
 
   <script type="text/babel">
     // ─── CONFIG SUPABASE ────────────────────────────────────────────────────────
-    // Reemplazá estos valores con los tuyos de Supabase
+    // Mismo proyecto que usan la app móvil y el bot de WhatsApp de Orbe: los datos
+    // se leen/escriben en la tabla "finanzas" (columna jsonb "data"), así que todo
+    // lo que se guarda acá es visible al instante en la app y para el bot.
     const SUPABASE_URL = "https://cvazbnthpsntqoatzswj.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2YXpibnRocHNudHFvYXR6c3dqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyMzkyMTMsImV4cCI6MjA4NzgxNTIxM30.KLevD2MfnMD0lndOhvngaG5JR76VKTBg_ofCmerRCRg";
+    const BACKEND_URL = "https://orbe-bot-production.up.railway.app";
     // ───────────────────────────────────────────────────────────────────────────
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -61,7 +64,10 @@
       if (SUPABASE_URL === "TU_SUPABASE_URL") return null;
       const { data, error } = await supabaseClient.from("finanzas").select("data").eq("id", uid).single();
       if (error || !data) return null;
-      return data.data;
+      // Merge con los defaults: así nunca pisamos campos que solo usa el bot
+      // de WhatsApp (memoria, vocabulario, negocio, etc.) aunque esta página
+      // no los conozca ni los muestre.
+      return { ...makeDefaultData(), ...data.data };
     }
 
     async function saveData(uid, payload) {
@@ -72,34 +78,76 @@
 const { useState, useEffect, useCallback } = React;
 
 const COLORS = {
-  bg: "#f0f4f1",
-  surface: "#ffffff",
-  surfaceHover: "#f8faf8",
-  border: "#dde8e2",
-  accent: "#2e7d5a",
-  accentDim: "#e8f5ee",
-  green: "#2e7d5a",
-  greenDim: "#e8f5ee",
-  red: "#c0392b",
-  redDim: "#fff0f0",
-  blue: "#2e7d5a",
-  blueDim: "#e8f5ee",
-  purple: "#2e7d5a",
-  purpleDim: "#e8f5ee",
-  text: "#1a2e22",
-  textMuted: "#607a6c",
-  textDim: "#a8bdb4",
+  bg: "#F2F7F5",
+  surface: "#FFFFFF",
+  surfaceHover: "#F7FBF9",
+  border: "#C8DDD6",
+  accent: "#005247",
+  accentDim: "#D6EDE7",
+  gold: "#C9A84C",
+  goldDim: "#C9A84C22",
+  green: "#059669",
+  greenDim: "#D1F5E8",
+  red: "#F43F5E",
+  redDim: "#FFF1F6",
+  blue: "#3B82F6",
+  blueDim: "#EAF1FF",
+  purple: "#005247",
+  purpleDim: "#D6EDE7",
+  text: "#0D1F1C",
+  textMuted: "#4A6B62",
+  textDim: "#A9C4BC",
 };
 
-const CATEGORY_ICONS = {
+const DEFAULT_CATEGORIES = {
   "Vivienda": "🏠", "Alimentación": "🛒", "Transporte": "🚗",
   "Salud": "💊", "Entretenimiento": "🎬", "Ropa": "👗",
   "Educación": "📚", "Servicios": "💡", "Préstamo tarjeta": "💳", "Otros": "📦",
 };
 
+const ICON_OPTIONS = ["🏠","🛒","🚗","💊","🎬","👗","📚","💡","💳","📦","💰","🎁","🐾","✈️","🎉","🍿","☕","🔧","🏋️","📱"];
+
 const MONTH_NAMES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
+const todayStr = () => new Date().toISOString().split("T")[0];
+
+function makeDefaultData() {
+  return {
+    transactions: [],
+    budgets: Object.keys(DEFAULT_CATEGORIES).map(cat => ({ cat, limit: 0 })),
+    categories: { ...DEFAULT_CATEGORIES },
+    savings: [],
+    debts: [],
+    loans: [],
+    credits: {},
+    events: [],
+    turnos: [],
+    recurringIncomes: [],
+    salaryOverrides: [],
+    suscripciones: [],
+    recurringExpenses: [],
+    orbeName: "Orbe",
+    selectedMonth: currentMonth,
+    selectedYear: currentYear,
+  };
+}
+
+const isIncomeType = (t) => t.type === "ingreso" || t.type === "sueldo";
+const isExpenseType = (t) => t.type === "gasto" || t.type === "ahorro_meta";
+const catIcon = (data, name) => (data.categories && data.categories[name]) || "📦";
+const catExists = (data, name) => !!(data.categories && data.categories[name]);
+// Igual que el backend: matching de categoría case-insensitive.
+const findCatCI = (data, name) => Object.keys(data.categories || {}).find(c => c.toLowerCase() === (name || "").toLowerCase());
+
+function validatePassword(pw) {
+  if (!pw || pw.length < 8) return "La contraseña debe tener al menos 8 caracteres";
+  if (!/[A-Z]/.test(pw)) return "Debe incluir al menos una mayúscula";
+  if (!/[a-z]/.test(pw)) return "Debe incluir al menos una minúscula";
+  if (!/[0-9]/.test(pw)) return "Debe incluir al menos un número";
+  if (!/[^A-Za-z0-9]/.test(pw)) return "Debe incluir al menos un carácter especial";
+  return null;
+}
 
 const formatCurrency = (n) => {
   const abs = Math.abs(n);
@@ -108,7 +156,8 @@ const formatCurrency = (n) => {
   return `$${n.toFixed(0)}`;
 };
 
-const formatFull = (n) => { const abs = Math.abs(Number(n)); const formatted = abs.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); return (n < 0 ? "-$" : "$") + formatted; };
+const formatFull = (n) => { const abs = Math.abs(Number(n) || 0); const formatted = abs.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); return ((Number(n) || 0) < 0 ? "-$" : "$") + formatted; };
+const formatUSD = (n) => `US$${(Number(n) || 0).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 function Pill({ color, children }) {
   return (
@@ -131,19 +180,29 @@ function Card({ children, style = {} }) {
   );
 }
 
-function Button({ children, onClick, variant = "primary", size = "md", style = {} }) {
+function InfoBanner({ children }) {
+  return (
+    <div style={{ background: COLORS.accentDim, border: `1px solid ${COLORS.accent}30`, borderRadius: 12, padding: 14, fontSize: 13, color: COLORS.accent }}>
+      {children}
+    </div>
+  );
+}
+
+function Button({ children, onClick, variant = "primary", size = "md", disabled = false, style = {} }) {
   const base = {
-    cursor: "pointer", border: "none", borderRadius: 10, fontFamily: "inherit",
+    cursor: disabled ? "not-allowed" : "pointer", border: "none", borderRadius: 10, fontFamily: "inherit",
     fontWeight: 600, transition: "all .15s",
     padding: size === "sm" ? "6px 14px" : "10px 20px",
     fontSize: size === "sm" ? 13 : 14,
+    opacity: disabled ? 0.6 : 1,
   };
   const variants = {
-    primary: { background: "#2e7d5a", color: "#ffffff", boxShadow: "none" },
+    primary: { background: COLORS.accent, color: "#ffffff", boxShadow: "none" },
+    gold: { background: COLORS.gold, color: "#2b2205", boxShadow: "none" },
     ghost: { background: "transparent", color: COLORS.textMuted, border: `1px solid ${COLORS.border}` },
     danger: { background: "#fff5f5", color: COLORS.red, border: `1px solid #f0c8c8` },
   };
-  return <button onClick={onClick} style={{ ...base, ...variants[variant], ...style }}>{children}</button>;
+  return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>{children}</button>;
 }
 
 function Input({ label, value, onChange, type = "text", placeholder, prefix, options, style = {} }) {
@@ -170,6 +229,23 @@ function Input({ label, value, onChange, type = "text", placeholder, prefix, opt
   );
 }
 
+function IconPicker({ value, onChange }) {
+  return (
+    <div>
+      <label style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, letterSpacing: ".5px", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Ícono</label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {ICON_OPTIONS.map(ic => (
+          <div key={ic} onClick={() => onChange(ic)} style={{
+            width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, cursor: "pointer", background: value === ic ? COLORS.accent : "#f8faf8",
+            border: `1px solid ${value === ic ? COLORS.accent : COLORS.border}`,
+          }}>{ic}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProgressBar({ value, max, color = COLORS.accent, height = 6 }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   const barColor = pct > 90 ? COLORS.red : pct > 70 ? "#f59e0b" : color;
@@ -185,19 +261,19 @@ function MonthYearPicker({ selectedMonth, selectedYear, onChangeMonth, onChangeY
   const [openM, setOpenM] = useState(false);
   const [openY, setOpenY] = useState(false);
   const btnStyle = {
-    background: "#ffffff", border: `1px solid #dde8e2`, borderRadius: 8,
-    color: "#1a2e22", padding: "6px 14px", fontFamily: "inherit", fontSize: 13,
+    background: "#ffffff", border: `1px solid ${COLORS.border}`, borderRadius: 8,
+    color: COLORS.text, padding: "6px 14px", fontFamily: "inherit", fontSize: 13,
     cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontWeight: 500,
   };
   const dropStyle = {
     position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 100,
-    background: "#ffffff", border: `1px solid #dde8e2`, borderRadius: 10,
+    background: "#ffffff", border: `1px solid ${COLORS.border}`, borderRadius: 10,
     boxShadow: "0 8px 32px #00000060", padding: 6, minWidth: 120,
   };
   const optStyle = (active) => ({
     padding: "7px 14px", borderRadius: 6, cursor: "pointer", fontSize: 13,
-    color: active ? "#ffffff" : "#1a2e22",
-    background: active ? "#2e7d5a" : "transparent",
+    color: active ? "#ffffff" : COLORS.text,
+    background: active ? COLORS.accent : "transparent",
     fontWeight: active ? 700 : 400,
   });
   return (
@@ -238,8 +314,8 @@ function MonthYearPicker({ selectedMonth, selectedYear, onChangeMonth, onChangeY
   );
 }
 
-const TABS = ["Resumen", "Transacciones", "Presupuesto", "Ahorros", "Deudas", "Proyección"];
-const TAB_ICONS = ["📊", "💸", "🎯", "🐷", "💳", "📅"];
+const TABS = ["Resumen", "Transacciones", "Presupuesto", "Ahorros", "Deudas", "Préstamos", "Gastos Fijos", "Suscripciones", "Turnos", "Calendario", "Proyección"];
+const TAB_ICONS = ["📊", "💸", "🏷️", "🐷", "💳", "🤝", "📌", "📺", "📅", "🗓️", "📈"];
 
 // ---- RESET PASSWORD SCREEN ----
 function ResetPasswordScreen({ onDone }) {
@@ -250,13 +326,14 @@ function ResetPasswordScreen({ onDone }) {
   const [success, setSuccess] = useState(false);
 
   const inputStyle = {
-    width: "100%", background: "#f8faf8", border: "1px solid #dde8e2",
-    borderRadius: 10, padding: "11px 14px", color: "#1a2e22",
+    width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
+    borderRadius: 10, padding: "11px 14px", color: COLORS.text,
     fontFamily: "inherit", fontSize: 14, outline: "none",
   };
 
   const handleReset = async () => {
-    if (!password || password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
+    const pwErr = validatePassword(password);
+    if (pwErr) { setError(pwErr); return; }
     if (password !== confirm) { setError("Las contraseñas no coinciden"); return; }
     setError(""); setLoading(true);
     try {
@@ -264,7 +341,6 @@ function ResetPasswordScreen({ onDone }) {
       if (error) throw error;
       setSuccess(true);
       setTimeout(() => {
-        // Clean URL and go to login
         window.history.replaceState({}, document.title, window.location.pathname);
         onDone();
       }, 2000);
@@ -275,32 +351,32 @@ function ResetPasswordScreen({ onDone }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f4f1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 16, background: "#2e7d5a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>🔑</div>
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 26, color: "#1a2e22", fontWeight: 700 }}>Nueva contraseña</div>
-          <div style={{ fontSize: 13, color: "#607a6c", marginTop: 4 }}>Ingresá tu nueva contraseña</div>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>🔑</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 26, color: COLORS.text, fontWeight: 700 }}>Nueva contraseña</div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>Ingresá tu nueva contraseña</div>
         </div>
-        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: "1px solid #dde8e2", boxShadow: "0 4px 24px #00000012" }}>
+        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 24px #00000012" }}>
           {success ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-              <div style={{ fontSize: 15, color: "#2e7d5a", fontWeight: 600 }}>¡Contraseña actualizada!</div>
-              <div style={{ fontSize: 13, color: "#607a6c", marginTop: 6 }}>Redirigiendo al login...</div>
+              <div style={{ fontSize: 15, color: COLORS.accent, fontWeight: 600 }}>¡Contraseña actualizada!</div>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 6 }}>Redirigiendo al login...</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <div style={{ fontSize: 12, color: "#607a6c", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Nueva contraseña</div>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" style={inputStyle} />
+                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Nueva contraseña</div>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" style={inputStyle} />
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "#607a6c", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Confirmar contraseña</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Confirmar contraseña</div>
                 <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repetí la contraseña" style={inputStyle} onKeyDown={e => e.key === "Enter" && handleReset()} />
               </div>
-              {error && <div style={{ background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#c0392b" }}>{error}</div>}
-              <button onClick={handleReset} disabled={loading} style={{ background: loading ? "#c8dcd4" : "#2e7d5a", color: "#ffffff", border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", marginTop: 4 }}>
+              {error && <div style={{ background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red }}>{error}</div>}
+              <button onClick={handleReset} disabled={loading} style={{ background: loading ? "#c8dcd4" : COLORS.accent, color: "#ffffff", border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", marginTop: 4 }}>
                 {loading ? "Actualizando..." : "Guardar contraseña"}
               </button>
             </div>
@@ -316,13 +392,15 @@ function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login"); // "login" | "register" | "reset"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
   const inputStyle = {
-    width: "100%", background: "#f8faf8", border: `1px solid #dde8e2`,
-    borderRadius: 10, padding: "11px 14px", color: "#1a2e22",
+    width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
+    borderRadius: 10, padding: "11px 14px", color: COLORS.text,
     fontFamily: "inherit", fontSize: 14, outline: "none",
   };
 
@@ -330,7 +408,13 @@ function LoginScreen({ onLogin }) {
     setError(""); setSuccess(""); setLoading(true);
     try {
       if (mode === "register") {
-        const { error } = await supabaseClient.auth.signUp({ email, password });
+        const pwErr = validatePassword(password);
+        if (pwErr) throw new Error(pwErr);
+        const full_name = [nombre, apellido].filter(Boolean).join(" ");
+        const { error } = await supabaseClient.auth.signUp({
+          email, password,
+          options: { data: { nombre, apellido, full_name } },
+        });
         if (error) throw error;
         setSuccess("¡Cuenta creada! Ahora podés iniciar sesión.");
         setMode("login");
@@ -352,25 +436,25 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f4f1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
+    <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 16, background: "#2e7d5a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>💰</div>
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 28, color: "#1a2e22", fontWeight: 700 }}>Mis Finanzas</div>
-          <div style={{ fontSize: 13, color: "#607a6c", marginTop: 4 }}>Tu gestor financiero personal</div>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>🌐</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 28, color: COLORS.text, fontWeight: 700 }}>Orbe</div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>Tu asistente financiero personal</div>
         </div>
 
         {/* Card */}
-        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: "1px solid #dde8e2", boxShadow: "0 4px 24px #00000012" }}>
+        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 24px #00000012" }}>
           {/* Tabs */}
-          <div style={{ display: "flex", marginBottom: 28, background: "#f0f4f1", borderRadius: 10, padding: 4 }}>
+          <div style={{ display: "flex", marginBottom: 28, background: COLORS.bg, borderRadius: 10, padding: 4 }}>
             {[["login","Iniciar sesión"], ["register","Registrarse"], ["reset","Olvidé clave"]].map(([m, label]) => (
               <button key={m} onClick={() => { setMode(m); setError(""); setSuccess(""); }} style={{
                 flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer",
                 fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 600, transition: "all .2s",
-                background: mode === m ? "#2e7d5a" : "transparent",
-                color: mode === m ? "#ffffff" : "#607a6c",
+                background: mode === m ? COLORS.accent : "transparent",
+                color: mode === m ? "#ffffff" : COLORS.textMuted,
               }}>
                 {label}
               </button>
@@ -379,31 +463,43 @@ function LoginScreen({ onLogin }) {
 
           {/* Fields */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {mode === "register" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Nombre</div>
+                  <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" style={inputStyle} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Apellido</div>
+                  <input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Tu apellido" style={inputStyle} />
+                </div>
+              </div>
+            )}
             <div>
-              <div style={{ fontSize: 12, color: "#6a9aaa", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Email</div>
+              <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Email</div>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="tu@email.com" style={inputStyle}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()} />
             </div>
             {mode !== "reset" && (
               <div>
-                <div style={{ fontSize: 12, color: "#6a9aaa", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Contraseña</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Contraseña</div>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres" style={inputStyle}
+                  placeholder={mode === "register" ? "Mín. 8 car., mayús., minús., número y símbolo" : "Tu contraseña"} style={inputStyle}
                   onKeyDown={e => e.key === "Enter" && handleSubmit()} />
               </div>
             )}
             {mode === "reset" && (
-              <div style={{ fontSize: 13, color: "#607a6c", background: "#f0f4f1", borderRadius: 8, padding: "10px 14px" }}>
+              <div style={{ fontSize: 13, color: COLORS.textMuted, background: COLORS.bg, borderRadius: 8, padding: "10px 14px" }}>
                 Te enviaremos un email para restablecer tu contraseña.
               </div>
             )}
 
-            {error && <div style={{ background: "#e0707015", border: "1px solid #e0707040", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#e07070" }}>{error}</div>}
-            {success && <div style={{ background: "#3ecfaa15", border: "1px solid #3ecfaa40", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#3ecfaa" }}>{success}</div>}
+            {error && <div style={{ background: COLORS.redDim, border: "1px solid #f0c8c8", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red }}>{error}</div>}
+            {success && <div style={{ background: COLORS.greenDim, border: `1px solid ${COLORS.green}40`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.green }}>{success}</div>}
 
             <button onClick={handleSubmit} disabled={loading} style={{
-              background: loading ? "#c8dcd4" : "#2e7d5a", color: loading ? "#ffffff" : "#ffffff",
+              background: loading ? "#c8dcd4" : COLORS.accent, color: "#ffffff",
               border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit",
               fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
               marginTop: 4, transition: "all .2s",
@@ -426,20 +522,17 @@ function FinanzasApp() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const [dolarRate, setDolarRate] = useState(null);
+  const [waPhone, setWaPhone] = useState(null); // null=sin chequear, false=no vinculado, string=teléfono
+  const [waModal, setWaModal] = useState(false);
+  const [waCode, setWaCode] = useState("");
+  const [waLoading, setWaLoading] = useState(false);
+  const [waError, setWaError] = useState("");
 
-  const defaultData = {
-    transactions: [],
-    budgets: Object.keys(CATEGORY_ICONS).map(cat => ({ cat, limit: 0 })),
-    savings: [],
-    debts: [],
-    selectedMonth: currentMonth,
-    selectedYear: currentYear,
-  };
+  const defaultData = makeDefaultData();
 
   // Check existing session on mount
   useEffect(() => {
-    // Si la URL tiene type=recovery, mostrar pantalla de reset antes que nada
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       setResetMode(true);
@@ -463,12 +556,73 @@ function FinanzasApp() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Cotización blue (para ahorros/deudas/préstamos en USD). Best-effort: si el
+  // backend no responde o bloquea el origen por CORS, la app sigue funcionando
+  // sin conversión USD.
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/api/dolar`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.blue) setDolarRate(d.blue); })
+      .catch(() => {});
+  }, []);
+
+  // Estado de vinculación con WhatsApp: se lee directo de whatsapp_users (RLS
+  // scopeado a auth.uid()), igual que hace la app móvil.
+  useEffect(() => {
+    if (!user) return;
+    supabaseClient.from("whatsapp_users").select("phone, linked_at").eq("user_id", user.id)
+      .order("linked_at", { ascending: false })
+      .then(({ data: rows }) => setWaPhone(rows?.[0]?.phone || false))
+      .catch(() => setWaPhone(false));
+  }, [user]);
+
+  const generateWaCode = async () => {
+    setWaError(""); setWaLoading(true);
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const resp = await fetch(`${BACKEND_URL}/api/generate-link-code`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const body = await resp.json();
+      if (resp.ok && body.code) {
+        setWaCode(body.code);
+        window.open(`https://wa.me/5491125728211?text=${encodeURIComponent("ORBE:" + body.code)}`, "_blank");
+      } else {
+        setWaError(body.error || "No se pudo generar el código. Probá de nuevo.");
+      }
+    } catch {
+      setWaError("Error de conexión con el backend de Orbe. Probá de nuevo.");
+    }
+    setWaLoading(false);
+  };
+
+  const refreshWaLinked = async () => {
+    setWaLoading(true);
+    try {
+      const { data: rows } = await supabaseClient.from("whatsapp_users").select("phone, linked_at").eq("user_id", user.id).order("linked_at", { ascending: false });
+      const phone = rows?.[0]?.phone || null;
+      if (phone) { setWaPhone(phone); setWaError(""); }
+      else setWaError("Todavía no recibí tu mensaje. Asegurate de enviarlo desde tu WhatsApp.");
+    } catch {
+      setWaError("No pude verificar. Probá de nuevo.");
+    }
+    setWaLoading(false);
+  };
+
   useEffect(() => {
     if (!user) return;
     async function load() {
       try {
         const d = await loadData(user.id);
-        setData(d || defaultData);
+        let next = d || defaultData;
+        // Igual que la app: si el mes/año guardado quedó en el pasado, lo
+        // adelantamos al actual en vez de mostrar un mes viejo por defecto.
+        if (next.selectedYear < currentYear || (next.selectedYear === currentYear && next.selectedMonth < currentMonth)) {
+          next = { ...next, selectedMonth: currentMonth, selectedYear: currentYear };
+        }
+        setData(next);
       } catch {
         setData(defaultData);
       }
@@ -490,8 +644,8 @@ function FinanzasApp() {
   };
 
   if (authLoading) return (
-    <div style={{ minHeight: "100vh", background: "#f0f4f1", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ color: "#607a6c", fontFamily: "'Nunito', sans-serif", fontSize: 18 }}>Cargando...</div>
+    <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: COLORS.textMuted, fontFamily: "'Nunito', sans-serif", fontSize: 18 }}>Cargando...</div>
     </div>
   );
 
@@ -499,18 +653,20 @@ function FinanzasApp() {
 
   if (!user) return <LoginScreen onLogin={setUser} />;
 
-  if (loading) return (
+  if (loading || !data) return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: COLORS.textMuted, fontFamily: "'Nunito', sans-serif", fontSize: 18 }}>Cargando tus finanzas...</div>
     </div>
   );
 
+  const displayName = user?.user_metadata?.full_name || [user?.user_metadata?.nombre, user?.user_metadata?.apellido].filter(Boolean).join(" ") || (user?.email || "").split("@")[0];
+
   const monthTxs = data.transactions.filter(t =>
     new Date(t.date).getMonth() === data.selectedMonth &&
     new Date(t.date).getFullYear() === data.selectedYear
   );
-  const totalIncome = monthTxs.filter(t => t.type === "ingreso").reduce((s, t) => s + t.amount, 0);
-  const totalExpense = monthTxs.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const totalIncome = monthTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
+  const totalExpense = monthTxs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
   const balance = totalIncome - totalExpense;
 
   const expByCat = {};
@@ -518,19 +674,19 @@ function FinanzasApp() {
     expByCat[t.category] = (expByCat[t.category] || 0) + t.amount;
   });
 
-  const totalDebt = data.debts.reduce((s, d) => s + d.remaining, 0);
-  const totalSavings = data.savings.reduce((s, g) => s + g.current, 0);
+  const totalDebt = data.debts.reduce((s, d) => s + (d.currency === "usd" ? (d.remainingUSD || 0) * (dolarRate || d.arsRate || 0) : d.remaining), 0);
+  const totalSavings = data.savings.reduce((s, g) => s + (g.currency === "usd" ? (g.current || 0) * (dolarRate || g.arsRate || 0) : (g.current || 0)), 0);
 
   return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text, display: "flex", flexDirection: "column" }}>
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
       {/* ── TOP HEADER ── */}
-      <div style={{ background: "rgba(240,244,241,0.97)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", boxShadow: "0 1px 8px #00000008", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
+      <div style={{ background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderBottom: `1px solid ${COLORS.border}`, padding: "0 20px", boxShadow: "0 1px 8px #00000008", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: COLORS.textMuted, fontSize: 20, cursor: "pointer", padding: "4px 8px", borderRadius: 8, lineHeight: 1 }}>☰</button>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>💰</div>
-          <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Mis Finanzas</div>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🌐</div>
+          <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
@@ -545,10 +701,10 @@ function FinanzasApp() {
       <div style={{ position: "fixed", top: 0, left: sidebarOpen ? 0 : "-260px", bottom: 0, width: 240, background: "#ffffff", zIndex: 99, transition: "left .28s cubic-bezier(.4,0,.2,1)", boxShadow: sidebarOpen ? "8px 0 32px #00000018" : "none", borderRight: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "52px 16px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>💰</div>
-            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 20, color: COLORS.text, fontWeight: 700 }}>Mis Finanzas</div>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🌐</div>
+            <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 20, color: COLORS.text, fontWeight: 700 }}>Orbe</div>
           </div>
-          <div style={{ fontSize: 12, color: COLORS.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {user?.email}</div>
+          <div style={{ fontSize: 12, color: COLORS.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {displayName}</div>
         </div>
         <div style={{ flex: 1, padding: "12px", display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
           {TABS.map((t, i) => (
@@ -557,7 +713,10 @@ function FinanzasApp() {
             </button>
           ))}
         </div>
-        <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}` }}>
+        <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => { setWaError(""); setWaCode(""); setWaModal(true); setSidebarOpen(false); }} style={{ width: "100%", background: waPhone ? COLORS.greenDim : COLORS.surface, border: `1px solid ${waPhone ? COLORS.green + "50" : COLORS.border}`, borderRadius: 12, color: waPhone ? COLORS.green : COLORS.textMuted, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+            {waPhone ? "✅ WhatsApp vinculado" : "🔗 Conectar WhatsApp"}
+          </button>
           <button onClick={logout} style={{ width: "100%", background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 12, color: COLORS.red, padding: "10px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🚪 Cerrar sesión</button>
         </div>
       </div>
@@ -567,7 +726,7 @@ function FinanzasApp() {
 
         {/* Desktop sidebar (always visible, collapses) */}
         <div className="desktop-sidebar" style={{ width: 220, background: "#ffffff", borderRight: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", flexShrink: 0, minHeight: "calc(100vh - 56px)", boxShadow: "2px 0 8px #00000006" }}>
-          <div style={{ padding: "20px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ padding: "20px 12px", flex: 1, display: "flex", flexDirection: "column", gap: 4, overflowY: "auto" }}>
             <div style={{ fontSize: 11, color: COLORS.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, padding: "0 8px", marginBottom: 8 }}>Navegación</div>
             {TABS.map((t, i) => (
               <button key={t} onClick={() => setTab(i)} style={{ background: tab === i ? COLORS.accentDim : "transparent", border: `1px solid ${tab === i ? COLORS.accent + "30" : "transparent"}`, borderRadius: 14, cursor: "pointer", fontFamily: "inherit", color: tab === i ? COLORS.accent : COLORS.textMuted, padding: "11px 14px", fontSize: 14, fontWeight: tab === i ? 700 : 400, textAlign: "left", display: "flex", alignItems: "center", gap: 10, transition: "all .15s", whiteSpace: "nowrap" }}>
@@ -575,8 +734,11 @@ function FinanzasApp() {
               </button>
             ))}
           </div>
-          <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}` }}>
-            <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {user?.email}</div>
+          <div style={{ padding: "14px 16px", borderTop: `1px solid ${COLORS.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>👤 {displayName}</div>
+            <button onClick={() => { setWaError(""); setWaCode(""); setWaModal(true); }} style={{ width: "100%", background: waPhone ? COLORS.greenDim : COLORS.bg, border: `1px solid ${waPhone ? COLORS.green + "50" : COLORS.border}`, borderRadius: 12, color: waPhone ? COLORS.green : COLORS.textMuted, padding: "9px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              {waPhone ? "✅ WhatsApp vinculado" : "🔗 Conectar WhatsApp"}
+            </button>
             <button onClick={logout} style={{ width: "100%", background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 12, color: COLORS.red, padding: "9px", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>🚪 Cerrar sesión</button>
           </div>
         </div>
@@ -586,21 +748,67 @@ function FinanzasApp() {
           {tab === 0 && <Resumen balance={balance} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} monthTxs={monthTxs} expByCat={expByCat} data={data} />}
           {tab === 1 && <Transacciones data={data} save={save} monthTxs={monthTxs} />}
           {tab === 2 && <Presupuesto data={data} save={save} expByCat={expByCat} />}
-          {tab === 3 && <Ahorros data={data} save={save} />}
-          {tab === 4 && <Deudas data={data} save={save} />}
-          {tab === 5 && <Proyeccion data={data} />}
+          {tab === 3 && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
+          {tab === 4 && <Deudas data={data} save={save} dolarRate={dolarRate} />}
+          {tab === 5 && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
+          {tab === 6 && <GastosFijos data={data} />}
+          {tab === 7 && <Suscripciones data={data} />}
+          {tab === 8 && <Turnos data={data} save={save} />}
+          {tab === 9 && <Calendario data={data} save={save} />}
+          {tab === 10 && <Proyeccion data={data} save={save} />}
         </div>
       </div>
 
       {/* ── MOBILE BOTTOM TAB BAR ── */}
-      <div className="mobile-bottombar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(240,244,241,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px 24px", justifyContent: "space-around", zIndex: 40 }}>
+      <div className="mobile-bottombar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px 24px", justifyContent: "space-around", zIndex: 40, overflowX: "auto" }}>
         {TABS.map((t, i) => (
-          <button key={t} onClick={() => setTab(i)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 8px", minWidth: 48 }}>
-            <div style={{ fontSize: 22, filter: tab === i ? "none" : "grayscale(1) opacity(0.35)", transform: tab === i ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{TAB_ICONS[i]}</div>
-            <div style={{ fontSize: 9, color: tab === i ? COLORS.accent : COLORS.textDim, fontWeight: tab === i ? 700 : 400, transition: "all .2s", whiteSpace: "nowrap" }}>{t}</div>
+          <button key={t} onClick={() => setTab(i)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "4px 6px", minWidth: 44, flexShrink: 0 }}>
+            <div style={{ fontSize: 20, filter: tab === i ? "none" : "grayscale(1) opacity(0.35)", transform: tab === i ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{TAB_ICONS[i]}</div>
+            <div style={{ fontSize: 8, color: tab === i ? COLORS.accent : COLORS.textDim, fontWeight: tab === i ? 700 : 400, transition: "all .2s", whiteSpace: "nowrap" }}>{t}</div>
           </button>
         ))}
       </div>
+
+      {/* ── MODAL: Conectar WhatsApp ── */}
+      {waModal && (
+        <div onClick={() => setWaModal(false)} style={{ position: "fixed", inset: 0, background: "#00000070", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, padding: 28, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px #00000030" }}>
+            <div style={{ fontSize: 32, textAlign: "center", marginBottom: 10 }}>💬</div>
+            <div style={{ fontWeight: 700, fontSize: 18, textAlign: "center", marginBottom: 6 }}>Conectar WhatsApp</div>
+            {waPhone ? (
+              <>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 20 }}>
+                  Tu número <strong style={{ color: COLORS.text }}>{waPhone}</strong> ya está vinculado al bot de Orbe.
+                </div>
+                <Button onClick={() => setWaModal(false)} style={{ width: "100%" }}>Listo</Button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 20 }}>
+                  Generá un código, se va a abrir WhatsApp con un mensaje listo para enviar al bot. Apenas lo mandes desde tu teléfono, quedan vinculados.
+                </div>
+                {waCode && (
+                  <div style={{ background: COLORS.accentDim, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.accent, textAlign: "center", marginBottom: 14, fontWeight: 600 }}>
+                    Código: ORBE:{waCode} — se abrió WhatsApp en otra pestaña.
+                  </div>
+                )}
+                {waError && <div style={{ background: COLORS.redDim, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red, marginBottom: 14 }}>{waError}</div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {!waCode ? (
+                    <Button onClick={generateWaCode} disabled={waLoading} style={{ width: "100%" }}>{waLoading ? "Generando..." : "Generar código y abrir WhatsApp"}</Button>
+                  ) : (
+                    <>
+                      <Button onClick={refreshWaLinked} disabled={waLoading} style={{ width: "100%" }}>{waLoading ? "Verificando..." : "Ya lo envié, verificar"}</Button>
+                      <Button onClick={generateWaCode} variant="ghost" disabled={waLoading} style={{ width: "100%" }}>Generar otro código</Button>
+                    </>
+                  )}
+                  <Button onClick={() => setWaModal(false)} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -613,7 +821,7 @@ function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, 
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* Hero balance card */}
-      <div style={{ background: "linear-gradient(135deg, #2e7d5a 0%, #1d5e40 100%)", borderRadius: 28, padding: "30px 32px 26px", boxShadow: "0 12px 48px #2e7d5a28", marginBottom: 4, position: "relative", overflow: "hidden" }}>
+      <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "30px 32px 26px", boxShadow: `0 12px 48px ${COLORS.accent}28`, marginBottom: 4, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 12 }}>Balance del mes</div>
@@ -645,7 +853,7 @@ function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, 
           ) : topCats.map(([cat, amt]) => (
             <div key={cat} style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
-                <span>{CATEGORY_ICONS[cat] || "📦"} {cat}</span>
+                <span>{catIcon(data, cat)} {cat}</span>
                 <span style={{ color: COLORS.text, fontWeight: 600 }}>{formatFull(amt)}</span>
               </div>
               <ProgressBar value={amt} max={totalExpense || 1} color={COLORS.accent} />
@@ -665,7 +873,7 @@ function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, 
                 <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
               </div>
               <span style={{ fontWeight: 700, color: COLORS.text, fontSize: 14 }}>
-                {t.type === "ingreso" ? "+" : "-"}{formatFull(t.amount)}
+                {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
               </span>
             </div>
           ))}
@@ -678,15 +886,16 @@ function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, 
           <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>🎯 Metas de ahorro</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
             {data.savings.map(g => {
-              const pct = g.goal > 0 ? Math.min(100, (g.current / g.goal) * 100) : 0;
+              const pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
+              const fmt = g.currency === "usd" ? formatUSD : formatFull;
               return (
                 <div key={g.id} style={{ background: COLORS.bg, borderRadius: 12, padding: 16, border: `1px solid ${COLORS.border}` }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{g.name}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 6 }}>
-                    <span>{formatFull(g.current)}</span>
-                    <span>{formatFull(g.goal)}</span>
+                    <span>{fmt(g.current)}</span>
+                    <span>{fmt(g.target)}</span>
                   </div>
-                  <ProgressBar value={g.current} max={g.goal} color={COLORS.accent} />
+                  <ProgressBar value={g.current} max={g.target} color={COLORS.accent} />
                   <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 6, fontWeight: 600 }}>{pct.toFixed(0)}% completado</div>
                 </div>
               );
@@ -700,14 +909,15 @@ function Resumen({ balance, totalIncome, totalExpense, totalDebt, totalSavings, 
 
 // ---- TRANSACCIONES ----
 function Transacciones({ data, save, monthTxs }) {
-  const [form, setForm] = useState({ type: "gasto", amount: "", category: "Alimentación", description: "", date: new Date().toISOString().split("T")[0] });
+  const catNames = Object.keys(data.categories);
+  const [form, setForm] = useState({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
   const [showForm, setShowForm] = useState(false);
 
   const add = () => {
     if (!form.amount || isNaN(form.amount)) return;
     const tx = { ...form, amount: parseFloat(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
-    setForm({ type: "gasto", amount: "", category: "Alimentación", description: "", date: new Date().toISOString().split("T")[0] });
+    setForm({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
     setShowForm(false);
   };
 
@@ -723,9 +933,9 @@ function Transacciones({ data, save, monthTxs }) {
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso"]} />
+            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso", "sueldo"]} />
             <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="number" prefix="$" placeholder="0" />
-            <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={Object.keys(CATEGORY_ICONS)} />
+            <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Supermercado" />
@@ -737,22 +947,22 @@ function Transacciones({ data, save, monthTxs }) {
 
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15 }}>
-          Transacciones — {["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][data.selectedMonth]} {data.selectedYear}
+          Transacciones — {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}
         </div>
         {monthTxs.length === 0 ? (
           <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones este mes. ¡Agregá la primera!</div>
         ) : (
           [...monthTxs].reverse().map(t => (
             <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: t.type === "ingreso" ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                {CATEGORY_ICONS[t.category] || "📦"}
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                {catIcon(data, t.category)}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description || t.category}</div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date} · {t.category}{t.type === "ahorro_meta" ? " · aporte a ahorro" : t.type === "sueldo" ? " · sueldo" : ""}</div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: t.type === "ingreso" ? COLORS.green : COLORS.red }}>
-                {t.type === "ingreso" ? "+" : "-"}{formatFull(t.amount)}
+              <div style={{ fontWeight: 700, fontSize: 16, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>
+                {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
               </div>
               <button onClick={() => del(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
             </div>
@@ -763,13 +973,59 @@ function Transacciones({ data, save, monthTxs }) {
   );
 }
 
-// ---- PRESUPUESTO ----
+// ---- PRESUPUESTO (incluye gestión de categorías) ----
 function Presupuesto({ data, save, expByCat }) {
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [newCat, setNewCat] = useState({ icon: "📦", name: "" });
+  const [editingCat, setEditingCat] = useState(null);
+  const [editCat, setEditCat] = useState({ icon: "", name: "" });
+
   const updateLimit = (cat, val) => {
     const budgets = data.budgets.map(b => b.cat === cat ? { ...b, limit: parseFloat(val) || 0 } : b);
     save({ ...data, budgets });
   };
 
+  const addCategory = () => {
+    const name = newCat.name.trim();
+    if (!name || data.categories[name]) return;
+    const categories = { ...data.categories, [name]: newCat.icon };
+    const budgets = [...data.budgets, { cat: name, limit: 0 }];
+    save({ ...data, categories, budgets });
+    setNewCat({ icon: "📦", name: "" });
+    setShowCatForm(false);
+  };
+
+  const startEditCat = (name) => { setEditingCat(name); setEditCat({ icon: catIcon(data, name), name }); };
+
+  const saveEditCat = () => {
+    const oldName = editingCat;
+    const newName = editCat.name.trim();
+    if (!newName) return;
+    const categories = { ...data.categories };
+    delete categories[oldName];
+    categories[newName] = editCat.icon;
+    const budgets = data.budgets.map(b => b.cat === oldName ? { ...b, cat: newName } : b);
+    const transactions = data.transactions.map(t => t.category === oldName ? { ...t, category: newName } : t);
+    save({ ...data, categories, budgets, transactions });
+    setEditingCat(null);
+  };
+
+  const deleteCategory = (name) => {
+    const txCount = data.transactions.filter(t => t.category === name).length;
+    const msg = txCount > 0
+      ? `Eliminar "${name}" dejará ${txCount} transacción(es) sin categoría existente. ¿Continuar?`
+      : `¿Eliminar la categoría "${name}"?`;
+    if (!window.confirm(msg)) return;
+    const categories = { ...data.categories };
+    delete categories[name];
+    const budgets = data.budgets.filter(b => b.cat !== name);
+    save({ ...data, categories, budgets });
+  };
+
+  const allCatNames = Array.from(new Set([
+    ...Object.keys(data.categories),
+    ...data.budgets.filter(b => b.limit > 0).map(b => b.cat),
+  ]));
   const totalBudget = data.budgets.reduce((s, b) => s + b.limit, 0);
   const totalSpent = Object.values(expByCat).reduce((s, v) => s + v, 0);
 
@@ -787,32 +1043,65 @@ function Presupuesto({ data, save, expByCat }) {
       </div>
 
       <Card>
-        <div style={{ fontWeight: 700, marginBottom: 20, fontSize: 15 }}>Límites por categoría</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>Categorías y límites</div>
+          <Button size="sm" onClick={() => setShowCatForm(!showCatForm)}>{showCatForm ? "✕ Cancelar" : "+ Nueva categoría"}</Button>
+        </div>
+
+        {showCatForm && (
+          <div style={{ background: COLORS.bg, borderRadius: 14, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+            <IconPicker value={newCat.icon} onChange={ic => setNewCat({ ...newCat, icon: ic })} />
+            <div style={{ display: "flex", gap: 10 }}>
+              <input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} placeholder="Nombre de la categoría" style={{ flex: 1, background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 14 }} />
+              <Button size="sm" onClick={addCategory}>Agregar</Button>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {data.budgets.map(b => {
-            const spent = expByCat[b.cat] || 0;
+          {allCatNames.map(catName => {
+            const b = data.budgets.find(x => x.cat === catName) || { cat: catName, limit: 0 };
+            const spent = expByCat[catName] || 0;
             const pct = b.limit > 0 ? Math.min(100, (spent / b.limit) * 100) : 0;
+            const isEditing = editingCat === catName;
             return (
-              <div key={b.cat}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                  <span style={{ fontSize: 20 }}>{CATEGORY_ICONS[b.cat]}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{b.cat}</span>
-                      <span style={{ fontSize: 13, color: COLORS.textMuted }}>
-                        {formatFull(spent)} / {b.limit > 0 ? formatFull(b.limit) : "sin límite"}
-                      </span>
+              <div key={catName}>
+                {isEditing ? (
+                  <div style={{ background: COLORS.bg, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                    <IconPicker value={editCat.icon} onChange={ic => setEditCat({ ...editCat, icon: ic })} />
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input value={editCat.name} onChange={e => setEditCat({ ...editCat, name: e.target.value })} style={{ flex: 1, background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+                      <Button onClick={saveEditCat} size="sm">Guardar</Button>
+                      <Button onClick={() => setEditingCat(null)} variant="ghost" size="sm">Cancelar</Button>
                     </div>
-                    <ProgressBar value={spent} max={b.limit || 1} />
                   </div>
-                  <input
-                    type="number"
-                    value={b.limit || ""}
-                    onChange={e => updateLimit(b.cat, e.target.value)}
-                    placeholder="Límite"
-                    style={{ width: 90, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 8px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, textAlign: "right" }}
-                  />
-                </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 20 }}>{catIcon(data, catName)}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{catName}</span>
+                        {b.limit > 0 ? (
+                          <span style={{ fontSize: 13, color: COLORS.textMuted }}>{formatFull(spent)} / {formatFull(b.limit)}</span>
+                        ) : spent > 0 ? (
+                          <span style={{ fontSize: 13, color: COLORS.textMuted }}>Gastado: {formatFull(spent)}</span>
+                        ) : (
+                          <span style={{ fontSize: 13, color: COLORS.textDim }}>Sin gastos este mes</span>
+                        )}
+                      </div>
+                      {b.limit > 0 && <ProgressBar value={spent} max={b.limit} />}
+                    </div>
+                    <input
+                      type="number"
+                      value={b.limit || ""}
+                      onChange={e => updateLimit(catName, e.target.value)}
+                      placeholder="Límite"
+                      style={{ width: 90, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 8px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, textAlign: "right" }}
+                    />
+                    <button onClick={() => startEditCat(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14 }}>✏️</button>
+                    <button onClick={() => deleteCategory(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 14 }}>✕</button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -823,25 +1112,41 @@ function Presupuesto({ data, save, expByCat }) {
 }
 
 // ---- AHORROS ----
-function Ahorros({ data, save }) {
-  const [form, setForm] = useState({ name: "", goal: "", current: "" });
+function Ahorros({ data, save, dolarRate }) {
+  const [form, setForm] = useState({ name: "", target: "", current: "", currency: "ars" });
   const [addAmt, setAddAmt] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: "", goal: "" });
+  const [editForm, setEditForm] = useState({ name: "", target: "" });
+  const [fromSalary, setFromSalary] = useState(true);
 
   const add = () => {
-    if (!form.name || !form.goal) return;
-    const g = { name: form.name, goal: parseFloat(form.goal), current: parseFloat(form.current) || 0, id: Date.now() };
-    save({ ...data, savings: [...data.savings, g] });
-    setForm({ name: "", goal: "", current: "" });
+    if (!form.name || !form.target) return;
+    const current = parseFloat(form.current) || 0;
+    const g = {
+      id: Date.now(), name: form.name, target: parseFloat(form.target), current,
+      currency: form.currency, arsRate: form.currency === "usd" ? dolarRate : null,
+      history: current > 0 ? [{ date: todayStr(), amount: current }] : [],
+    };
+    let transactions = data.transactions;
+    if (current > 0 && fromSalary) {
+      const amountARS = form.currency === "usd" ? Math.round(current * (dolarRate || 0)) : current;
+      transactions = [...transactions, {
+        id: Date.now() + 1, type: "ahorro_meta", description: `Ahorro: ${g.name}`,
+        amount: amountARS, category: findCatCI(data, "Otros") || "Otros", date: todayStr(), savingsId: g.id,
+        ...(form.currency === "usd" ? { currency: "usd", amountUSD: current } : {}),
+      }];
+    }
+    save({ ...data, savings: [...data.savings, g], transactions });
+    setForm({ name: "", target: "", current: "", currency: "ars" });
+    setFromSalary(true);
     setShowForm(false);
   };
 
-  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, goal: g.goal }); };
+  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, target: g.target }); };
   const saveEdit = () => {
-    if (!editForm.name || !editForm.goal) return;
-    const savings = data.savings.map(g => g.id === editId ? { ...g, name: editForm.name, goal: parseFloat(editForm.goal) } : g);
+    if (!editForm.name || !editForm.target) return;
+    const savings = data.savings.map(g => g.id === editId ? { ...g, name: editForm.name, target: parseFloat(editForm.target) } : g);
     save({ ...data, savings });
     setEditId(null);
   };
@@ -849,12 +1154,12 @@ function Ahorros({ data, save }) {
   const addToSaving = (id) => {
     const amt = parseFloat(addAmt[id] || 0);
     if (!amt) return;
-    const savings = data.savings.map(g => g.id === id ? { ...g, current: g.current + amt } : g);
+    const savings = data.savings.map(g => g.id === id ? { ...g, current: (g.current || 0) + amt, history: [...(g.history || []), { date: todayStr(), amount: amt }] } : g);
     save({ ...data, savings });
     setAddAmt({ ...addAmt, [id]: "" });
   };
 
-  const del = (id) => save({ ...data, savings: data.savings.filter(g => g.id !== id) });
+  const del = (id) => { if (window.confirm("¿Eliminar esta meta de ahorro?")) save({ ...data, savings: data.savings.filter(g => g.id !== id) }); };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -864,11 +1169,18 @@ function Ahorros({ data, save }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva meta de ahorro</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
-            <Input label="Meta total" value={form.goal} onChange={v => setForm({ ...form, goal: v })} type="number" prefix="$" placeholder="100000" />
-            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="number" prefix="$" placeholder="0" />
+            <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
+            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
+            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
+          {parseFloat(form.current) > 0 && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
+              <input type="checkbox" checked={fromSalary} onChange={e => setFromSalary(e.target.checked)} />
+              Ese monto ya lo desconté de mi sueldo (afecta el balance del mes)
+            </label>
+          )}
           <Button onClick={add}>Crear meta</Button>
         </Card>
       )}
@@ -881,8 +1193,10 @@ function Ahorros({ data, save }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
           {data.savings.map(g => {
-            const pct = g.goal > 0 ? Math.min(100, (g.current / g.goal) * 100) : 0;
-            const remaining = Math.max(0, g.goal - g.current);
+            const pct = g.target > 0 ? Math.min(100, (g.current / g.target) * 100) : 0;
+            const remaining = Math.max(0, g.target - g.current);
+            const fmt = g.currency === "usd" ? formatUSD : formatFull;
+            const arsEquiv = g.currency === "usd" && dolarRate ? Math.round(g.current * dolarRate) : null;
             return (
               <Card key={g.id}>
                 {editId === g.id ? (
@@ -890,7 +1204,7 @@ function Ahorros({ data, save }) {
                     <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>✏️ Editar meta</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Nombre" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-                      <input type="number" value={editForm.goal} onChange={e => setEditForm({...editForm, goal: e.target.value})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+                      <input type="number" value={editForm.target} onChange={e => setEditForm({...editForm, target: e.target.value})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                       <div style={{ display: "flex", gap: 8 }}>
                         <Button onClick={saveEdit} size="sm">Guardar</Button>
                         <Button onClick={() => setEditId(null)} variant="ghost" size="sm">Cancelar</Button>
@@ -899,7 +1213,10 @@ function Ahorros({ data, save }) {
                   </div>
                 ) : (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{g.name}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{g.name}</div>
+                    {g.currency === "usd" && <Pill color={COLORS.green}>USD{arsEquiv ? ` · ≈ ${formatFull(arsEquiv)}` : ""}</Pill>}
+                  </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => startEdit(g)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14 }}>✏️</button>
                     <button onClick={() => del(g.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim }}>✕</button>
@@ -908,20 +1225,25 @@ function Ahorros({ data, save }) {
                 )}
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>
-                    <span>Ahorrado: <strong>{formatFull(g.current)}</strong></span>
-                    <span>Meta: <strong style={{ color: COLORS.text }}>{formatFull(g.goal)}</strong></span>
+                    <span>Ahorrado: <strong>{fmt(g.current)}</strong></span>
+                    <span>Meta: <strong style={{ color: COLORS.text }}>{fmt(g.target)}</strong></span>
                   </div>
-                  <ProgressBar value={g.current} max={g.goal} color={COLORS.accent} height={10} />
+                  <ProgressBar value={g.current} max={g.target} color={COLORS.accent} height={10} />
                   <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 8 }}>
-                    {pct.toFixed(1)}% · Falta {formatFull(remaining)}
+                    {pct.toFixed(1)}% · Falta {fmt(remaining)}
                   </div>
                 </div>
+                {g.history && g.history.length > 0 && (
+                  <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>
+                    Últimos depósitos: {g.history.slice(-3).reverse().map(h => `${h.date} (${fmt(h.amount)})`).join(" · ")}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                   <input
                     type="number"
                     value={addAmt[g.id] || ""}
                     onChange={e => setAddAmt({ ...addAmt, [g.id]: e.target.value })}
-                    placeholder="Agregar monto..."
+                    placeholder={g.currency === "usd" ? "Agregar US$..." : "Agregar monto..."}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
                   <Button onClick={() => addToSaving(g.id)} size="sm">+ Agregar</Button>
@@ -936,8 +1258,8 @@ function Ahorros({ data, save }) {
 }
 
 // ---- DEUDAS ----
-function Deudas({ data, save }) {
-  const [form, setForm] = useState({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "" });
+function Deudas({ data, save, dolarRate }) {
+  const [form, setForm] = useState({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
   const [showForm, setShowForm] = useState(false);
   const [payAmt, setPayAmt] = useState({});
 
@@ -945,39 +1267,58 @@ function Deudas({ data, save }) {
     if (!form.name || !form.remaining) return;
     const installment = parseFloat(form.installment) || 0;
     const remainingInstallments = parseInt(form.remainingInstallments) || (installment > 0 ? Math.ceil(parseFloat(form.remaining) / installment) : 0);
+    const isUsd = form.currency === "usd";
     const d = {
+      id: Date.now(),
       name: form.name,
-      total: parseFloat(form.total) || parseFloat(form.remaining),
-      remaining: parseFloat(form.remaining),
+      currency: form.currency,
+      total: isUsd ? Math.round(parseFloat(form.total || form.remaining) * (dolarRate || 0)) : (parseFloat(form.total) || parseFloat(form.remaining)),
+      remaining: isUsd ? Math.round(parseFloat(form.remaining) * (dolarRate || 0)) : parseFloat(form.remaining),
+      ...(isUsd ? { amountUSD: parseFloat(form.total || form.remaining), remainingUSD: parseFloat(form.remaining), arsRate: dolarRate } : {}),
       installment,
       remainingInstallments,
       dueDay: parseInt(form.dueDay) || 1,
       interest: parseFloat(form.interest) || 0,
       startMonth: new Date().getMonth(),
       startYear: new Date().getFullYear(),
-      id: Date.now(),
     };
     save({ ...data, debts: [...data.debts, d] });
-    setForm({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "" });
+    setForm({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
     setShowForm(false);
   };
 
   const pay = (id) => {
     const amt = parseFloat(payAmt[id] || 0);
     if (!amt) return;
-    const debts = data.debts.map(d => d.id === id ? { ...d, remaining: Math.max(0, d.remaining - amt) } : d);
-    save({ ...data, debts });
+    const debt = data.debts.find(d => d.id === id);
+    if (debt.currency === "usd" && !dolarRate && !debt.arsRate) { alert("Sin cotización del dólar disponible, intentá más tarde."); return; }
+    const rate = dolarRate || debt.arsRate || 0;
+    const amountARS = debt.currency === "usd" ? Math.round(amt * rate) : amt;
+    const debts = data.debts.map(d => {
+      if (d.id !== id) return d;
+      const upd = { ...d, remainingInstallments: Math.max(0, (d.remainingInstallments || 0) - 1) };
+      if (d.currency === "usd") { upd.remainingUSD = Math.max(0, (d.remainingUSD || 0) - amt); upd.remaining = Math.round(upd.remainingUSD * rate); }
+      else { upd.remaining = Math.max(0, d.remaining - amt); }
+      return upd;
+    });
+    const cat = findCatCI(data, "Préstamo tarjeta") || findCatCI(data, "Otros") || Object.keys(data.categories)[0];
+    const transactions = [...data.transactions, {
+      id: Date.now(), type: "gasto", description: `Pago ${debt.name}`, amount: amountARS,
+      category: cat, date: todayStr(),
+      ...(debt.currency === "usd" ? { currency: "usd", amountUSD: amt } : {}),
+    }];
+    save({ ...data, debts, transactions });
     setPayAmt({ ...payAmt, [id]: "" });
   };
 
-  const del = (id) => save({ ...data, debts: data.debts.filter(d => d.id !== id) });
+  const del = (id) => { if (window.confirm("¿Eliminar esta deuda?")) save({ ...data, debts: data.debts.filter(d => d.id !== id) }); };
 
-  const totalDebt = data.debts.reduce((s, d) => s + d.remaining, 0);
-  const monthlyPayments = data.debts.reduce((s, d) => s + d.installment, 0);
+  const totalDebt = data.debts.reduce((s, d) => s + (d.currency === "usd" ? Math.round((d.remainingUSD || 0) * (dolarRate || d.arsRate || 0)) : d.remaining), 0);
+  const monthlyPayments = data.debts.reduce((s, d) => s + (d.installment || 0), 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", gap: 12 }}>
           <Card style={{ padding: "12px 20px" }}>
             <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Deuda total</div>
@@ -996,10 +1337,11 @@ function Deudas({ data, save }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva deuda</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
-            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="number" prefix="$" placeholder="0" />
-            <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="number" prefix="$" placeholder="0" />
+            <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
+            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Input label="Cuota mensual" value={form.installment} onChange={v => setForm({ ...form, installment: v })} type="number" prefix="$" placeholder="0" />
@@ -1024,19 +1366,21 @@ function Deudas({ data, save }) {
               <Card key={d.id}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>💳 {d.name}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>💳 {d.name} {d.currency === "usd" && <Pill color={COLORS.green}>USD</Pill>}</div>
                     <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>
                       {d.dueDay ? `Vence día ${d.dueDay}` : ""}
                       {d.interest > 0 ? ` · ${d.interest}% mensual` : ""}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(d.remaining)}</div>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>de {formatFull(d.total)}</div>
+                    <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>
+                      {d.currency === "usd" ? formatUSD(d.remainingUSD) : formatFull(d.remaining)}
+                    </div>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>de {d.currency === "usd" ? formatUSD(d.amountUSD) : formatFull(d.total)}</div>
                   </div>
                 </div>
                 <ProgressBar value={d.total - d.remaining} max={d.total || 1} color={COLORS.accent} height={8} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginTop: 6, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginTop: 6, marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
                   <span style={{ color: COLORS.textMuted }}>{pct.toFixed(0)}% pagado</span>
                   <div style={{ display: "flex", gap: 12 }}>
                     {d.installment > 0 && <span>Cuota: <strong style={{ color: COLORS.text }}>{formatFull(d.installment)}</strong>/mes</span>}
@@ -1048,7 +1392,7 @@ function Deudas({ data, save }) {
                     type="number"
                     value={payAmt[d.id] || ""}
                     onChange={e => setPayAmt({ ...payAmt, [d.id]: e.target.value })}
-                    placeholder="Monto a pagar..."
+                    placeholder={d.currency === "usd" ? "Monto a pagar (US$)..." : "Monto a pagar..."}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
                   <Button onClick={() => pay(d.id)} size="sm">💸 Pagar</Button>
@@ -1063,30 +1407,416 @@ function Deudas({ data, save }) {
   );
 }
 
+// ---- PRÉSTAMOS (dinero prestado a terceros) ----
+// Igual que en la app: crear préstamos y registrar cobros es una función del
+// bot de WhatsApp (necesita conversación para tomar todos los datos). Acá se
+// puede ver el estado y eliminar registros.
+function Prestamos({ data, save, dolarRate }) {
+  const loans = data.loans || [];
+  const credits = data.credits || {};
+
+  const totalPrestado = loans.reduce((s, l) => s + (l.currency === "usd" ? (l.amountUSD || 0) * (dolarRate || l.arsRate || 0) : (l.amount || 0)), 0);
+  const totalPendiente = loans.reduce((s, l) => s + (l.currency === "usd" ? (l.remainingUSD || 0) * (dolarRate || l.arsRate || 0) : (l.remaining || 0)), 0);
+
+  const del = (id) => { if (window.confirm("¿Eliminar este préstamo?")) save({ ...data, loans: loans.filter(l => l.id !== id) }); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <InfoBanner>💬 Para registrar nuevos préstamos o cobros, usá el bot de WhatsApp.</InfoBanner>
+
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <Card style={{ padding: "12px 20px" }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total prestado</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPrestado)}</div>
+        </Card>
+        <Card style={{ padding: "12px 20px" }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total pendiente</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPendiente)}</div>
+        </Card>
+      </div>
+
+      {loans.length === 0 ? (
+        <Card style={{ textAlign: "center", padding: 48 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🤝</div>
+          <div style={{ color: COLORS.textMuted }}>No tenés préstamos registrados.</div>
+        </Card>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {loans.map(l => {
+            const amount = l.currency === "usd" ? l.amountUSD : l.amount;
+            const remaining = l.currency === "usd" ? l.remainingUSD : l.remaining;
+            const fmt = l.currency === "usd" ? formatUSD : formatFull;
+            const pct = amount > 0 ? Math.min(100, ((amount - remaining) / amount) * 100) : 0;
+            return (
+              <Card key={l.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>
+                      🤝 {l.name} {l.loanType === "fiado" && <Pill color={COLORS.gold}>Fiado</Pill>} {l.currency === "usd" && <Pill color={COLORS.green}>USD</Pill>}
+                    </div>
+                    {l.reason && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{l.reason}</div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 20, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{fmt(remaining)}</div>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>de {fmt(amount)}</div>
+                  </div>
+                </div>
+                <ProgressBar value={amount - remaining} max={amount || 1} color={COLORS.accent} height={8} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                  <span style={{ fontSize: 12, color: COLORS.textMuted }}>{pct.toFixed(0)}% cobrado</span>
+                  <Button onClick={() => del(l.id)} variant="danger" size="sm">Eliminar</Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {Object.keys(credits).length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>💰 Saldo a favor</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {Object.values(credits).map(c => (
+              <div key={c.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                <span style={{ color: COLORS.textMuted }}>{c.name}</span>
+                <span style={{ fontWeight: 600 }}>{formatFull(c.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---- GASTOS FIJOS ----
+// Solo lectura, igual que en la app: se gestionan desde el bot de WhatsApp.
+function GastosFijos({ data }) {
+  const items = (data.recurringExpenses || []).filter(g => g.active !== false);
+  const total = items.reduce((s, g) => s + (g.amount || 0), 0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <InfoBanner>💬 Pedile al bot de WhatsApp que agregue tus gastos fijos.</InfoBanner>
+      <Card>
+        <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>Total mensual</div>
+        <div style={{ fontSize: 28, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
+      </Card>
+      {items.length === 0 ? (
+        <Card style={{ textAlign: "center", padding: 48 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📌</div>
+          <div style={{ color: COLORS.textMuted }}>No tenés gastos fijos registrados.</div>
+        </Card>
+      ) : (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          {items.map(g => (
+            <div key={g.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{catIcon(data, g.category)}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 14 }}>{g.description}</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted }}>{g.category}{g.day ? ` · día ${g.day}` : ""}</div>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{formatFull(g.amount)}</div>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---- SUSCRIPCIONES ----
+// Solo lectura, igual que en la app: se gestionan desde el bot de WhatsApp.
+function Suscripciones({ data }) {
+  const items = (data.suscripciones || []).filter(s => s.active !== false);
+  const total = items.reduce((s, x) => s + (x.amount || 0), 0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <InfoBanner>💬 Pedile al bot de WhatsApp que agregue tus suscripciones.</InfoBanner>
+      <Card>
+        <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>Total mensual</div>
+        <div style={{ fontSize: 28, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
+      </Card>
+      {items.length === 0 ? (
+        <Card style={{ textAlign: "center", padding: 48 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📺</div>
+          <div style={{ color: COLORS.textMuted }}>No tenés suscripciones registradas.</div>
+        </Card>
+      ) : (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          {items.map(s => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>📺</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 14 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted }}>{s.category}{s.day ? ` · día ${s.day}` : ""}</div>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{formatFull(s.amount)}</div>
+            </div>
+          ))}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---- TURNOS ----
+const TIPOS_TURNO = ["médico", "peluquería", "banco", "trámite", "reunión", "otro"];
+const TIPO_ICONS = { "médico": "🩺", "peluquería": "💇", "banco": "🏦", "trámite": "📋", "reunión": "🧑‍💼", "otro": "📌" };
+
+function Turnos({ data, save }) {
+  const [form, setForm] = useState({ description: "", date: todayStr(), time: "", location: "", turnoType: "otro", addToCal: false });
+  const [showForm, setShowForm] = useState(false);
+
+  const turnos = data.turnos || [];
+  const today = todayStr();
+  const proximos = turnos.filter(t => t.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  const historial = turnos.filter(t => t.date < today).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
+  const add = () => {
+    if (!form.description || !form.date) return;
+    const t = { id: Date.now(), description: form.description, date: form.date, time: form.time, location: form.location, turnoType: form.turnoType, notified: false };
+    let events = data.events;
+    if (form.addToCal) {
+      const day = parseInt(form.date.split("-")[2], 10);
+      events = [...events, { id: Date.now() + 1, title: form.description, day, type: "recordatorio", notifyDaysBefore: 1 }];
+    }
+    save({ ...data, turnos: [...turnos, t], events });
+    setForm({ description: "", date: todayStr(), time: "", location: "", turnoType: "otro", addToCal: false });
+    setShowForm(false);
+  };
+
+  const del = (id) => save({ ...data, turnos: turnos.filter(t => t.id !== id) });
+
+  const Row = ({ t }) => (
+    <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: COLORS.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{TIPO_ICONS[t.turnoType] || "📌"}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description}</div>
+        <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}{t.location ? ` · ${t.location}` : ""}</div>
+      </div>
+      <button onClick={() => del(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nuevo turno"}</Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nuevo turno</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Dentista" />
+            <Input label="Tipo" value={form.turnoType} onChange={v => setForm({ ...form, turnoType: v })} options={TIPOS_TURNO} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+            <Input label="Hora" value={form.time} onChange={v => setForm({ ...form, time: v })} type="time" />
+            <Input label="Lugar" value={form.location} onChange={v => setForm({ ...form, location: v })} placeholder="opcional" />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
+            <input type="checkbox" checked={form.addToCal} onChange={e => setForm({ ...form, addToCal: e.target.checked })} />
+            Agregar recordatorio al calendario
+          </label>
+          <Button onClick={add}>Guardar turno</Button>
+        </Card>
+      )}
+
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15 }}>Próximos</div>
+        {proximos.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin turnos próximos.</div>
+        ) : proximos.map(t => <Row key={t.id} t={t} />)}
+      </Card>
+
+      {historial.length > 0 && (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15 }}>Historial</div>
+          {historial.map(t => <Row key={t.id} t={t} />)}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ---- CALENDARIO ----
+const EVENT_TYPES = {
+  vencimiento: { label: "Vencimiento 📋", color: "#e53935" },
+  pago: { label: "Pago 💳", color: "#4aba82" },
+  recordatorio: { label: "Recordatorio 🔔", color: "#005247" },
+};
+
+function Calendario({ data, save }) {
+  const [form, setForm] = useState({ title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" });
+  const [showForm, setShowForm] = useState(false);
+  const [payingId, setPayingId] = useState(null);
+  const [payAmt, setPayAmt] = useState("");
+
+  const events = data.events || [];
+  const daysInMonth = new Date(data.selectedYear, data.selectedMonth + 1, 0).getDate();
+  const todayDate = new Date();
+  const isCurrentMonth = todayDate.getMonth() === data.selectedMonth && todayDate.getFullYear() === data.selectedYear;
+  const todayDay = todayDate.getDate();
+
+  const add = () => {
+    if (!form.title || !form.day) return;
+    const day = Math.min(daysInMonth, Math.max(1, parseInt(form.day) || 1));
+    const ev = { id: Date.now(), title: form.title, day, type: form.type, notifyDaysBefore: parseInt(form.notifyDaysBefore) || 3 };
+    save({ ...data, events: [...events, ev] });
+    setForm({ title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" });
+    setShowForm(false);
+  };
+
+  const del = (id) => save({ ...data, events: events.filter(e => e.id !== id) });
+
+  const confirmPago = (ev) => {
+    const amt = parseFloat(payAmt || 0);
+    if (!amt) return;
+    const preferred = ev.type === "pago" ? "Servicios" : "Otros";
+    const cat = findCatCI(data, preferred) || Object.keys(data.categories)[0];
+    const transactions = [...data.transactions, { id: Date.now(), type: "gasto", description: ev.title, amount: amt, category: cat, date: todayStr() }];
+    save({ ...data, transactions, events: events.filter(e => e.id !== ev.id) });
+    setPayingId(null);
+    setPayAmt("");
+  };
+
+  const grouped = Object.keys(EVENT_TYPES).map(type => ({ type, items: events.filter(e => e.type === type).sort((a, b) => a.day - b.day) }));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nuevo evento"}</Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nuevo evento — {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="ej. Alquiler" style={{ gridColumn: "span 2" }} />
+            <Input label="Día del mes" value={form.day} onChange={v => setForm({ ...form, day: v })} type="number" placeholder={`1-${daysInMonth}`} />
+            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={Object.keys(EVENT_TYPES)} />
+          </div>
+          <Button onClick={add}>Guardar evento</Button>
+        </Card>
+      )}
+
+      {/* Grilla del mes */}
+      <Card>
+        <div style={{ fontWeight: 700, marginBottom: 14, fontSize: 15 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+            const dayEvents = events.filter(e => e.day === day);
+            const isToday = isCurrentMonth && day === todayDay;
+            return (
+              <div key={day} style={{
+                aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                background: isToday ? COLORS.accent : dayEvents.length > 0 ? (EVENT_TYPES[dayEvents[0].type].color + "22") : COLORS.bg,
+                border: isToday ? "none" : `1px solid ${COLORS.border}`, fontSize: 12, gap: 2,
+              }}>
+                <span style={{ color: isToday ? "#fff" : COLORS.text, fontWeight: isToday ? 700 : 400 }}>{day}</span>
+                {dayEvents.length > 0 && (
+                  <div style={{ display: "flex", gap: 2 }}>
+                    {dayEvents.slice(0, 3).map(e => <div key={e.id} style={{ width: 5, height: 5, borderRadius: "50%", background: isToday ? "#fff" : EVENT_TYPES[e.type].color }} />)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Próximos a vencer */}
+      {isCurrentMonth && (() => {
+        const proximos = events.filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 7);
+        return proximos.length > 0 ? (
+          <InfoBanner>
+            ⏰ {proximos.map(e => `${e.title} vence en ${e.day - todayDay === 0 ? "hoy" : `${e.day - todayDay} día(s)`}`).join(" · ")}
+          </InfoBanner>
+        ) : null;
+      })()}
+
+      {/* Listas agrupadas */}
+      {grouped.map(g => g.items.length > 0 && (
+        <Card key={g.type} style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, color: EVENT_TYPES[g.type].color }}>{EVENT_TYPES[g.type].label}</div>
+          {g.items.map(ev => (
+            <div key={ev.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{ev.title}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted }}>Día {ev.day}</div>
+                </div>
+                {(g.type === "vencimiento" || g.type === "pago") && (
+                  <Button size="sm" onClick={() => { setPayingId(ev.id); setPayAmt(""); }}>💸 Pagar</Button>
+                )}
+                <button onClick={() => del(ev.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
+              </div>
+              {payingId === ev.id && (
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <input type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} placeholder="Monto pagado..." autoFocus
+                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+                  <Button size="sm" onClick={() => confirmPago(ev)}>Confirmar</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setPayingId(null)}>Cancelar</Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 // ---- PROYECCIÓN 12 MESES ----
-function Proyeccion({ data }) {
+function Proyeccion({ data, save }) {
   const now = new Date();
   const startMonth = now.getMonth();
   const startYear = now.getFullYear();
   const [expandido, setExpandido] = useState(null);
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideForm, setOverrideForm] = useState({ month: startMonth, year: startYear, amount: "" });
 
-  // Promedio de ingresos de los últimos 3 meses
+  const recurringIncomes = data.recurringIncomes || [];
+  const salaryOverrides = data.salaryOverrides || [];
+
+  // Promedio de ingresos (ingreso + sueldo) de los últimos 3 meses
   const avgIncome = (() => {
     const totals = [];
     for (let i = 0; i < 3; i++) {
       let m = startMonth - i; let y = startYear;
       if (m < 0) { m += 12; y--; }
       const inc = data.transactions
-        .filter(t => t.type === "ingreso" && new Date(t.date).getMonth() === m && new Date(t.date).getFullYear() === y)
+        .filter(t => isIncomeType(t) && new Date(t.date).getMonth() === m && new Date(t.date).getFullYear() === y)
         .reduce((s, t) => s + t.amount, 0);
       if (inc > 0) totals.push(inc);
     }
     return totals.length > 0 ? totals.reduce((a, b) => a + b, 0) / totals.length : 0;
   })();
 
+  // Ingreso de un mes dado: usa el override vigente más reciente, si no el promedio.
+  const getIncome = (m, y) => {
+    const applicable = salaryOverrides
+      .filter(o => o.fromYear < y || (o.fromYear === y && o.fromMonth <= m))
+      .sort((a, b) => (b.fromYear - a.fromYear) || (b.fromMonth - a.fromMonth));
+    return applicable.length > 0 ? applicable[0].amount : avgIncome;
+  };
+
+  const addOverride = () => {
+    if (!overrideForm.amount) return;
+    const ov = { fromMonth: parseInt(overrideForm.month), fromYear: parseInt(overrideForm.year), amount: parseFloat(overrideForm.amount) };
+    save({ ...data, salaryOverrides: [...salaryOverrides, ov] });
+    setOverrideForm({ month: startMonth, year: startYear, amount: "" });
+    setShowOverrideForm(false);
+  };
+  const delOverride = (i) => save({ ...data, salaryOverrides: salaryOverrides.filter((_, idx) => idx !== i) });
+  const delRecurringIncome = (id) => save({ ...data, recurringIncomes: recurringIncomes.filter(r => r.id !== id) });
+
   // Categorías de presupuesto con límite > 0
   const budgetItems = data.budgets.filter(b => b.limit > 0);
   const budgetTotal = budgetItems.reduce((s, b) => s + b.limit, 0);
+  const gastosFijosTotal = (data.recurringExpenses || []).filter(g => g.active !== false).reduce((s, g) => s + (g.amount || 0), 0);
 
   // Colores para cuotas
   const DEBT_COLORS = ["#5aacbf","#3ecfaa","#f472b6","#fb923c","#3ecfaa","#fbbf24","#22d3ee"];
@@ -1096,13 +1826,14 @@ function Proyeccion({ data }) {
   const months = Array.from({ length: 12 }, (_, i) => {
     const m = (startMonth + i) % 12;
     const y = startYear + Math.floor((startMonth + i) / 12);
+    const income = getIncome(m, y);
     const cuotas = activeDebts
       .filter(d => i < d.remainingInstallments)
       .map(d => ({ name: d.name, amount: d.installment, color: DEBT_COLORS[activeDebts.indexOf(d) % DEBT_COLORS.length] }));
     const totalCuotas = cuotas.reduce((s, c) => s + c.amount, 0);
-    const totalGasto = budgetTotal + totalCuotas;
-    const balance = avgIncome - totalGasto;
-    return { m, y, label: MONTH_NAMES[m], year: y, cuotas, totalCuotas, budgetTotal, totalGasto, balance };
+    const totalGasto = budgetTotal + gastosFijosTotal + totalCuotas;
+    const balance = income - totalGasto;
+    return { m, y, label: MONTH_NAMES[m], year: y, income, cuotas, totalCuotas, budgetTotal, gastosFijosTotal, totalGasto, balance };
   });
 
   const maxGasto = Math.max(...months.map(mo => mo.totalGasto), avgIncome, 1);
@@ -1113,11 +1844,11 @@ function Proyeccion({ data }) {
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14 }}>
         {[
-          { label: "Ingreso estimado", value: avgIncome, color: COLORS.text, icon: "📈", sub: avgIncome > 0 ? "Prom. últimos 3 meses" : "Sin ingresos registrados" },
-          { label: "Gastos fijos", value: budgetTotal, color: COLORS.text, icon: "🏷️", sub: `${budgetItems.length} categorías` },
+          { label: "Ingreso estimado", value: months[0].income, color: COLORS.text, icon: "📈", sub: avgIncome > 0 || months[0].income !== avgIncome ? "Prom. últimos 3 meses / ajustes" : "Sin ingresos registrados" },
+          { label: "Gastos fijos + presup.", value: budgetTotal + gastosFijosTotal, color: COLORS.text, icon: "🏷️", sub: `${budgetItems.length} categorías` },
           { label: "Cuotas este mes", value: months[0].totalCuotas, color: COLORS.text, icon: "💳", sub: `${months[0].cuotas.length} cuota(s)` },
           { label: "Compromiso total", value: months[0].totalGasto, color: COLORS.text, icon: "📊", sub: "Fijos + cuotas" },
-          ...(avgIncome > 0 ? [{ label: "Balance estimado", value: months[0].balance, color: COLORS.text, icon: months[0].balance >= 0 ? "✅" : "⚠️", sub: months[0].balance >= 0 ? "Superávit" : "Déficit" }] : []),
+          ...(months[0].income > 0 ? [{ label: "Balance estimado", value: months[0].balance, color: COLORS.text, icon: months[0].balance >= 0 ? "✅" : "⚠️", sub: months[0].balance >= 0 ? "Superávit" : "Déficit" }] : []),
         ].map(k => (
           <Card key={k.label} style={{ padding: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -1131,29 +1862,25 @@ function Proyeccion({ data }) {
       </div>
 
       {/* Tips si faltan datos */}
-      {avgIncome === 0 && (
-        <div style={{ background: COLORS.accentDim, border: `1px solid ${COLORS.accent}40`, borderRadius: 12, padding: 14, fontSize: 13, color: COLORS.accent }}>
-          💡 Registrá ingresos en <strong>Transacciones</strong> para ver tu balance mensual estimado.
-        </div>
+      {avgIncome === 0 && salaryOverrides.length === 0 && (
+        <InfoBanner>💡 Registrá ingresos en <strong>Transacciones</strong> (o un ajuste de sueldo abajo) para ver tu balance mensual estimado.</InfoBanner>
       )}
       {activeDebts.length === 0 && (
-        <div style={{ background: COLORS.purpleDim, border: `1px solid ${COLORS.purple}40`, borderRadius: 12, padding: 14, fontSize: 13, color: COLORS.purple }}>
-          💳 Agregá deudas en cuotas en la pestaña <strong>Deudas</strong> (con cuota mensual y cuotas restantes) para verlas en la proyección.
-        </div>
+        <InfoBanner>💳 Agregá deudas en cuotas en la pestaña <strong>Deudas</strong> (con cuota mensual y cuotas restantes) para verlas en la proyección.</InfoBanner>
       )}
 
       {/* ─── LÍNEA DE TIEMPO ─── */}
       <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <span>📅 Línea de tiempo — 12 meses</span>
           <span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400 }}>Hacé click en un mes para ver el detalle</span>
         </div>
 
         {/* Leyenda */}
         <div style={{ padding: "12px 22px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {budgetItems.length > 0 && (
+          {(budgetTotal + gastosFijosTotal) > 0 && (
             <span style={{ background: COLORS.accent+"22", color: COLORS.accent, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
-              🏷️ Gastos fijos ({formatFull(budgetTotal)})
+              🏷️ Fijos + presupuesto ({formatFull(budgetTotal + gastosFijosTotal)})
             </span>
           )}
           {activeDebts.map((d, i) => (
@@ -1173,8 +1900,8 @@ function Proyeccion({ data }) {
           const isHoy = i === 0;
           const abierto = expandido === i;
           const pctTotal = (mo.totalGasto / maxGasto) * 100;
-          const pctBudget = (mo.budgetTotal / maxGasto) * 100;
-          const isDeficit = avgIncome > 0 && mo.balance < 0;
+          const pctBudget = ((mo.budgetTotal + mo.gastosFijosTotal) / maxGasto) * 100;
+          const isDeficit = mo.income > 0 && mo.balance < 0;
 
           return (
             <div key={i}>
@@ -1184,7 +1911,7 @@ function Proyeccion({ data }) {
                 style={{
                   display: "flex", alignItems: "center", gap: 0,
                   borderBottom: `1px solid ${COLORS.border}`,
-                  background: isHoy ? "#3ecfaa08" : abierto ? "#ffffff05" : "transparent",
+                  background: isHoy ? COLORS.accent + "08" : abierto ? "#00000005" : "transparent",
                   cursor: "pointer", transition: "background .15s",
                 }}
               >
@@ -1195,7 +1922,7 @@ function Proyeccion({ data }) {
                 }} />
 
                 {/* Contenido */}
-                <div style={{ flex: 1, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ flex: 1, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
 
                   {/* Mes + año */}
                   <div style={{ width: 54, flexShrink: 0 }}>
@@ -1204,26 +1931,22 @@ function Proyeccion({ data }) {
                   </div>
 
                   {/* Barra apilada */}
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ flex: 1, minWidth: 120, display: "flex", flexDirection: "column", gap: 5 }}>
                     <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", background: COLORS.bg }}>
-                      {/* Presupuesto fijo */}
-                      {mo.budgetTotal > 0 && (
+                      {(mo.budgetTotal + mo.gastosFijosTotal) > 0 && (
                         <div style={{ width: `${pctBudget}%`, background: COLORS.accent, opacity: 0.8, transition: "width .4s" }} />
                       )}
-                      {/* Cada cuota como segmento */}
-                      {mo.cuotas.map((c, ci) => (
+                      {mo.cuotas.map((c) => (
                         <div key={c.name} style={{
                           width: `${(c.amount / maxGasto) * 100}%`,
                           background: c.color, opacity: 0.85,
                           transition: "width .4s",
-                          position: "relative",
                         }} />
                       ))}
                     </div>
-                    {/* Línea de ingreso */}
-                    {avgIncome > 0 && (
+                    {mo.income > 0 && (
                       <div style={{ position: "relative", height: 2 }}>
-                        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(avgIncome / maxGasto) * 100}%`, background: COLORS.green, borderRadius: 2 }} />
+                        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${(mo.income / maxGasto) * 100}%`, background: COLORS.green, borderRadius: 2 }} />
                         <div style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0, background: COLORS.bg, borderRadius: 2, zIndex: -1 }} />
                       </div>
                     )}
@@ -1232,7 +1955,7 @@ function Proyeccion({ data }) {
                   {/* Totales */}
                   <div style={{ width: 140, flexShrink: 0, textAlign: "right" }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{formatFull(mo.totalGasto)}</div>
-                    {avgIncome > 0 && (
+                    {mo.income > 0 && (
                       <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textMuted, marginTop: 2 }}>
                         {mo.balance >= 0 ? "▲ +" : "▼ "}{formatFull(mo.balance)}
                       </div>
@@ -1253,37 +1976,44 @@ function Proyeccion({ data }) {
 
               {/* Detalle expandido */}
               {abierto && (
-                <div style={{ background: "#ffffff06", borderBottom: `1px solid ${COLORS.border}`, padding: "16px 22px 16px 42px" }}>
+                <div style={{ background: "#00000004", borderBottom: `1px solid ${COLORS.border}`, padding: "16px 22px 16px 42px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 500 }}>
 
-                    {/* Título sección gastos fijos */}
                     {budgetItems.length > 0 && (
                       <>
                         <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4 }}>
-                          🏷️ Gastos fijos
+                          🏷️ Presupuesto por categoría
                         </div>
                         {budgetItems.map(b => (
                           <div key={b.cat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
-                            <span style={{ color: COLORS.textMuted }}>{CATEGORY_ICONS[b.cat] || "📦"} {b.cat}</span>
+                            <span style={{ color: COLORS.textMuted }}>{catIcon(data, b.cat)} {b.cat}</span>
                             <span style={{ color: COLORS.text, fontWeight: 600 }}>{formatFull(b.limit)}</span>
                           </div>
                         ))}
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, borderTop: `1px solid ${COLORS.border}`, paddingTop: 8, marginTop: 2 }}>
-                          <span style={{ color: COLORS.text, fontWeight: 600 }}>Subtotal fijos</span>
-                          <span style={{ color: COLORS.text, fontWeight: 700 }}>{formatFull(mo.budgetTotal)}</span>
-                        </div>
                       </>
                     )}
 
-                    {/* Cuotas */}
+                    {gastosFijosTotal > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, marginTop: budgetItems.length > 0 ? 6 : 0 }}>
+                        <span style={{ color: COLORS.textMuted }}>📌 Gastos fijos</span>
+                        <span style={{ color: COLORS.text, fontWeight: 600 }}>{formatFull(gastosFijosTotal)}</span>
+                      </div>
+                    )}
+
+                    {(budgetItems.length > 0 || gastosFijosTotal > 0) && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, borderTop: `1px solid ${COLORS.border}`, paddingTop: 8, marginTop: 2 }}>
+                        <span style={{ color: COLORS.text, fontWeight: 600 }}>Subtotal fijos</span>
+                        <span style={{ color: COLORS.text, fontWeight: 700 }}>{formatFull(mo.budgetTotal + mo.gastosFijosTotal)}</span>
+                      </div>
+                    )}
+
                     {mo.cuotas.length > 0 && (
                       <>
-                        <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4, marginTop: budgetItems.length > 0 ? 12 : 0 }}>
+                        <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4, marginTop: 12 }}>
                           💳 Cuotas activas
                         </div>
-                        {mo.cuotas.map((c, ci) => {
+                        {mo.cuotas.map((c) => {
                           const debt = activeDebts.find(d => d.name === c.name);
-                          const cuotaNum = debt ? (debt.remainingInstallments - (months.findIndex(mo2 => mo2.cuotas.find(c2 => c2.name === c.name)) + i)) : "?";
                           return (
                             <div key={c.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1302,14 +2032,12 @@ function Proyeccion({ data }) {
                       </>
                     )}
 
-                    {/* Total del mes */}
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, background: COLORS.bg, borderRadius: 10, padding: "10px 14px", marginTop: 8 }}>
                       <span>Total comprometido</span>
                       <span style={{ color: COLORS.text }}>{formatFull(mo.totalGasto)}</span>
                     </div>
 
-                    {/* Balance */}
-                    {avgIncome > 0 && (
+                    {mo.income > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 700, background: mo.balance >= 0 ? COLORS.greenDim : COLORS.redDim, borderRadius: 10, padding: "10px 14px", border: `1px solid ${mo.balance >= 0 ? COLORS.green : COLORS.red}40` }}>
                         <span style={{ color: COLORS.text }}>
                           {mo.balance >= 0 ? "✅ Te sobra" : "⚠️ Te falta"}
@@ -1325,6 +2053,56 @@ function Proyeccion({ data }) {
             </div>
           );
         })}
+      </Card>
+
+      {/* Ingresos recurrentes */}
+      {recurringIncomes.length > 0 && (
+        <Card>
+          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>💵 Ingresos recurrentes</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recurringIncomes.map(r => (
+              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                <span style={{ color: COLORS.textMuted }}>{r.name}{r.day ? ` · día ${r.day}` : ""}{r.active === false ? " (inactivo)" : ""}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontWeight: 600 }}>{formatFull(r.amount)}</span>
+                  <button onClick={() => delRecurringIncome(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim }}>✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Ajustes de sueldo (salaryOverrides) */}
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>📈 Ajustes de ingreso futuro</div>
+          <Button size="sm" onClick={() => setShowOverrideForm(!showOverrideForm)}>{showOverrideForm ? "✕ Cancelar" : "+ Nuevo ajuste"}</Button>
+        </div>
+        <div style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: showOverrideForm || salaryOverrides.length > 0 ? 14 : 0 }}>
+          Usá esto si sabés que tu ingreso va a cambiar (ej. aumento) a partir de un mes puntual.
+        </div>
+        {showOverrideForm && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 14, alignItems: "end" }}>
+            <Input label="Mes" value={MONTH_NAMES[overrideForm.month]} onChange={v => setOverrideForm({ ...overrideForm, month: MONTH_NAMES.indexOf(v) })} options={MONTH_NAMES} />
+            <Input label="Año" value={String(overrideForm.year)} onChange={v => setOverrideForm({ ...overrideForm, year: v })} type="number" />
+            <Input label="Ingreso mensual" value={overrideForm.amount} onChange={v => setOverrideForm({ ...overrideForm, amount: v })} type="number" prefix="$" />
+            <Button size="sm" onClick={addOverride}>Guardar</Button>
+          </div>
+        )}
+        {salaryOverrides.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {salaryOverrides.map((o, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                <span style={{ color: COLORS.textMuted }}>Desde {MONTH_NAMES[o.fromMonth]} {o.fromYear}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontWeight: 600 }}>{formatFull(o.amount)}</span>
+                  <button onClick={() => delOverride(i)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim }}>✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );

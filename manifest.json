@@ -1,22 +1,22 @@
 {
-  "name": "Mis Finanzas",
-  "short_name": "Finanzas",
-  "description": "Tu gestor financiero personal",
+  "name": "Orbe",
+  "short_name": "Orbe",
+  "description": "Tu asistente financiero personal",
   "start_url": "/mis-finanzas/",
   "scope": "/mis-finanzas/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f0f4f1",
-  "theme_color": "#2e7d5a",
+  "background_color": "#F2F7F5",
+  "theme_color": "#005247",
   "icons": [
     {
-      "src": "https://img.icons8.com/emoji/192/money-bag.png",
+      "src": "https://img.icons8.com/emoji/192/globe-with-meridians.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://img.icons8.com/emoji/512/money-bag.png",
+      "src": "https://img.icons8.com/emoji/512/globe-with-meridians.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
