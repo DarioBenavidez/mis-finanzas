@@ -184,6 +184,16 @@ const formatCurrency = (n) => {
 const formatFull = (n) => { const abs = Math.abs(Number(n) || 0); const formatted = abs.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); return ((Number(n) || 0) < 0 ? "-$" : "$") + formatted; };
 const formatUSD = (n) => `US$${(Number(n) || 0).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
+// Formatea un monto mientras se escribe (separador de miles "."), igual que la
+// app real: solo dígitos, agrupados de a 3 desde la derecha. parseAmountInput
+// lo revierte para poder hacer cuentas con el valor.
+const formatAmountInput = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+const parseAmountInput = (v) => parseFloat(String(v || "0").replace(/\./g, "")) || 0;
+
 function Pill({ color, children }) {
   return (
     <span style={{
@@ -246,6 +256,8 @@ function Input({ label, value, onChange, type = "text", placeholder, prefix, opt
           <select value={value} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, appearance: "none" }}>
             {options.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
+        ) : type === "amount" ? (
+          <input type="text" inputMode="numeric" value={value} onChange={e => onChange(formatAmountInput(e.target.value))} placeholder={placeholder} style={inputStyle} />
         ) : (
           <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
         )}
@@ -936,13 +948,13 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const delTx = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
 
   const catNames = Object.keys(data.categories);
-  const startEditTx = (t) => { setEditingTxId(t.id); setEditTxForm({ type: t.type, amount: String(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
+  const startEditTx = (t) => { setEditingTxId(t.id); setEditTxForm({ type: t.type, amount: formatAmountInput(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
   const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
   const saveEditTx = () => {
-    if (!editTxForm.amount || isNaN(editTxForm.amount)) return;
+    if (!editTxForm.amount || !parseAmountInput(editTxForm.amount)) return;
     const category = editTxForm.type === "gasto" ? editTxForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const transactions = data.transactions.map(t => t.id === editingTxId
-      ? { ...t, type: editTxForm.type, amount: parseFloat(editTxForm.amount), description: editTxForm.description, category, date: editTxForm.date }
+      ? { ...t, type: editTxForm.type, amount: parseAmountInput(editTxForm.amount), description: editTxForm.description, category, date: editTxForm.date }
       : t);
     save({ ...data, transactions });
     cancelEditTx();
@@ -1062,7 +1074,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
-                <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="number" prefix="$" />
+                <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
                 {needsCatEdit && <Input label="Categoría" value={editTxForm.category} onChange={v => setEditTxForm({ ...editTxForm, category: v })} options={catNames} />}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -1274,9 +1286,9 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   const [editForm, setEditForm] = useState(null);
 
   const add = () => {
-    if (!form.amount || isNaN(form.amount)) return;
+    if (!form.amount || !parseAmountInput(form.amount)) return;
     const category = form.type === "gasto" ? form.category : (findCatCI(data, "Sueldos") || "Sueldos");
-    const tx = { ...form, category, amount: parseFloat(form.amount), id: Date.now() };
+    const tx = { ...form, category, amount: parseAmountInput(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
     setForm({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
     setShowForm(false);
@@ -1284,13 +1296,13 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
 
   const del = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
 
-  const startEdit = (t) => { setEditingId(t.id); setEditForm({ type: t.type, amount: String(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
+  const startEdit = (t) => { setEditingId(t.id); setEditForm({ type: t.type, amount: formatAmountInput(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
   const cancelEdit = () => { setEditingId(null); setEditForm(null); };
   const saveEdit = () => {
-    if (!editForm.amount || isNaN(editForm.amount)) return;
+    if (!editForm.amount || !parseAmountInput(editForm.amount)) return;
     const category = editForm.type === "gasto" ? editForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const transactions = data.transactions.map(t => t.id === editingId
-      ? { ...t, type: editForm.type, amount: parseFloat(editForm.amount), description: editForm.description, category, date: editForm.date }
+      ? { ...t, type: editForm.type, amount: parseAmountInput(editForm.amount), description: editForm.description, category, date: editForm.date }
       : t);
     save({ ...data, transactions });
     cancelEdit();
@@ -1312,7 +1324,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
           <div style={{ display: "grid", gridTemplateColumns: needsCat ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso"]} />
-            <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="number" prefix="$" placeholder="0" />
+            <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
             {needsCat && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -1334,7 +1346,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
             <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editForm.type} onChange={v => setEditForm({ ...editForm, type: v })} options={TX_TYPES} />
-                <Input label="Monto" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} type="number" prefix="$" />
+                <Input label="Monto" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} type="amount" prefix="$" />
                 {needsCatEdit && <Input label="Categoría" value={editForm.category} onChange={v => setEditForm({ ...editForm, category: v })} options={catNames} />}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -1376,7 +1388,7 @@ function Presupuesto({ data, save, expByCat }) {
   const [editCat, setEditCat] = useState({ icon: "", name: "" });
 
   const updateLimit = (cat, val) => {
-    const budgets = data.budgets.map(b => b.cat === cat ? { ...b, limit: parseFloat(val) || 0 } : b);
+    const budgets = data.budgets.map(b => b.cat === cat ? { ...b, limit: parseAmountInput(val) } : b);
     save({ ...data, budgets });
   };
 
@@ -1487,8 +1499,9 @@ function Presupuesto({ data, save, expByCat }) {
                       {b.limit > 0 && <ProgressBar value={spent} max={b.limit} />}
                     </div>
                     <input
-                      type="number"
-                      value={b.limit || ""}
+                      type="text"
+                      inputMode="numeric"
+                      value={formatAmountInput(b.limit || "")}
                       onChange={e => updateLimit(catName, e.target.value)}
                       placeholder="Límite"
                       style={{ width: 90, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 8px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, textAlign: "right" }}
@@ -1517,9 +1530,9 @@ function Ahorros({ data, save, dolarRate }) {
 
   const add = () => {
     if (!form.name || !form.target) return;
-    const current = parseFloat(form.current) || 0;
+    const current = parseAmountInput(form.current);
     const g = {
-      id: Date.now(), name: form.name, target: parseFloat(form.target), current,
+      id: Date.now(), name: form.name, target: parseAmountInput(form.target), current,
       currency: form.currency, arsRate: form.currency === "usd" ? dolarRate : null,
       history: current > 0 ? [{ date: todayStr(), amount: current }] : [],
     };
@@ -1538,16 +1551,16 @@ function Ahorros({ data, save, dolarRate }) {
     setShowForm(false);
   };
 
-  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, target: g.target }); };
+  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, target: formatAmountInput(g.target) }); };
   const saveEdit = () => {
     if (!editForm.name || !editForm.target) return;
-    const savings = data.savings.map(g => g.id === editId ? { ...g, name: editForm.name, target: parseFloat(editForm.target) } : g);
+    const savings = data.savings.map(g => g.id === editId ? { ...g, name: editForm.name, target: parseAmountInput(editForm.target) } : g);
     save({ ...data, savings });
     setEditId(null);
   };
 
   const addToSaving = (id) => {
-    const amt = parseFloat(addAmt[id] || 0);
+    const amt = parseAmountInput(addAmt[id] || 0);
     if (!amt) return;
     const savings = data.savings.map(g => g.id === id ? { ...g, current: (g.current || 0) + amt, history: [...(g.history || []), { date: todayStr(), amount: amt }] } : g);
     save({ ...data, savings });
@@ -1567,10 +1580,10 @@ function Ahorros({ data, save, dolarRate }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
-            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
-            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
+            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
-          {parseFloat(form.current) > 0 && (
+          {parseAmountInput(form.current) > 0 && (
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
               <input type="checkbox" checked={fromSalary} onChange={e => setFromSalary(e.target.checked)} />
               Ese monto ya lo desconté de mi sueldo (afecta el balance del mes)
@@ -1599,7 +1612,7 @@ function Ahorros({ data, save, dolarRate }) {
                     <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>✏️ Editar meta</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Nombre" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-                      <input type="number" value={editForm.target} onChange={e => setEditForm({...editForm, target: e.target.value})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+                      <input type="text" inputMode="numeric" value={editForm.target} onChange={e => setEditForm({...editForm, target: formatAmountInput(e.target.value)})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                       <div style={{ display: "flex", gap: 8 }}>
                         <Button onClick={saveEdit} size="sm">Guardar</Button>
                         <Button onClick={() => setEditId(null)} variant="ghost" size="sm">Cancelar</Button>
@@ -1635,9 +1648,10 @@ function Ahorros({ data, save, dolarRate }) {
                 )}
                 <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={addAmt[g.id] || ""}
-                    onChange={e => setAddAmt({ ...addAmt, [g.id]: e.target.value })}
+                    onChange={e => setAddAmt({ ...addAmt, [g.id]: formatAmountInput(e.target.value) })}
                     placeholder={g.currency === "usd" ? "Agregar US$..." : "Agregar monto..."}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
@@ -1660,16 +1674,16 @@ function Deudas({ data, save, dolarRate }) {
 
   const add = () => {
     if (!form.name || !form.remaining) return;
-    const installment = parseFloat(form.installment) || 0;
-    const remainingInstallments = parseInt(form.remainingInstallments) || (installment > 0 ? Math.ceil(parseFloat(form.remaining) / installment) : 0);
+    const installment = parseAmountInput(form.installment);
+    const remainingInstallments = parseInt(form.remainingInstallments) || (installment > 0 ? Math.ceil(parseAmountInput(form.remaining) / installment) : 0);
     const isUsd = form.currency === "usd";
     const d = {
       id: Date.now(),
       name: form.name,
       currency: form.currency,
-      total: isUsd ? Math.round(parseFloat(form.total || form.remaining) * (dolarRate || 0)) : (parseFloat(form.total) || parseFloat(form.remaining)),
-      remaining: isUsd ? Math.round(parseFloat(form.remaining) * (dolarRate || 0)) : parseFloat(form.remaining),
-      ...(isUsd ? { amountUSD: parseFloat(form.total || form.remaining), remainingUSD: parseFloat(form.remaining), arsRate: dolarRate } : {}),
+      total: isUsd ? Math.round(parseAmountInput(form.total || form.remaining) * (dolarRate || 0)) : (parseAmountInput(form.total) || parseAmountInput(form.remaining)),
+      remaining: isUsd ? Math.round(parseAmountInput(form.remaining) * (dolarRate || 0)) : parseAmountInput(form.remaining),
+      ...(isUsd ? { amountUSD: parseAmountInput(form.total || form.remaining), remainingUSD: parseAmountInput(form.remaining), arsRate: dolarRate } : {}),
       installment,
       remainingInstallments,
       dueDay: parseInt(form.dueDay) || 1,
@@ -1683,7 +1697,7 @@ function Deudas({ data, save, dolarRate }) {
   };
 
   const pay = (id) => {
-    const amt = parseFloat(payAmt[id] || 0);
+    const amt = parseAmountInput(payAmt[id] || 0);
     if (!amt) return;
     const debt = data.debts.find(d => d.id === id);
     if (debt.currency === "usd" && !dolarRate && !debt.arsRate) { alert("Sin cotización del dólar disponible, intentá más tarde."); return; }
@@ -1735,11 +1749,11 @@ function Deudas({ data, save, dolarRate }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
-            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-            <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="number" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <Input label="Cuota mensual" value={form.installment} onChange={v => setForm({ ...form, installment: v })} type="number" prefix="$" placeholder="0" />
+            <Input label="Cuota mensual" value={form.installment} onChange={v => setForm({ ...form, installment: v })} type="amount" prefix="$" placeholder="0" />
             <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => setForm({ ...form, remainingInstallments: v })} type="number" placeholder="ej. 9" />
             <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
             <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
@@ -1784,9 +1798,10 @@ function Deudas({ data, save, dolarRate }) {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={payAmt[d.id] || ""}
-                    onChange={e => setPayAmt({ ...payAmt, [d.id]: e.target.value })}
+                    onChange={e => setPayAmt({ ...payAmt, [d.id]: formatAmountInput(e.target.value) })}
                     placeholder={d.currency === "usd" ? "Monto a pagar (US$)..." : "Monto a pagar..."}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
@@ -2101,7 +2116,7 @@ function Calendario({ data, save }) {
   const del = (id) => save({ ...data, events: events.filter(e => e.id !== id) });
 
   const confirmPago = (ev) => {
-    const amt = parseFloat(payAmt || 0);
+    const amt = parseAmountInput(payAmt || 0);
     if (!amt) return;
     const preferred = ev.type === "pago" ? "Servicios" : "Otros";
     const cat = findCatCI(data, preferred) || Object.keys(data.categories)[0];
@@ -2185,7 +2200,7 @@ function Calendario({ data, save }) {
               </div>
               {payingId === ev.id && (
                 <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <input type="number" value={payAmt} onChange={e => setPayAmt(e.target.value)} placeholder="Monto pagado..." autoFocus
+                  <input type="text" inputMode="numeric" value={payAmt} onChange={e => setPayAmt(formatAmountInput(e.target.value))} placeholder="Monto pagado..." autoFocus
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
                   <Button size="sm" onClick={() => confirmPago(ev)}>Confirmar</Button>
                   <Button size="sm" variant="ghost" onClick={() => setPayingId(null)}>Cancelar</Button>
@@ -2235,7 +2250,7 @@ function Proyeccion({ data, save }) {
 
   const addOverride = () => {
     if (!overrideForm.amount) return;
-    const ov = { fromMonth: parseInt(overrideForm.month), fromYear: parseInt(overrideForm.year), amount: parseFloat(overrideForm.amount) };
+    const ov = { fromMonth: parseInt(overrideForm.month), fromYear: parseInt(overrideForm.year), amount: parseAmountInput(overrideForm.amount) };
     save({ ...data, salaryOverrides: [...salaryOverrides, ov] });
     setOverrideForm({ month: startMonth, year: startYear, amount: "" });
     setShowOverrideForm(false);
@@ -2516,7 +2531,7 @@ function Proyeccion({ data, save }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 14, alignItems: "end" }}>
             <Input label="Mes" value={MONTH_NAMES[overrideForm.month]} onChange={v => setOverrideForm({ ...overrideForm, month: MONTH_NAMES.indexOf(v) })} options={MONTH_NAMES} />
             <Input label="Año" value={String(overrideForm.year)} onChange={v => setOverrideForm({ ...overrideForm, year: v })} type="number" />
-            <Input label="Ingreso mensual" value={overrideForm.amount} onChange={v => setOverrideForm({ ...overrideForm, amount: v })} type="number" prefix="$" />
+            <Input label="Ingreso mensual" value={overrideForm.amount} onChange={v => setOverrideForm({ ...overrideForm, amount: v })} type="amount" prefix="$" />
             <Button size="sm" onClick={addOverride}>Guardar</Button>
           </div>
         )}
