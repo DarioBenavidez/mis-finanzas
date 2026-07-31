@@ -847,7 +847,11 @@ function FinanzasApp() {
                 <div style={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center", marginBottom: 20 }}>
                   Tu número <strong style={{ color: COLORS.text }}>{waPhone}</strong> ya está vinculado al bot de Orbe.
                 </div>
-                <Button onClick={() => setWaModal(false)} style={{ width: "100%" }}>Listo</Button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <Button onClick={() => window.open(`https://wa.me/5491125728211`, "_blank")} style={{ width: "100%", background: "#25D366" }}>💬 Hablar con Orbe</Button>
+                  <Button onClick={() => { setWaPhone(false); setWaCode(""); setWaError(""); }} variant="ghost" style={{ width: "100%" }}>Cambiar número</Button>
+                  <Button onClick={() => setWaModal(false)} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
+                </div>
               </>
             ) : (
               <>
@@ -881,10 +885,14 @@ function FinanzasApp() {
 }
 
 // ---- INICIO (dashboard estilo app) ----
+const TX_TYPES = ["gasto", "ingreso", "sueldo", "ahorro_meta"];
+
 function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel }) {
   const [hideBalance, setHideBalance] = useState(false);
   const [txFilter, setTxFilter] = useState("mes");
   const [search, setSearch] = useState("");
+  const [editingTxId, setEditingTxId] = useState(null);
+  const [editTxForm, setEditTxForm] = useState(null);
 
   const balance = totalIncome - totalExpense;
   const greeting = (() => {
@@ -922,6 +930,19 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   }
   const listTxs = [...filteredTxs].reverse().slice(0, 20);
   const delTx = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+
+  const catNames = Object.keys(data.categories);
+  const startEditTx = (t) => { setEditingTxId(t.id); setEditTxForm({ type: t.type, amount: String(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
+  const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
+  const saveEditTx = () => {
+    if (!editTxForm.amount || isNaN(editTxForm.amount)) return;
+    const transactions = data.transactions.map(t => t.id === editingTxId
+      ? { ...t, type: editTxForm.type, amount: parseFloat(editTxForm.amount), description: editTxForm.description, category: editTxForm.category, date: editTxForm.date }
+      : t);
+    save({ ...data, transactions });
+    cancelEditTx();
+  };
+  const needsCatEdit = editTxForm && (editTxForm.type === "gasto" || editTxForm.type === "ingreso");
 
   return (
     <div className="inicio-layout">
@@ -1032,7 +1053,23 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           </div>
           {listTxs.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
-          ) : listTxs.map(t => (
+          ) : listTxs.map(t => editingTxId === t.id ? (
+            <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+              <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
+                <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="number" prefix="$" />
+                {needsCatEdit && <Input label="Categoría" value={editTxForm.category} onChange={v => setEditTxForm({ ...editTxForm, category: v })} options={catNames} />}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <Input label="Descripción" value={editTxForm.description} onChange={v => setEditTxForm({ ...editTxForm, description: v })} />
+                <Input label="Fecha" value={editTxForm.date} onChange={v => setEditTxForm({ ...editTxForm, date: v })} type="date" />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button size="sm" onClick={saveEditTx}>Guardar</Button>
+                <Button size="sm" variant="ghost" onClick={cancelEditTx}>Cancelar</Button>
+              </div>
+            </div>
+          ) : (
             <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1040,6 +1077,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
               </div>
               <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+              <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
               <button onClick={() => delTx(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
             </div>
           ))}
@@ -1227,6 +1265,8 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   const catNames = Object.keys(data.categories);
   const [form, setForm] = useState({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
   const [showForm, setShowForm] = useState(startOpen);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
 
   const add = () => {
     if (!form.amount || isNaN(form.amount)) return;
@@ -1237,6 +1277,18 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   };
 
   const del = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+
+  const startEdit = (t) => { setEditingId(t.id); setEditForm({ type: t.type, amount: String(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
+  const cancelEdit = () => { setEditingId(null); setEditForm(null); };
+  const saveEdit = () => {
+    if (!editForm.amount || isNaN(editForm.amount)) return;
+    const transactions = data.transactions.map(t => t.id === editingId
+      ? { ...t, type: editForm.type, amount: parseFloat(editForm.amount), description: editForm.description, category: editForm.category, date: editForm.date }
+      : t);
+    save({ ...data, transactions });
+    cancelEdit();
+  };
+  const needsCatEdit = editForm && (editForm.type === "gasto" || editForm.type === "ingreso");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1267,7 +1319,23 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
         {monthTxs.length === 0 ? (
           <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones este mes. ¡Agregá la primera!</div>
         ) : (
-          [...monthTxs].reverse().map(t => (
+          [...monthTxs].reverse().map(t => editingId === t.id ? (
+            <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+              <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <Input label="Tipo" value={editForm.type} onChange={v => setEditForm({ ...editForm, type: v })} options={TX_TYPES} />
+                <Input label="Monto" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} type="number" prefix="$" />
+                {needsCatEdit && <Input label="Categoría" value={editForm.category} onChange={v => setEditForm({ ...editForm, category: v })} options={catNames} />}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <Input label="Descripción" value={editForm.description} onChange={v => setEditForm({ ...editForm, description: v })} />
+                <Input label="Fecha" value={editForm.date} onChange={v => setEditForm({ ...editForm, date: v })} type="date" />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button size="sm" onClick={saveEdit}>Guardar</Button>
+                <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
+              </div>
+            </div>
+          ) : (
             <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
                 {catIcon(data, t.category)}
@@ -1279,6 +1347,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
               <div style={{ fontWeight: 700, fontSize: 16, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>
                 {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
               </div>
+              <button onClick={() => startEdit(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
               <button onClick={() => del(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
             </div>
           ))
@@ -1759,7 +1828,10 @@ function Prestamos({ data, save, dolarRate }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {loans.map(l => {
             const amount = l.currency === "usd" ? l.amountUSD : l.amount;
-            const remaining = l.currency === "usd" ? l.remainingUSD : l.remaining;
+            // Recién creado (antes del primer pago), remainingUSD todavía no existe:
+            // el bot solo lo agrega en el primer pago parcial. Sin este fallback al
+            // monto original se mostraba "USD NaN" y "NaN% cobrado".
+            const remaining = l.currency === "usd" ? (l.remainingUSD ?? l.amountUSD ?? 0) : (l.remaining ?? l.amount ?? 0);
             const fmt = l.currency === "usd" ? formatUSD : formatFull;
             const pct = amount > 0 ? Math.min(100, ((amount - remaining) / amount) * 100) : 0;
             return (
@@ -1787,11 +1859,11 @@ function Prestamos({ data, save, dolarRate }) {
         </div>
       )}
 
-      {Object.keys(credits).length > 0 && (
+      {Object.values(credits).filter(c => c.amount > 0).length > 0 && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>💰 Saldo a favor</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.values(credits).map(c => (
+            {Object.values(credits).filter(c => c.amount > 0).map(c => (
               <div key={c.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
                 <span style={{ color: COLORS.textMuted }}>{c.name}</span>
                 <span style={{ fontWeight: 600 }}>{formatFull(c.amount)}</span>
@@ -1879,25 +1951,39 @@ const TIPOS_TURNO = ["médico", "peluquería", "banco", "trámite", "reunión", 
 const TIPO_ICONS = { "médico": "🩺", "peluquería": "💇", "banco": "🏦", "trámite": "📋", "reunión": "🧑‍💼", "otro": "📌" };
 
 function Turnos({ data, save }) {
-  const [form, setForm] = useState({ description: "", date: todayStr(), time: "", location: "", turnoType: "otro", addToCal: false });
+  const emptyForm = { description: "", date: todayStr(), time: "", location: "", turnoType: "otro", addToCal: false };
+  const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const turnos = data.turnos || [];
   const today = todayStr();
   const proximos = turnos.filter(t => t.date >= today).sort((a, b) => a.date.localeCompare(b.date));
   const historial = turnos.filter(t => t.date < today).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
-  const add = () => {
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(emptyForm); };
+
+  const startEdit = (t) => {
+    setForm({ description: t.description, date: t.date, time: t.time || "", location: t.location || "", turnoType: t.turnoType || "otro", addToCal: false });
+    setEditingId(t.id);
+    setShowForm(true);
+  };
+
+  const save_ = () => {
     if (!form.description || !form.date) return;
-    const t = { id: Date.now(), description: form.description, date: form.date, time: form.time, location: form.location, turnoType: form.turnoType, notified: false };
-    let events = data.events;
-    if (form.addToCal) {
-      const day = parseInt(form.date.split("-")[2], 10);
-      events = [...events, { id: Date.now() + 1, title: form.description, day, type: "recordatorio", notifyDaysBefore: 1 }];
+    if (editingId) {
+      const turnosUpd = turnos.map(t => t.id === editingId ? { ...t, description: form.description, date: form.date, time: form.time, location: form.location, turnoType: form.turnoType } : t);
+      save({ ...data, turnos: turnosUpd });
+    } else {
+      const t = { id: Date.now(), description: form.description, date: form.date, time: form.time, location: form.location, turnoType: form.turnoType, notified: false };
+      let events = data.events;
+      if (form.addToCal) {
+        const day = parseInt(form.date.split("-")[2], 10);
+        events = [...events, { id: Date.now() + 1, title: form.description, day, type: "recordatorio", notifyDaysBefore: 1 }];
+      }
+      save({ ...data, turnos: [...turnos, t], events });
     }
-    save({ ...data, turnos: [...turnos, t], events });
-    setForm({ description: "", date: todayStr(), time: "", location: "", turnoType: "otro", addToCal: false });
-    setShowForm(false);
+    closeForm();
   };
 
   const del = (id) => save({ ...data, turnos: turnos.filter(t => t.id !== id) });
@@ -1909,6 +1995,7 @@ function Turnos({ data, save }) {
         <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description}</div>
         <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}{t.location ? ` · ${t.location}` : ""}</div>
       </div>
+      <button onClick={() => startEdit(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
       <button onClick={() => del(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
     </div>
   );
@@ -1916,12 +2003,12 @@ function Turnos({ data, save }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nuevo turno"}</Button>
+        <Button onClick={() => showForm ? closeForm() : setShowForm(true)}>{showForm ? "✕ Cancelar" : "+ Nuevo turno"}</Button>
       </div>
 
       {showForm && (
         <Card>
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nuevo turno</div>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar turno" : "Nuevo turno"}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Dentista" />
             <Input label="Tipo" value={form.turnoType} onChange={v => setForm({ ...form, turnoType: v })} options={TIPOS_TURNO} />
@@ -1931,11 +2018,13 @@ function Turnos({ data, save }) {
             <Input label="Hora" value={form.time} onChange={v => setForm({ ...form, time: v })} type="time" />
             <Input label="Lugar" value={form.location} onChange={v => setForm({ ...form, location: v })} placeholder="opcional" />
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
-            <input type="checkbox" checked={form.addToCal} onChange={e => setForm({ ...form, addToCal: e.target.checked })} />
-            Agregar recordatorio al calendario
-          </label>
-          <Button onClick={add}>Guardar turno</Button>
+          {!editingId && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
+              <input type="checkbox" checked={form.addToCal} onChange={e => setForm({ ...form, addToCal: e.target.checked })} />
+              Agregar recordatorio al calendario
+            </label>
+          )}
+          <Button onClick={save_}>{editingId ? "Guardar cambios" : "Guardar turno"}</Button>
         </Card>
       )}
 
@@ -1964,8 +2053,10 @@ const EVENT_TYPES = {
 };
 
 function Calendario({ data, save }) {
-  const [form, setForm] = useState({ title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" });
+  const emptyForm = { title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" };
+  const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [payingId, setPayingId] = useState(null);
   const [payAmt, setPayAmt] = useState("");
 
@@ -1975,13 +2066,25 @@ function Calendario({ data, save }) {
   const isCurrentMonth = todayDate.getMonth() === data.selectedMonth && todayDate.getFullYear() === data.selectedYear;
   const todayDay = todayDate.getDate();
 
-  const add = () => {
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(emptyForm); };
+
+  const startEdit = (ev) => {
+    setForm({ title: ev.title, day: String(ev.day), type: ev.type, notifyDaysBefore: String(ev.notifyDaysBefore || 3) });
+    setEditingId(ev.id);
+    setShowForm(true);
+  };
+
+  const save_ = () => {
     if (!form.title || !form.day) return;
     const day = Math.min(daysInMonth, Math.max(1, parseInt(form.day) || 1));
-    const ev = { id: Date.now(), title: form.title, day, type: form.type, notifyDaysBefore: parseInt(form.notifyDaysBefore) || 3 };
-    save({ ...data, events: [...events, ev] });
-    setForm({ title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" });
-    setShowForm(false);
+    if (editingId) {
+      const updated = events.map(e => e.id === editingId ? { ...e, title: form.title, day, type: form.type, notifyDaysBefore: parseInt(form.notifyDaysBefore) || 3 } : e);
+      save({ ...data, events: updated });
+    } else {
+      const ev = { id: Date.now(), title: form.title, day, type: form.type, notifyDaysBefore: parseInt(form.notifyDaysBefore) || 3 };
+      save({ ...data, events: [...events, ev] });
+    }
+    closeForm();
   };
 
   const del = (id) => save({ ...data, events: events.filter(e => e.id !== id) });
@@ -2002,18 +2105,18 @@ function Calendario({ data, save }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nuevo evento"}</Button>
+        <Button onClick={() => showForm ? closeForm() : setShowForm(true)}>{showForm ? "✕ Cancelar" : "+ Nuevo evento"}</Button>
       </div>
 
       {showForm && (
         <Card>
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nuevo evento — {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+          <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar evento" : `Nuevo evento — ${MONTH_NAMES[data.selectedMonth]} ${data.selectedYear}`}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="ej. Alquiler" style={{ gridColumn: "span 2" }} />
             <Input label="Día del mes" value={form.day} onChange={v => setForm({ ...form, day: v })} type="number" placeholder={`1-${daysInMonth}`} />
             <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={Object.keys(EVENT_TYPES)} />
           </div>
-          <Button onClick={add}>Guardar evento</Button>
+          <Button onClick={save_}>{editingId ? "Guardar cambios" : "Guardar evento"}</Button>
         </Card>
       )}
 
@@ -2066,6 +2169,7 @@ function Calendario({ data, save }) {
                 {(g.type === "vencimiento" || g.type === "pago") && (
                   <Button size="sm" onClick={() => { setPayingId(ev.id); setPayAmt(""); }}>💸 Pagar</Button>
                 )}
+                <button onClick={() => startEdit(ev)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
                 <button onClick={() => del(ev.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
               </div>
               {payingId === ev.id && (

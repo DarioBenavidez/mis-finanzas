@@ -50,6 +50,31 @@ Verificado con esbuild (sintaxis) y carga en Chrome sin errores de consola. **No
 el flujo logueado completo con una cuenta real** — se evitó a propósito para no crear un
 usuario de prueba en la base de producción que comparte con el bot.
 
+## Auditoría de paridad de features (2026-07-31)
+
+Se comparó panel por panel y pantalla por pantalla contra la app real
+(`~/Documents/ORBE - PROYECTO/frontend`) para asegurar que la web tenga las mismas
+funciones. Bugs y gaps encontrados y corregidos:
+
+- **Préstamos en USD sin pagos mostraban "NaN"**: un préstamo/fiado en USD recién creado
+  por el bot no tiene `remainingUSD` hasta el primer pago parcial (el backend solo lo
+  agrega ahí). La web no tenía fallback a `amountUSD` y mostraba "USD NaN" y "NaN%
+  cobrado" hasta el primer pago. Corregido con el mismo fallback que ya usaba la app real.
+- **"Saldo a favor" en Préstamos** no filtraba por `amount > 0`, podía listar personas con
+  saldo en $0. Corregido.
+- **Turnos y Calendario no tenían "Editar"**: solo se podía agregar o eliminar, a
+  diferencia de la app real. Agregado editar en ambos paneles.
+- **Sin forma de editar una transacción existente**: la app real permite tocar cualquier
+  movimiento para corregirlo (monto, categoría, fecha, tipo); la web solo permitía
+  agregar o borrar. Agregado un formulario de edición inline tanto en la lista de
+  Inicio como en el panel de Transacciones.
+- **Modal de WhatsApp ya vinculado**: solo tenía botón "Listo". Agregados "Hablar con
+  Orbe" (abre el chat directo) y "Cambiar número", igual que la app real.
+
+Verificado con esbuild (sintaxis) y visualmente en Chrome headless a 500px (mobile),
+800px y 1440px (desktop) con la técnica de copia+mock (ver memoria del proyecto) —
+sin errores de consola ni fallos visuales en los paneles tocados.
+
 ## Pendiente
 
 - Probar el flujo logueado completo (login, cada panel, vinculación de WhatsApp) con una
@@ -57,6 +82,10 @@ usuario de prueba en la base de producción que comparte con el bot.
 - Confirmar visualmente en un dispositivo real la grilla de paneles y el modal de
   WhatsApp — no se pudo hacer un test end-to-end sin cuenta.
 - Modo oscuro: descartado explícitamente por el dueño del proyecto, no implementar.
+- Gaps menores no corregidos por alcance/riesgo, para una próxima sesión si se quiere ir
+  a paridad total: el formulario de "+ Nueva transacción" del panel Transacciones no
+  ofrece el tipo "Ahorro" con selector de meta (sí existe como flujo separado en el panel
+  Ahorros); no se agregó categoría nueva inline desde ese mismo formulario.
 
 ## Dónde vive todo
 
