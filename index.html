@@ -936,7 +936,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
   const saveEditTx = () => {
     if (!editTxForm.amount || isNaN(editTxForm.amount)) return;
-    const category = editTxForm.type === "gasto" ? editTxForm.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
+    const category = editTxForm.type === "gasto" ? editTxForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const transactions = data.transactions.map(t => t.id === editingTxId
       ? { ...t, type: editTxForm.type, amount: parseFloat(editTxForm.amount), description: editTxForm.description, category, date: editTxForm.date }
       : t);
@@ -1271,7 +1271,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
 
   const add = () => {
     if (!form.amount || isNaN(form.amount)) return;
-    const category = form.type === "gasto" ? form.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
+    const category = form.type === "gasto" ? form.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const tx = { ...form, category, amount: parseFloat(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
     setForm({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
@@ -1284,7 +1284,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   const cancelEdit = () => { setEditingId(null); setEditForm(null); };
   const saveEdit = () => {
     if (!editForm.amount || isNaN(editForm.amount)) return;
-    const category = editForm.type === "gasto" ? editForm.category : (findCatCI(data, "Otros") || catNames[0] || "Otros");
+    const category = editForm.type === "gasto" ? editForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const transactions = data.transactions.map(t => t.id === editingId
       ? { ...t, type: editForm.type, amount: parseFloat(editForm.amount), description: editForm.description, category, date: editForm.date }
       : t);
@@ -1293,7 +1293,8 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
   };
   const needsCatEdit = editForm && editForm.type === "gasto";
   // Ingreso/Sueldo no se categorizan: la categoría solo se usa para desglosar
-  // gastos (Presupuesto/Análisis), no tiene sentido pedirla para dinero que entra.
+  // gastos (Presupuesto/Análisis). Se etiquetan como "Sueldos" automáticamente
+  // (ver `add`/`saveEdit`), sin pedirle nada al usuario ni mostrarla en el form.
   const needsCat = form.type === "gasto";
 
   return (
