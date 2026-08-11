@@ -1778,6 +1778,16 @@ function Deudas({ data, save, dolarRate }) {
   const [form, setForm] = useState({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
   const [showForm, setShowForm] = useState(false);
   const [payAmt, setPayAmt] = useState({});
+  // Si el usuario no tocó "Cuota mensual" a mano, se recalcula solo a partir de
+  // Saldo restante ÷ Cuotas restantes. En cuanto edita el campo directamente,
+  // dejamos de pisarlo (por si la cuota real no es una división exacta, ej. con
+  // interés).
+  const [installmentEdited, setInstallmentEdited] = useState(false);
+  const autoInstallment = (remainingVal, cuotasVal) => {
+    const r = parseAmountInput(remainingVal || "0");
+    const c = parseInt(cuotasVal) || 0;
+    return r > 0 && c > 0 ? formatAmountInput(String(Math.round(r / c))) : "";
+  };
 
   const add = () => {
     if (!form.name || !form.remaining) return;
@@ -1800,6 +1810,7 @@ function Deudas({ data, save, dolarRate }) {
     };
     save({ ...data, debts: [...data.debts, d] });
     setForm({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
+    setInstallmentEdited(false);
     setShowForm(false);
   };
 
@@ -1863,11 +1874,19 @@ function Deudas({ data, save, dolarRate }) {
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
             <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-            <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Saldo restante" value={form.remaining} onChange={v => {
+              const next = { ...form, remaining: v };
+              if (!installmentEdited) next.installment = autoInstallment(v, form.remainingInstallments);
+              setForm(next);
+            }} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
           <div className="form-grid-4" style={{ marginBottom: 16 }}>
-            <Input label="Cuota mensual" value={form.installment} onChange={v => setForm({ ...form, installment: v })} type="amount" prefix="$" placeholder="0" />
-            <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => setForm({ ...form, remainingInstallments: v })} type="number" placeholder="ej. 9" />
+            <Input label="Cuota mensual" value={form.installment} onChange={v => { setInstallmentEdited(true); setForm({ ...form, installment: v }); }} type="amount" prefix="$" placeholder="0" />
+            <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
+              const next = { ...form, remainingInstallments: v };
+              if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
+              setForm(next);
+            }} type="number" placeholder="ej. 9" />
             <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
             <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
           </div>
