@@ -33,6 +33,22 @@
     .inicio-rail { display: flex; flex-direction: column; gap: 20px; }
     .panel-card { width: 100%; }
 
+    /* Grid de "Nueva meta de ahorro": 1 columna en mobile angosto (~360-412px
+       Android), 2 desde 640px, y las 4 originales recién desde 1024px. Antes
+       era un grid fijo de 4 columnas sin adaptar, así que en mobile los
+       campos quedaban apretados e ilegibles. */
+    .ahorros-form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+    @media (min-width: 640px) {
+      .ahorros-form-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Filas de edición inline (categoría en Presupuesto, meta en Ahorros):
+       flex-wrap para que "Guardar"/"Cancelar" no queden cortados en pantallas
+       angostas. Si hay un input compartiendo la fila, usa una base chica en
+       vez de flex:1 para no empujar los botones fuera del viewport. */
+    .inline-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .inline-edit-actions input { flex: 1 1 140px; min-width: 0; }
+
     @media (min-width: 1024px) {
       .app-shell { flex-direction: row; }
       .desktop-sidebar {
@@ -53,6 +69,7 @@
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
+      .ahorros-form-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
     }
   </style>
   <!-- PWA -->
@@ -196,17 +213,36 @@ const formatCurrency = (n) => {
 };
 
 const formatFull = (n) => { const abs = Math.abs(Number(n) || 0); const formatted = abs.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 }); return ((Number(n) || 0) < 0 ? "-$" : "$") + formatted; };
-const formatUSD = (n) => `US$${(Number(n) || 0).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+// maximumFractionDigits: 2 (en vez de 0) para que las metas de ahorro en USD,
+// que sí admiten centavos, no pierdan el decimal al mostrarse. No afecta a
+// los demás usos de formatUSD (deudas/préstamos), que siempre guardan enteros.
+const formatUSD = (n) => `US$${(Number(n) || 0).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
 // Formatea un monto mientras se escribe (separador de miles "."), igual que la
 // app real: solo dígitos, agrupados de a 3 desde la derecha. parseAmountInput
-// lo revierte para poder hacer cuentas con el valor.
+// lo revierte para poder hacer cuentas con el valor. Solo para ARS (montos
+// enteros): ver formatAmountInputUSD para montos con decimales.
 const formatAmountInput = (raw) => {
   const digits = String(raw || "").replace(/\D/g, "");
   if (!digits) return "";
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 const parseAmountInput = (v) => parseFloat(String(v || "0").replace(/\./g, "")) || 0;
+
+// Variante para montos en USD (metas de ahorro en dólares), que sí usan
+// centavos: acá "." es punto decimal, no separador de miles, así que no se
+// agrupa. Permite un solo "." y hasta 2 decimales.
+const formatAmountInputUSD = (raw) => {
+  let s = String(raw || "").replace(/[^\d.]/g, "");
+  const firstDot = s.indexOf(".");
+  if (firstDot !== -1) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+    const [intPart, decPart] = s.split(".");
+    s = intPart + "." + decPart.slice(0, 2);
+  }
+  return s;
+};
+const parseAmountInputUSD = (v) => parseFloat(v) || 0;
 
 function Pill({ color, children }) {
   return (
@@ -255,7 +291,7 @@ function Button({ children, onClick, variant = "primary", size = "md", disabled 
   return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>{children}</button>;
 }
 
-function Input({ label, value, onChange, type = "text", placeholder, prefix, options, style = {} }) {
+function Input({ label, value, onChange, type = "text", placeholder, prefix, options, decimals = false, style = {} }) {
   const inputStyle = {
     width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
     borderRadius: 8, padding: prefix ? "8px 12px 8px 28px" : "8px 12px",
@@ -272,7 +308,7 @@ function Input({ label, value, onChange, type = "text", placeholder, prefix, opt
             {options.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         ) : type === "amount" ? (
-          <input type="text" inputMode="numeric" value={value} onChange={e => onChange(formatAmountInput(e.target.value))} placeholder={placeholder} style={inputStyle} />
+          <input type="text" inputMode={decimals ? "decimal" : "numeric"} value={value} onChange={e => onChange((decimals ? formatAmountInputUSD : formatAmountInput)(e.target.value))} placeholder={placeholder} style={inputStyle} />
         ) : (
           <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
         )}
@@ -750,7 +786,12 @@ function FinanzasApp() {
 
   const save = useCallback(async (newData) => {
     setData(newData);
-    try { await saveData(user.id, newData); } catch {}
+    // El estado local ya se actualizó de forma optimista (arriba); si el guardado
+    // real en Supabase falla, avisamos para que no se pierda el cambio en
+    // silencio (antes el catch estaba vacío).
+    try { await saveData(user.id, newData); } catch {
+      alert("No se pudo guardar el cambio. Revisá tu conexión e intentá de nuevo.");
+    }
   }, [user]);
 
   const logout = async () => {
@@ -1499,10 +1540,11 @@ function Presupuesto({ data, save, expByCat }) {
             return (
               <div key={catName}>
                 {isEditing ? (
-                  <div style={{ background: COLORS.bg, borderRadius: 12, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ background: COLORS.bg, borderRadius: 14, padding: 16, border: `1.5px solid ${COLORS.accent}`, boxShadow: "0 4px 16px #00000014", display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.accent }}>✏️ Editar categoría</div>
                     <IconPicker value={editCat.icon} onChange={ic => setEditCat({ ...editCat, icon: ic })} />
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <input value={editCat.name} onChange={e => setEditCat({ ...editCat, name: e.target.value })} style={{ flex: 1, background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+                    <div className="inline-edit-actions">
+                      <input value={editCat.name} onChange={e => setEditCat({ ...editCat, name: e.target.value })} style={{ background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
                       <Button onClick={saveEditCat} size="sm">Guardar</Button>
                       <Button onClick={() => setEditingCat(null)} variant="ghost" size="sm">Cancelar</Button>
                     </div>
@@ -1555,9 +1597,11 @@ function Ahorros({ data, save, dolarRate }) {
 
   const add = () => {
     if (!form.name || !form.target) return;
-    const current = parseAmountInput(form.current);
+    const isUsd = form.currency === "usd";
+    const parse = isUsd ? parseAmountInputUSD : parseAmountInput;
+    const current = parse(form.current);
     const g = {
-      id: Date.now(), name: form.name, target: parseAmountInput(form.target), current,
+      id: Date.now(), name: form.name, target: parse(form.target), current,
       currency: form.currency, arsRate: form.currency === "usd" ? dolarRate : null,
       history: current > 0 ? [{ date: todayStr(), amount: current }] : [],
     };
@@ -1576,16 +1620,22 @@ function Ahorros({ data, save, dolarRate }) {
     setShowForm(false);
   };
 
-  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, target: formatAmountInput(g.target) }); };
+  const startEdit = (g) => { setEditId(g.id); setEditForm({ name: g.name, target: (g.currency === "usd" ? formatAmountInputUSD : formatAmountInput)(g.target) }); };
   const saveEdit = () => {
     if (!editForm.name || !editForm.target) return;
-    const savings = data.savings.map(g => g.id === editId ? { ...g, name: editForm.name, target: parseAmountInput(editForm.target) } : g);
+    const savings = data.savings.map(g => {
+      if (g.id !== editId) return g;
+      const parse = g.currency === "usd" ? parseAmountInputUSD : parseAmountInput;
+      return { ...g, name: editForm.name, target: parse(editForm.target) };
+    });
     save({ ...data, savings });
     setEditId(null);
   };
 
   const addToSaving = (id) => {
-    const amt = parseAmountInput(addAmt[id] || 0);
+    const g = data.savings.find(x => x.id === id);
+    const parse = g && g.currency === "usd" ? parseAmountInputUSD : parseAmountInput;
+    const amt = parse(addAmt[id] || 0);
     if (!amt) return;
     const savings = data.savings.map(g => g.id === id ? { ...g, current: (g.current || 0) + amt, history: [...(g.history || []), { date: todayStr(), amount: amt }] } : g);
     save({ ...data, savings });
@@ -1602,11 +1652,11 @@ function Ahorros({ data, save, dolarRate }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva meta de ahorro</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="ahorros-form-grid">
             <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
-            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
-            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
+            <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
           {parseAmountInput(form.current) > 0 && (
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
@@ -1637,8 +1687,8 @@ function Ahorros({ data, save, dolarRate }) {
                     <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>✏️ Editar meta</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Nombre" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-                      <input type="text" inputMode="numeric" value={editForm.target} onChange={e => setEditForm({...editForm, target: formatAmountInput(e.target.value)})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <input type="text" inputMode={g.currency === "usd" ? "decimal" : "numeric"} value={editForm.target} onChange={e => setEditForm({...editForm, target: (g.currency === "usd" ? formatAmountInputUSD : formatAmountInput)(e.target.value)})} placeholder="Meta total" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
+                      <div className="inline-edit-actions">
                         <Button onClick={saveEdit} size="sm">Guardar</Button>
                         <Button onClick={() => setEditId(null)} variant="ghost" size="sm">Cancelar</Button>
                       </div>
@@ -1674,9 +1724,9 @@ function Ahorros({ data, save, dolarRate }) {
                 <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                   <input
                     type="text"
-                    inputMode="numeric"
+                    inputMode={g.currency === "usd" ? "decimal" : "numeric"}
                     value={addAmt[g.id] || ""}
-                    onChange={e => setAddAmt({ ...addAmt, [g.id]: formatAmountInput(e.target.value) })}
+                    onChange={e => setAddAmt({ ...addAmt, [g.id]: (g.currency === "usd" ? formatAmountInputUSD : formatAmountInput)(e.target.value) })}
                     placeholder={g.currency === "usd" ? "Agregar US$..." : "Agregar monto..."}
                     style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
