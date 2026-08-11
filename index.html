@@ -1728,8 +1728,21 @@ function Ahorros({ data, save, dolarRate }) {
                   </div>
                 </div>
                 {g.history && g.history.length > 0 && (
-                  <div style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>
-                    Últimos depósitos: {g.history.slice(-3).reverse().map(h => `${h.date} (${fmt(h.amount)})`).join(" · ")}
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textDim, letterSpacing: ".5px", textTransform: "uppercase", marginBottom: 6 }}>
+                      Últimos depósitos
+                    </div>
+                    <div style={{ maxHeight: 96, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+                      {g.history.slice().reverse().map((h, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: COLORS.textDim }}>
+                          <span>{h.date}</span>
+                          <span>+{fmt(h.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {g.history.length > 4 && (
+                      <div style={{ textAlign: "center", fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>⌄</div>
+                    )}
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
