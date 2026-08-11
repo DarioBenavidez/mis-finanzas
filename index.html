@@ -29,13 +29,13 @@
     .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .desktop-sidebar { display: none; }
     .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 110px; box-sizing: border-box; }
-    .inicio-layout { display: flex; flex-direction: column; gap: 20px; }
-    .inicio-primary { display: flex; flex-direction: column; gap: 20px; }
-    .inicio-rail { display: flex; flex-direction: column; gap: 20px; }
+    .inicio-layout { display: flex; flex-direction: column; gap: 16px; }
+    .inicio-primary { display: flex; flex-direction: column; gap: 16px; }
+    .inicio-rail { display: flex; flex-direction: column; gap: 16px; }
     /* 3 columnas fijas en mobile (como antes); desde 1024px pasa a auto-fill
        para aprovechar el ancho completo sin quedar en una columna angosta. */
     .inicio-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .inicio-upcoming { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    .inicio-upcoming { display: grid; grid-template-columns: 1fr; gap: 16px; }
     .panel-card { width: 100%; }
 
     /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
@@ -1088,14 +1088,14 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
         </div>
 
         {/* Hero balance */}
-        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "28px 26px 24px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "22px 24px 20px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance del mes</div>
               <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
               {hideBalance ? (
                 <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
               ) : (
@@ -1106,7 +1106,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
               )}
             </div>
             <div style={{ fontSize: 13, color: "#ffffff70" }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 20, paddingTop: 16, borderTop: "1px solid #ffffff18" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 14, paddingTop: 14, borderTop: "1px solid #ffffff18" }}>
               {[["↑ Ingresos", totalIncome], ["↓ Gastos", totalExpense], ["◆ Deudas", totalDebt], ["🐷 Ahorros", totalSavings]].map(([label, val]) => (
                 <div key={label}>
                   <div style={{ fontSize: 10, color: "#ffffff60", marginBottom: 4, textTransform: "uppercase", letterSpacing: .5 }}>{label}</div>
@@ -1118,7 +1118,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
         </div>
 
         {totalBudget > 0 && (
-          <Card style={{ padding: 16 }}>
+          <Card style={{ padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
               <span>Presupuesto del mes</span>
               <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
@@ -1133,8 +1133,8 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
       <div className="inicio-rail">
         <div className="inicio-shortcuts">
           {PLAN_PANELS.map(p => (
-            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
-              <span style={{ fontSize: 22 }}>{p.icon}</span>
+            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "12px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
+              <span style={{ fontSize: 20 }}>{p.icon}</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
             </button>
           ))}
@@ -1143,8 +1143,8 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
         {(proximosTurnos.length > 0 || proximosVencimientos.length > 0) && (
           <div className="inicio-upcoming">
             {proximosTurnos.length > 0 && (
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Card style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
                   <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
                 </div>
@@ -1160,8 +1160,8 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             )}
 
             {proximosVencimientos.length > 0 && (
-              <Card>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Card style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
                   <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
                 </div>
