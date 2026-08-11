@@ -34,19 +34,22 @@
     .inicio-rail { display: flex; flex-direction: column; gap: 20px; }
     .panel-card { width: 100%; }
 
-    /* Grid de "Nueva meta de ahorro": 1 columna en mobile angosto (~360-412px
-       Android), 2 desde 640px, y las 4 originales recién desde 1024px. Antes
-       era un grid fijo de 4 columnas sin adaptar, así que en mobile los
-       campos quedaban apretados e ilegibles. */
-    .ahorros-form-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+    /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
+       "Nueva deuda"): 1 columna en mobile angosto (~360-412px Android), 2
+       desde 640px, y las 4 originales recién desde 1024px. Antes eran grids
+       fijos de 4 columnas sin adaptar, así que en mobile los campos quedaban
+       apretados e ilegibles. Nombre genérico porque lo comparten Ahorros y
+       Deudas (antes era ".ahorros-form-grid", solo para Ahorros). */
+    .form-grid-4 { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
     @media (min-width: 640px) {
-      .ahorros-form-grid { grid-template-columns: 1fr 1fr; }
+      .form-grid-4 { grid-template-columns: 1fr 1fr; }
     }
 
-    /* Filas de edición inline (categoría en Presupuesto, meta en Ahorros):
-       flex-wrap para que "Guardar"/"Cancelar" no queden cortados en pantallas
-       angostas. Si hay un input compartiendo la fila, usa una base chica en
-       vez de flex:1 para no empujar los botones fuera del viewport. */
+    /* Filas de input + botones en una sola línea (edición inline de categoría
+       en Presupuesto y de meta en Ahorros; fila de pagar/eliminar deuda en
+       Deudas): flex-wrap para que los botones no queden cortados en
+       pantallas angostas. Si hay un input compartiendo la fila, usa una base
+       chica en vez de flex:1 para no empujar los botones fuera del viewport. */
     .inline-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .inline-edit-actions input { flex: 1 1 140px; min-width: 0; }
 
@@ -70,7 +73,7 @@
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
-      .ahorros-form-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
+      .form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
     }
   </style>
   <!-- PWA -->
@@ -1661,7 +1664,7 @@ function Ahorros({ data, save, dolarRate }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva meta de ahorro</div>
-          <div className="ahorros-form-grid">
+          <div className="form-grid-4">
             <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
             <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
@@ -1812,7 +1815,7 @@ function Deudas({ data, save, dolarRate }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <Card style={{ padding: "12px 20px" }}>
             <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Deuda total</div>
             <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalDebt)}</div>
@@ -1830,13 +1833,13 @@ function Deudas({ data, save, dolarRate }) {
       {showForm && (
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva deuda</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="form-grid-4">
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
             <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
             <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
             <Input label="Saldo restante" value={form.remaining} onChange={v => setForm({ ...form, remaining: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+          <div className="form-grid-4" style={{ marginBottom: 16 }}>
             <Input label="Cuota mensual" value={form.installment} onChange={v => setForm({ ...form, installment: v })} type="amount" prefix="$" placeholder="0" />
             <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => setForm({ ...form, remainingInstallments: v })} type="number" placeholder="ej. 9" />
             <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
@@ -1875,19 +1878,19 @@ function Deudas({ data, save, dolarRate }) {
                 <ProgressBar value={d.total - d.remaining} max={d.total || 1} color={COLORS.accent} height={8} />
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginTop: 6, marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
                   <span style={{ color: COLORS.textMuted }}>{pct.toFixed(0)}% pagado</span>
-                  <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                     {d.installment > 0 && <span>Cuota: <strong style={{ color: COLORS.text }}>{formatFull(d.installment)}</strong>/mes</span>}
                     {d.remainingInstallments > 0 && <span>Cuotas restantes: <strong style={{ color: COLORS.text }}>{d.remainingInstallments}</strong></span>}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="inline-edit-actions">
                   <input
                     type="text"
                     inputMode="numeric"
                     value={payAmt[d.id] || ""}
                     onChange={e => setPayAmt({ ...payAmt, [d.id]: formatAmountInput(e.target.value) })}
                     placeholder={d.currency === "usd" ? "Monto a pagar (US$)..." : "Monto a pagar..."}
-                    style={{ flex: 1, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
+                    style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
                   <Button onClick={() => pay(d.id)} size="sm">💸 Pagar</Button>
                   <Button onClick={() => del(d.id)} variant="danger" size="sm">Eliminar</Button>
