@@ -1561,11 +1561,21 @@ function Presupuesto({ data, save, expByCat }) {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 20 }}>{catIcon(data, catName)}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{catName}</span>
+                  <div>
+                    {/* Fila 1: ícono + nombre + editar/eliminar — separada de los montos
+                        para no amontonar 5 elementos en una sola fila en mobile (antes el
+                        nombre y "$X / $Y" quedaban pegados o se cortaban en ~360-390px). */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: 20 }}>{catIcon(data, catName)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, flex: 1, minWidth: 0 }}>{catName}</span>
+                      <button onClick={() => startEditCat(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14, flexShrink: 0 }}>✏️</button>
+                      <button onClick={() => deleteCategory(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 14, flexShrink: 0 }}>✕</button>
+                    </div>
+                    {/* Fila 2: gasto/límite + barra de progreso (izquierda, flexible) y el
+                        input de límite (derecha, ancho fijo) — con flex-wrap por si igual
+                        no entran en el mismo renglón. */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 140 }}>
                         {b.limit > 0 ? (
                           <span style={{ fontSize: 13, color: COLORS.textMuted }}>{formatFull(spent)} / {formatFull(b.limit)}</span>
                         ) : spent > 0 ? (
@@ -1573,19 +1583,17 @@ function Presupuesto({ data, save, expByCat }) {
                         ) : (
                           <span style={{ fontSize: 13, color: COLORS.textDim }}>Sin gastos este mes</span>
                         )}
+                        {b.limit > 0 && <div style={{ marginTop: 6 }}><ProgressBar value={spent} max={b.limit} /></div>}
                       </div>
-                      {b.limit > 0 && <ProgressBar value={spent} max={b.limit} />}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={formatAmountInput(b.limit || "")}
+                        onChange={e => updateLimit(catName, e.target.value)}
+                        placeholder="Límite"
+                        style={{ width: 90, flexShrink: 0, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 8px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, textAlign: "right" }}
+                      />
                     </div>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={formatAmountInput(b.limit || "")}
-                      onChange={e => updateLimit(catName, e.target.value)}
-                      placeholder="Límite"
-                      style={{ width: 90, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "5px 8px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, textAlign: "right" }}
-                    />
-                    <button onClick={() => startEditCat(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14 }}>✏️</button>
-                    <button onClick={() => deleteCategory(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 14 }}>✕</button>
                   </div>
                 )}
               </div>
