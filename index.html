@@ -1804,7 +1804,13 @@ function Deudas({ data, save, dolarRate }) {
     const amountARS = debt.currency === "usd" ? Math.round(amt * rate) : amt;
     const debts = data.debts.map(d => {
       if (d.id !== id) return d;
-      const upd = { ...d, remainingInstallments: Math.max(0, (d.remainingInstallments || 0) - 1) };
+      const upd = { ...d };
+      // Igual que la app real: un pago solo cuenta como "una cuota" si cubre al
+      // menos el 90% de la cuota mensual. Un pago parcial (ej. $400 de una cuota
+      // de $1000) descuenta esa plata de la deuda pero no toca "cuotas restantes".
+      if ((d.remainingInstallments || 0) > 0 && d.installment > 0 && amountARS >= d.installment * 0.9) {
+        upd.remainingInstallments = Math.max(0, (d.remainingInstallments || 0) - 1);
+      }
       if (d.currency === "usd") { upd.remainingUSD = Math.max(0, (d.remainingUSD || 0) - amt); upd.remaining = Math.round(upd.remainingUSD * rate); }
       else { upd.remaining = Math.max(0, d.remaining - amt); }
       return upd;
