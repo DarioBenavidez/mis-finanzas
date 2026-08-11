@@ -24,6 +24,62 @@
     button { outline: none; -webkit-appearance: none; appearance: none; }
     button:focus-visible { outline: 2px solid #005247; outline-offset: 2px; }
 
+    /* ── Sistema de movimiento: una sola curva/escala de duración para toda la
+       app, en vez de valores sueltos (.15s / .2s / .4s) repartidos por el código.
+       "fast" = feedback inmediato (hover, tap), "base" = cambio de estado de
+       rutina (mostrar/ocultar, listas), "layout" = overlay/panel entrando. La
+       curva de salida usa un ease-in simétrico para que cerrar se sienta tan
+       intencional como abrir, solo que más rápido. */
+    :root {
+      --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in: cubic-bezier(0.4, 0, 1, 1);
+      --dur-fast: 140ms;
+      --dur-base: 200ms;
+      --dur-layout: 300ms;
+    }
+
+    @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes rowExit { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.97); } }
+    @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+    @keyframes modalOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(.97); } }
+
+    /* Filas/cards de listas (transacciones, categorías, ahorros, deudas): entran
+       con fade+slide sutil apenas se montan (alta nueva o primer render de
+       página), salen con fade+scale antes de desmontarse (ver componente
+       Removable en el script). */
+    .row-enter { animation: fadeSlideIn var(--dur-base) var(--ease-standard); }
+    .row-exit { animation: rowExit var(--dur-fast) var(--ease-in) forwards; pointer-events: none; }
+
+    /* Formularios de alta/edición que se expanden inline dentro de una lista
+       (nueva categoría, nueva meta, nueva deuda, editar transacción, etc.). */
+    .form-pop { animation: fadeSlideIn var(--dur-base) var(--ease-standard); transform-origin: top; }
+
+    /* Cambio de tab (Inicio ⇄ Análisis ⇄ Perfil): el contenido nuevo entra con
+       fade+slide; no hay salida animada porque el tab anterior se desmonta al
+       instante (React solo renderiza uno a la vez), pero la entrada alcanza
+       para que no se sienta como un corte brusco. */
+    .tab-fade { animation: fadeSlideIn var(--dur-layout) var(--ease-standard); }
+
+    /* Overlay a pantalla completa (PanelModal) y modal de Conectar WhatsApp:
+       el fondo se desvanece y la card/panel entra con una leve translación +
+       escala. Al cerrar, un estado "closing" en React aplica las variantes
+       *Out durante --dur-fast antes de desmontar (ver hook useClosable). */
+    .overlay-anim { animation: overlayIn var(--dur-layout) var(--ease-standard); }
+    .overlay-anim.is-closing { animation: overlayOut var(--dur-fast) var(--ease-in) forwards; }
+    .modal-anim { animation: modalIn var(--dur-layout) var(--ease-standard); }
+    .modal-anim.is-closing { animation: modalOut var(--dur-fast) var(--ease-in) forwards; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
     /* ── Layout responsive: app shell mobile-first, sidebar persistente desde 1024px ── */
     .app-shell { display: flex; flex-direction: column; }
     .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -272,9 +328,9 @@ function Pill({ color, children }) {
   );
 }
 
-function Card({ children, style = {} }) {
+function Card({ children, style = {}, className = "" }) {
   return (
-    <div style={{
+    <div className={className} style={{
       background: COLORS.surface,
       border: `1px solid ${COLORS.border}`,
       borderRadius: 22, padding: 24,
@@ -295,7 +351,7 @@ function InfoBanner({ children }) {
 function Button({ children, onClick, variant = "primary", size = "md", disabled = false, style = {} }) {
   const base = {
     cursor: disabled ? "not-allowed" : "pointer", border: "none", borderRadius: 10, fontFamily: "inherit",
-    fontWeight: 600, transition: "all .15s",
+    fontWeight: 600, transition: "all var(--dur-fast) var(--ease-standard)",
     padding: size === "sm" ? "6px 14px" : "10px 20px",
     fontSize: size === "sm" ? 13 : 14,
     opacity: disabled ? 0.6 : 1,
@@ -358,9 +414,41 @@ function ProgressBar({ value, max, color = COLORS.accent, height = 6 }) {
   const barColor = pct > 90 ? COLORS.red : pct > 70 ? "#f59e0b" : color;
   return (
     <div style={{ background: "#e8f0ec", borderRadius: 99, height, overflow: "hidden" }}>
-      <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 99, transition: "width .4s ease" }} />
+      <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 99, transition: "width var(--dur-layout) var(--ease-standard)" }} />
     </div>
   );
+}
+
+// ---- MOTION HELPERS ----
+// Overlays y modales (PanelModal, "Conectar WhatsApp") se cierran de golpe si
+// simplemente se desmontan cuando el padre pone su estado en null/false: no
+// hay tiempo para que la animación de salida (.overlay-anim.is-closing /
+// .modal-anim.is-closing, ver <style>) se vea. useClosable retiene el
+// desmontaje real `duration` ms mientras aplica esas clases, así "cerrar" se
+// ve tan intencional como "abrir".
+function useClosable(onFullyClosed, duration = 140) {
+  const [closing, setClosing] = useState(false);
+  const requestClose = () => {
+    if (closing) return;
+    setClosing(true);
+    setTimeout(() => { setClosing(false); onFullyClosed(); }, duration);
+  };
+  return { closing, requestClose };
+}
+
+// Filas/cards de una lista (transacciones, categorías, ahorros, deudas): al
+// borrar, primero se les aplica ".row-exit" (fade + scale down) y recién
+// después de `duration` se ejecuta la baja real de los datos — así el ítem no
+// desaparece de un frame al otro. Render-prop en vez de wrapper de DOM propio
+// para no romper el layout (grid/flex) del contenedor de la lista.
+function Removable({ onRemove, duration = 140, children }) {
+  const [leaving, setLeaving] = useState(false);
+  const remove = () => {
+    if (leaving) return;
+    setLeaving(true);
+    setTimeout(onRemove, duration);
+  };
+  return children({ leaving, remove, rowClass: leaving ? "row-exit" : "row-enter" });
 }
 
 // ---- MONTH YEAR PICKER (custom, no browser select) ----
@@ -594,7 +682,7 @@ function LoginScreen({ onLogin }) {
             {[["login","Iniciar sesión"], ["register","Registrarse"], ["reset","Olvidé clave"]].map(([m, label]) => (
               <button key={m} onClick={() => { setMode(m); setError(""); setSuccess(""); }} style={{
                 flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 600, transition: "all .2s",
+                fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 600, transition: "all var(--dur-base) var(--ease-standard)",
                 background: mode === m ? COLORS.accent : "transparent",
                 color: mode === m ? "#ffffff" : COLORS.textMuted,
               }}>
@@ -644,7 +732,7 @@ function LoginScreen({ onLogin }) {
               background: loading ? "#c8dcd4" : COLORS.accent, color: "#ffffff",
               border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit",
               fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-              marginTop: 4, transition: "all .2s",
+              marginTop: 4, transition: "all var(--dur-base) var(--ease-standard)",
             }}>
               {loading ? "Procesando..." : mode === "login" ? "Entrar" : mode === "register" ? "Crear cuenta" : "Enviar email"}
             </button>
@@ -675,11 +763,15 @@ function LoginScreen({ onLogin }) {
 
 // ---- MAIN APP ----
 function PanelModal({ title, onClose, children }) {
+  // El padre desmonta este componente apenas `panel` pasa a null: sin este
+  // hook, cerrar se ve tan brusco como abrir de golpe. requestClose retiene
+  // el desmontaje real lo justo para que se vea la animación de salida.
+  const { closing, requestClose } = useClosable(onClose);
   return (
-    <div className="panel-overlay" onClick={onClose} style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
-      <div className="panel-card" onClick={e => e.stopPropagation()}>
+    <div className={`panel-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose} style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
+      <div className={`panel-card modal-anim ${closing ? "is-closing" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="panel-card-header" style={{ position: "sticky", top: 0, background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-          <button onClick={onClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
+          <button onClick={requestClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 17 }}>{title}</div>
         </div>
         <div style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>{children}</div>
@@ -741,6 +833,7 @@ function FinanzasApp() {
   const [waCode, setWaCode] = useState("");
   const [waLoading, setWaLoading] = useState(false);
   const [waError, setWaError] = useState("");
+  const { closing: waClosing, requestClose: closeWa } = useClosable(() => setWaModal(false));
 
   const defaultData = makeDefaultData();
 
@@ -913,16 +1006,21 @@ function FinanzasApp() {
 
         {/* ── CONTENIDO: una sola columna centrada en mobile, dashboard ancho desde 1024px ── */}
         <div className="content-area">
-          {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
-          {mainTab === "analisis" && <div className="narrow-col"><AnalisisTab data={data} /></div>}
-          {mainTab === "perfil" && <div className="narrow-col"><PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} /></div>}
+          {/* key={mainTab} fuerza a React a remontar este wrapper al cambiar de
+              tab, lo que retrigger la animación .tab-fade en cada cambio en vez
+              de reciclar el nodo (que no dispararía la animación de nuevo). */}
+          <div key={mainTab} className="tab-fade">
+            {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
+            {mainTab === "analisis" && <div className="narrow-col"><AnalisisTab data={data} /></div>}
+            {mainTab === "perfil" && <div className="narrow-col"><PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} /></div>}
+          </div>
         </div>
 
         {/* ── BOTTOM NAV estilo app: Inicio / Análisis / + / WhatsApp / Perfil (oculto desde 1024px, reemplazado por el sidebar) ── */}
         <div className="bottom-nav" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "rgba(242,247,245,0.97)", backdropFilter: "blur(20px)", borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -2px 12px #00000010", padding: "8px 4px calc(8px + env(safe-area-inset-bottom))", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 60 }}>
           {[["inicio", "Inicio", "🏠"], ["analisis", "Análisis", "📊"]].map(([key, label, icon]) => (
             <button key={key} onClick={() => setMainTab(key)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
-              <div style={{ fontSize: 20, filter: mainTab === key ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === key ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>{icon}</div>
+              <div style={{ fontSize: 20, filter: mainTab === key ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === key ? "scale(1.1)" : "scale(1)", transition: "all var(--dur-base) var(--ease-standard)" }}>{icon}</div>
               <div style={{ fontSize: 9, color: mainTab === key ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === key ? 700 : 400 }}>{label}</div>
             </button>
           ))}
@@ -934,7 +1032,7 @@ function FinanzasApp() {
             <div style={{ fontSize: 9, color: waPhone ? COLORS.green : COLORS.textDim, fontWeight: 600 }}>WhatsApp</div>
           </button>
           <button onClick={() => setMainTab("perfil")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
-            <div style={{ fontSize: 20, filter: mainTab === "perfil" ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === "perfil" ? "scale(1.1)" : "scale(1)", transition: "all .2s" }}>👤</div>
+            <div style={{ fontSize: 20, filter: mainTab === "perfil" ? "none" : "grayscale(1) opacity(0.4)", transform: mainTab === "perfil" ? "scale(1.1)" : "scale(1)", transition: "all var(--dur-base) var(--ease-standard)" }}>👤</div>
             <div style={{ fontSize: 9, color: mainTab === "perfil" ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === "perfil" ? 700 : 400 }}>Perfil</div>
           </button>
         </div>
@@ -958,8 +1056,8 @@ function FinanzasApp() {
 
       {/* ── MODAL: Conectar WhatsApp ── */}
       {waModal && (
-        <div onClick={() => setWaModal(false)} style={{ position: "fixed", inset: 0, background: "#00000070", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, padding: 28, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px #00000030" }}>
+        <div onClick={closeWa} className={`overlay-anim ${waClosing ? "is-closing" : ""}`} style={{ position: "fixed", inset: 0, background: "#00000070", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} className={`modal-anim ${waClosing ? "is-closing" : ""}`} style={{ background: "#fff", borderRadius: 22, padding: 28, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px #00000030" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}><WhatsAppIcon size={32} /></div>
             <div style={{ fontWeight: 700, fontSize: 18, textAlign: "center", marginBottom: 6 }}>Conectar WhatsApp</div>
             {waPhone ? (
@@ -970,7 +1068,7 @@ function FinanzasApp() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <Button onClick={() => window.open(`https://wa.me/5491125728211`, "_blank")} style={{ width: "100%", background: "#25D366", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><WhatsAppIcon size={16} color="#fff" /> Hablar con Orbe</Button>
                   <Button onClick={() => { setWaPhone(false); setWaCode(""); setWaError(""); }} variant="ghost" style={{ width: "100%" }}>Cambiar número</Button>
-                  <Button onClick={() => setWaModal(false)} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
+                  <Button onClick={closeWa} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
                 </div>
               </>
             ) : (
@@ -979,11 +1077,11 @@ function FinanzasApp() {
                   Generá un código, se va a abrir WhatsApp con un mensaje listo para enviar al bot. Apenas lo mandes desde tu teléfono, quedan vinculados.
                 </div>
                 {waCode && (
-                  <div style={{ background: COLORS.accentDim, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.accent, textAlign: "center", marginBottom: 14, fontWeight: 600 }}>
+                  <div style={{ background: COLORS.accentDim, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.accent, textAlign: "center", marginBottom: 14, fontWeight: 600 }} className="form-pop">
                     Código: ORBE:{waCode} — se abrió WhatsApp en otra pestaña.
                   </div>
                 )}
-                {waError && <div style={{ background: COLORS.redDim, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red, marginBottom: 14 }}>{waError}</div>}
+                {waError && <div style={{ background: COLORS.redDim, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red, marginBottom: 14 }} className="form-pop">{waError}</div>}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {!waCode ? (
                     <Button onClick={generateWaCode} disabled={waLoading} style={{ width: "100%" }}>{waLoading ? "Generando..." : "Generar código y abrir WhatsApp"}</Button>
@@ -993,7 +1091,7 @@ function FinanzasApp() {
                       <Button onClick={generateWaCode} variant="ghost" disabled={waLoading} style={{ width: "100%" }}>Generar otro código</Button>
                     </>
                   )}
-                  <Button onClick={() => setWaModal(false)} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
+                  <Button onClick={closeWa} variant="ghost" style={{ width: "100%" }}>Cerrar</Button>
                 </div>
               </>
             )}
@@ -1194,7 +1292,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           {listTxs.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
           ) : listTxs.map(t => editingTxId === t.id ? (
-            <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
                 <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
@@ -1210,16 +1308,20 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
               </div>
             </div>
           ) : (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
-                <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
-              <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
-              <button onClick={() => delTx(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
-            </div>
+            <Removable key={t.id} onRemove={() => delTx(t.id)}>
+              {({ remove, rowClass }) => (
+                <div className={rowClass} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+                  <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+                  <button onClick={remove} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
+                </div>
+              )}
+            </Removable>
           ))}
           {txTotalPages > 1 && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 20px" }}>
@@ -1450,7 +1552,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
       </div>
 
       {showForm && (
-        <Card>
+        <Card className="form-pop">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
           <div style={{ display: "grid", gridTemplateColumns: needsCat ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso"]} />
@@ -1473,7 +1575,7 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
           <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones este mes. ¡Agregá la primera!</div>
         ) : (
           [...monthTxs].reverse().sort((a, b) => b.date.localeCompare(a.date)).map(t => editingId === t.id ? (
-            <div key={t.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editForm.type} onChange={v => setEditForm({ ...editForm, type: v })} options={TX_TYPES} />
                 <Input label="Monto" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} type="amount" prefix="$" />
@@ -1489,20 +1591,24 @@ function Transacciones({ data, save, monthTxs, startOpen = false }) {
               </div>
             </div>
           ) : (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                {catIcon(data, t.category)}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description || t.category}</div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date} · {t.category}{t.type === "ahorro_meta" ? " · aporte a ahorro" : t.type === "sueldo" ? " · sueldo" : ""}</div>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>
-                {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
-              </div>
-              <button onClick={() => startEdit(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
-              <button onClick={() => del(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
-            </div>
+            <Removable key={t.id} onRemove={() => del(t.id)}>
+              {({ remove, rowClass }) => (
+                <div className={rowClass} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                    {catIcon(data, t.category)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description || t.category}</div>
+                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date} · {t.category}{t.type === "ahorro_meta" ? " · aporte a ahorro" : t.type === "sueldo" ? " · sueldo" : ""}</div>
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>
+                    {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
+                  </div>
+                  <button onClick={() => startEdit(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+                  <button onClick={remove} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
+                </div>
+              )}
+            </Removable>
           ))
         )}
       </Card>
@@ -1547,12 +1653,18 @@ function Presupuesto({ data, save, expByCat }) {
     setEditingCat(null);
   };
 
-  const deleteCategory = (name) => {
+  // Separado en "confirmar" (síncrono, antes de animar) y "aplicar" (después
+  // de la animación de salida, ver Removable más abajo): si confirmamos y
+  // borramos en el mismo paso, la fila desaparece de golpe antes de que la
+  // transición de salida llegue a jugar.
+  const confirmDeleteCategory = (name) => {
     const txCount = data.transactions.filter(t => t.category === name).length;
     const msg = txCount > 0
       ? `Eliminar "${name}" dejará ${txCount} transacción(es) sin categoría existente. ¿Continuar?`
       : `¿Eliminar la categoría "${name}"?`;
-    if (!window.confirm(msg)) return;
+    return window.confirm(msg);
+  };
+  const commitDeleteCategory = (name) => {
     const categories = { ...data.categories };
     delete categories[name];
     const budgets = data.budgets.filter(b => b.cat !== name);
@@ -1586,7 +1698,7 @@ function Presupuesto({ data, save, expByCat }) {
         </div>
 
         {showCatForm && (
-          <div style={{ background: COLORS.bg, borderRadius: 14, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="form-pop" style={{ background: COLORS.bg, borderRadius: 14, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
             <IconPicker value={newCat.icon} onChange={ic => setNewCat({ ...newCat, icon: ic })} />
             <div style={{ display: "flex", gap: 10 }}>
               <input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} placeholder="Nombre de la categoría" style={{ flex: 1, background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 14 }} />
@@ -1602,7 +1714,9 @@ function Presupuesto({ data, save, expByCat }) {
             const pct = b.limit > 0 ? Math.min(100, (spent / b.limit) * 100) : 0;
             const isEditing = editingCat === catName;
             return (
-              <div key={catName}>
+              <Removable key={catName} onRemove={() => commitDeleteCategory(catName)}>
+                {({ remove, rowClass }) => (
+                <div className={isEditing ? "form-pop" : rowClass}>
                 {isEditing ? (
                   <div style={{ background: COLORS.bg, borderRadius: 14, padding: 16, border: `1.5px solid ${COLORS.accent}`, boxShadow: "0 4px 16px #00000014", display: "flex", flexDirection: "column", gap: 10 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: COLORS.accent }}>✏️ Editar categoría</div>
@@ -1622,7 +1736,7 @@ function Presupuesto({ data, save, expByCat }) {
                       <span style={{ fontSize: 20 }}>{catIcon(data, catName)}</span>
                       <span style={{ fontSize: 14, fontWeight: 600, flex: 1, minWidth: 0 }}>{catName}</span>
                       <button onClick={() => startEditCat(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14, flexShrink: 0 }}>✏️</button>
-                      <button onClick={() => deleteCategory(catName)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 14, flexShrink: 0 }}>✕</button>
+                      <button onClick={() => { if (confirmDeleteCategory(catName)) remove(); }} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 14, flexShrink: 0 }}>✕</button>
                     </div>
                     {/* Fila 2: gasto/límite + barra de progreso (izquierda, flexible) y el
                         input de límite (derecha, ancho fijo) — con flex-wrap por si igual
@@ -1649,7 +1763,9 @@ function Presupuesto({ data, save, expByCat }) {
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+                )}
+              </Removable>
             );
           })}
         </div>
@@ -1714,7 +1830,8 @@ function Ahorros({ data, save, dolarRate }) {
     setAddAmt({ ...addAmt, [id]: "" });
   };
 
-  const del = (id) => { if (window.confirm("¿Eliminar esta meta de ahorro?")) save({ ...data, savings: data.savings.filter(g => g.id !== id) }); };
+  const confirmDeleteSaving = () => window.confirm("¿Eliminar esta meta de ahorro?");
+  const commitDeleteSaving = (id) => save({ ...data, savings: data.savings.filter(g => g.id !== id) });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1722,7 +1839,7 @@ function Ahorros({ data, save, dolarRate }) {
         <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nueva meta"}</Button>
       </div>
       {showForm && (
-        <Card>
+        <Card className="form-pop">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva meta de ahorro</div>
           <div className="form-grid-4">
             <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
@@ -1753,7 +1870,9 @@ function Ahorros({ data, save, dolarRate }) {
             const fmt = g.currency === "usd" ? formatUSD : formatFull;
             const arsEquiv = g.currency === "usd" && dolarRate ? Math.round(g.current * dolarRate) : null;
             return (
-              <Card key={g.id}>
+              <Removable key={g.id} onRemove={() => commitDeleteSaving(g.id)}>
+              {({ remove, rowClass }) => (
+              <Card className={editId === g.id ? "form-pop" : rowClass}>
                 {editId === g.id ? (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 14 }}>✏️ Editar meta</div>
@@ -1774,7 +1893,7 @@ function Ahorros({ data, save, dolarRate }) {
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button onClick={() => startEdit(g)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 14 }}>✏️</button>
-                    <button onClick={() => del(g.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim }}>✕</button>
+                    <button onClick={() => { if (confirmDeleteSaving()) remove(); }} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim }}>✕</button>
                   </div>
                 </div>
                 )}
@@ -1818,6 +1937,8 @@ function Ahorros({ data, save, dolarRate }) {
                   <Button onClick={() => addToSaving(g.id)} size="sm">+ Agregar</Button>
                 </div>
               </Card>
+              )}
+              </Removable>
             );
           })}
         </div>
@@ -1897,7 +2018,8 @@ function Deudas({ data, save, dolarRate }) {
     setPayAmt({ ...payAmt, [id]: "" });
   };
 
-  const del = (id) => { if (window.confirm("¿Eliminar esta deuda?")) save({ ...data, debts: data.debts.filter(d => d.id !== id) }); };
+  const confirmDeleteDebt = () => window.confirm("¿Eliminar esta deuda?");
+  const commitDeleteDebt = (id) => save({ ...data, debts: data.debts.filter(d => d.id !== id) });
 
   const totalDebt = data.debts.reduce((s, d) => s + (d.currency === "usd" ? Math.round((d.remainingUSD || 0) * (dolarRate || d.arsRate || 0)) : d.remaining), 0);
   const monthlyPayments = data.debts.reduce((s, d) => s + (d.installment || 0), 0);
@@ -1921,7 +2043,7 @@ function Deudas({ data, save, dolarRate }) {
       </div>
 
       {showForm && (
-        <Card>
+        <Card className="form-pop">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva deuda</div>
           <div className="form-grid-4">
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
@@ -1957,7 +2079,9 @@ function Deudas({ data, save, dolarRate }) {
           {data.debts.map(d => {
             const pct = d.total > 0 ? Math.min(100, ((d.total - d.remaining) / d.total) * 100) : 0;
             return (
-              <Card key={d.id}>
+              <Removable key={d.id} onRemove={() => commitDeleteDebt(d.id)}>
+              {({ remove, rowClass }) => (
+              <Card className={rowClass}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15 }}>💳 {d.name} {d.currency === "usd" && <Pill color={COLORS.green}>USD</Pill>}</div>
@@ -1991,9 +2115,11 @@ function Deudas({ data, save, dolarRate }) {
                     style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }}
                   />
                   <Button onClick={() => pay(d.id)} size="sm">💸 Pagar</Button>
-                  <Button onClick={() => del(d.id)} variant="danger" size="sm">Eliminar</Button>
+                  <Button onClick={() => { if (confirmDeleteDebt()) remove(); }} variant="danger" size="sm">Eliminar</Button>
                 </div>
               </Card>
+              )}
+              </Removable>
             );
           })}
         </div>
@@ -2218,7 +2344,7 @@ function Turnos({ data, save }) {
       </div>
 
       {showForm && (
-        <Card>
+        <Card className="form-pop">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar turno" : "Nuevo turno"}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Dentista" />
@@ -2320,7 +2446,7 @@ function Calendario({ data, save }) {
       </div>
 
       {showForm && (
-        <Card>
+        <Card className="form-pop">
           <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar evento" : `Nuevo evento — ${MONTH_NAMES[data.selectedMonth]} ${data.selectedYear}`}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
             <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="ej. Alquiler" style={{ gridColumn: "span 2" }} />
@@ -2542,7 +2668,7 @@ function Proyeccion({ data, save }) {
                   display: "flex", alignItems: "center", gap: 0,
                   borderBottom: `1px solid ${COLORS.border}`,
                   background: isHoy ? COLORS.accent + "08" : abierto ? "#00000005" : "transparent",
-                  cursor: "pointer", transition: "background .15s",
+                  cursor: "pointer", transition: "background var(--dur-fast) var(--ease-standard)",
                 }}
               >
                 {/* Indicador lateral */}
@@ -2564,13 +2690,13 @@ function Proyeccion({ data, save }) {
                   <div style={{ flex: 1, minWidth: 120, display: "flex", flexDirection: "column", gap: 5 }}>
                     <div style={{ display: "flex", height: 22, borderRadius: 6, overflow: "hidden", background: COLORS.bg }}>
                       {(mo.budgetTotal + mo.gastosFijosTotal) > 0 && (
-                        <div style={{ width: `${pctBudget}%`, background: COLORS.accent, opacity: 0.8, transition: "width .4s" }} />
+                        <div style={{ width: `${pctBudget}%`, background: COLORS.accent, opacity: 0.8, transition: "width var(--dur-layout) var(--ease-standard)" }} />
                       )}
                       {mo.cuotas.map((c) => (
                         <div key={c.name} style={{
                           width: `${(c.amount / maxGasto) * 100}%`,
                           background: c.color, opacity: 0.85,
-                          transition: "width .4s",
+                          transition: "width var(--dur-layout) var(--ease-standard)",
                         }} />
                       ))}
                     </div>
