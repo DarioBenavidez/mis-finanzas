@@ -32,6 +32,10 @@
     .inicio-layout { display: flex; flex-direction: column; gap: 20px; }
     .inicio-primary { display: flex; flex-direction: column; gap: 20px; }
     .inicio-rail { display: flex; flex-direction: column; gap: 20px; }
+    /* 3 columnas fijas en mobile (como antes); desde 1024px pasa a auto-fill
+       para aprovechar el ancho completo sin quedar en una columna angosta. */
+    .inicio-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .inicio-upcoming { display: grid; grid-template-columns: 1fr; gap: 20px; }
     .panel-card { width: 100%; }
 
     /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
@@ -66,10 +70,13 @@
       .topbar { justify-content: flex-end; }
       .content-area { max-width: 1160px; padding: 32px 40px 40px; }
       .narrow-col { max-width: 720px; margin: 0 auto; }
-      .inicio-layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
-      .inicio-primary { grid-column: 1; }
-      .inicio-rail { grid-column: 2; }
-      .inicio-tx { grid-column: 1 / -1; }
+      /* Inicio se queda apilado en una sola columna a todos los anchos: la card de
+         Balance quedaba más angosta que Transacciones de abajo cuando el rail de
+         accesos rápidos vivía al costado en un grid de 2 columnas — todo comparte
+         el mismo borde izq./der. así. Con más ancho disponible, los accesos
+         rápidos y las cards de turnos/vencimientos aprovechan el espacio extra. */
+      .inicio-shortcuts { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .inicio-upcoming { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
@@ -1121,9 +1128,10 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
         )}
       </div>
 
-      {/* Grilla de paneles + próximos turnos/vencimientos: columna lateral desde 1024px */}
+      {/* Accesos rápidos + próximos turnos/vencimientos: mismo ancho completo que
+          el resto de Inicio, ya no una columna lateral angosta al costado. */}
       <div className="inicio-rail">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+        <div className="inicio-shortcuts">
           {PLAN_PANELS.map(p => (
             <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
               <span style={{ fontSize: 22 }}>{p.icon}</span>
@@ -1132,38 +1140,42 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           ))}
         </div>
 
-        {proximosTurnos.length > 0 && (
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
-              <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {proximosTurnos.map(t => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
-                  <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
+        {(proximosTurnos.length > 0 || proximosVencimientos.length > 0) && (
+          <div className="inicio-upcoming">
+            {proximosTurnos.length > 0 && (
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
+                  <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
                 </div>
-              ))}
-            </div>
-          </Card>
-        )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {proximosTurnos.map(t => (
+                    <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
+                      <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
-        {proximosVencimientos.length > 0 && (
-          <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
-              <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {proximosVencimientos.map(e => (
-                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                  <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
-                  <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
+            {proximosVencimientos.length > 0 && (
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
+                  <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
                 </div>
-              ))}
-            </div>
-          </Card>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {proximosVencimientos.map(e => (
+                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
+                      <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
         )}
       </div>
 
