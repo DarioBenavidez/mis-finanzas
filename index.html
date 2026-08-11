@@ -87,7 +87,7 @@
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/mis-finanzas/sw.js").catch(() => {});
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
       });
     }
   </script>
@@ -543,7 +543,7 @@ function LoginScreen({ onLogin }) {
         setMode("login");
       } else if (mode === "reset") {
         const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://dariobenavidez.github.io/mis-finanzas/",
+          redirectTo: window.location.origin + "/",
         });
         if (error) throw error;
         setSuccess("¡Listo! Revisá tu email para restablecer la contraseña.");
@@ -565,7 +565,7 @@ function LoginScreen({ onLogin }) {
     // hace falta manejar el callback a mano.
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: "https://dariobenavidez.github.io/mis-finanzas/" },
+      options: { redirectTo: window.location.origin + "/" },
     });
     if (error) setError(error.message || "No se pudo iniciar sesión con Google");
   };

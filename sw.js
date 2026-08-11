@@ -1,7 +1,7 @@
-const CACHE = "mis-finanzas-v2";
+const CACHE = "mis-finanzas-v3";
 const ASSETS = [
-  "/mis-finanzas/",
-  "/mis-finanzas/index.html",
+  "/",
+  "/index.html",
   "https://unpkg.com/react@18/umd/react.production.min.js",
   "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
   "https://unpkg.com/@babel/standalone/babel.min.js",
