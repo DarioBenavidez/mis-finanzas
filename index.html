@@ -12,9 +12,11 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #F2F7F5; }
+    /* Menta pálido más saturado que el gris-verdoso original (#F2F7F5), calcado
+       del "piso" de contenido bajo el header verde en la app real (Expo). */
+    html, body { background: #E9F6F0; }
     ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: #F2F7F5; }
+    ::-webkit-scrollbar-track { background: #E9F6F0; }
     ::-webkit-scrollbar-thumb { background: #C8DDD6; border-radius: 3px; }
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
     /* El outline nativo de foco del navegador no sigue el border-radius de los
@@ -70,6 +72,28 @@
     .overlay-anim.is-closing { animation: overlayOut var(--dur-fast) var(--ease-in) forwards; }
     .modal-anim { animation: modalIn var(--dur-layout) var(--ease-standard); }
     .modal-anim.is-closing { animation: modalOut var(--dur-fast) var(--ease-in) forwards; }
+
+    /* ── Bottom sheet: identidad pinneada de los formularios "Nueva X" de la app
+       real (Deudas, Transacciones, Ahorros, Turnos, Eventos, Categorías) — sube
+       desde abajo con barrita de agarre y esquinas superiores muy redondeadas en
+       mobile. Reemplaza el patrón anterior de sección inline expandida dentro
+       del panel. Desde 1024px no tiene sentido un bottom sheet pegado al piso
+       de un monitor: pasa a ser un modal centrado con las 4 esquinas redondeadas
+       (mismo criterio que ya se usó en panel-card/LoginScreen). */
+    @keyframes sheetSlideIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes sheetSlideOut { from { transform: translateY(0); } to { transform: translateY(100%); } }
+    .sheet-overlay { position: fixed; inset: 0; background: #0D1F1C73; z-index: 220; display: flex; align-items: flex-end; justify-content: center; }
+    .sheet-card { background: #FFFFFF; width: 100%; max-width: 560px; border-radius: 28px 28px 0 0; max-height: 88vh; overflow-y: auto; box-shadow: 0 -8px 40px #00000030; animation: sheetSlideIn var(--dur-layout) var(--ease-standard); }
+    .sheet-card.sheet-closing { animation: sheetSlideOut var(--dur-fast) var(--ease-in) forwards; }
+    .sheet-handle { width: 40px; height: 5px; border-radius: 3px; background: #D8E8E1; margin: 10px auto 2px; flex-shrink: 0; }
+    .sheet-header { font-size: 21px; font-weight: 800; padding: 14px 24px 4px; color: #0D1F1C; letter-spacing: -.3px; }
+    .sheet-body { padding: 16px 24px 24px; }
+    @media (min-width: 1024px) {
+      .sheet-overlay { align-items: center; padding: 40px; }
+      .sheet-card { border-radius: 24px; max-height: 85vh; animation: modalIn var(--dur-layout) var(--ease-standard); }
+      .sheet-card.sheet-closing { animation: modalOut var(--dur-fast) var(--ease-in) forwards; }
+      .sheet-handle { display: none; }
+    }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -263,7 +287,13 @@
 const { useState, useEffect, useCallback } = React;
 
 const COLORS = {
-  bg: "#F2F7F5",
+  // Menta pálido más saturado que el gris-verdoso original: el "piso" de
+  // contenido bajo el header verde en la app real (Expo), ver las 11 capturas
+  // de referencia. pillBg es el mismo tono que usan los inputs/botones
+  // secundarios "soft" (una pizca más saturado que bg para distinguirse sobre
+  // fondos blancos y sobre el propio bg).
+  bg: "#E9F6F0",
+  pillBg: "#DCEEE3",
   surface: "#FFFFFF",
   surfaceHover: "#F7FBF9",
   border: "#C8DDD6",
@@ -415,9 +445,9 @@ function Card({ children, style = {}, className = "" }) {
   return (
     <div className={className} style={{
       background: COLORS.surface,
-      border: `1px solid ${COLORS.border}`,
+      border: "none",
       borderRadius: 22, padding: 24,
-      boxShadow: "0 2px 16px #00000010",
+      boxShadow: "0 4px 20px #00000012",
       ...style,
     }}>{children}</div>
   );
@@ -431,17 +461,23 @@ function InfoBanner({ children }) {
   );
 }
 
+// variant="soft" (menta pálido, texto verde) es el botón "secundario/Cancelar"
+// calcado de la app real; primary/gold/ghost/danger ya existían y ahora
+// comparten el mismo radio full-pill (base.borderRadius) para que TODA la
+// app -- no solo los formularios nuevos -- adopte la identidad "soft button"
+// pinneada en las 11 capturas, sin tener que tocar cada call site.
 function Button({ children, onClick, variant = "primary", size = "md", disabled = false, style = {} }) {
   const base = {
-    cursor: disabled ? "not-allowed" : "pointer", border: "none", borderRadius: 10, fontFamily: "inherit",
-    fontWeight: 600, transition: "all var(--dur-fast) var(--ease-standard)",
-    padding: size === "sm" ? "6px 14px" : "10px 20px",
+    cursor: disabled ? "not-allowed" : "pointer", border: "none", borderRadius: 999, fontFamily: "inherit",
+    fontWeight: 700, transition: "all var(--dur-fast) var(--ease-standard)",
+    padding: size === "sm" ? "7px 16px" : "11px 22px",
     fontSize: size === "sm" ? 13 : 14,
     opacity: disabled ? 0.6 : 1,
     outline: "none",
   };
   const variants = {
     primary: { background: COLORS.accent, color: "#ffffff", boxShadow: "none" },
+    soft: { background: COLORS.pillBg, color: COLORS.accent, boxShadow: "none" },
     gold: { background: COLORS.gold, color: "#2b2205", boxShadow: "none" },
     ghost: { background: "transparent", color: COLORS.textMuted, border: `1px solid ${COLORS.border}` },
     danger: { background: "#fff5f5", color: COLORS.red, border: `1px solid #f0c8c8` },
@@ -449,18 +485,23 @@ function Button({ children, onClick, variant = "primary", size = "md", disabled 
   return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>{children}</button>;
 }
 
+// Pastilla menta pálida sin borde + label chico arriba en mayúsculas/tracking
+// ancho, calcado 1:1 de los inputs de la app real (ver p.ej. "NOMBRE /
+// ACREEDOR" en la captura de Deudas). Mismo componente compartido de siempre
+// (misma firma/props), así que el restyle se propaga a toda la app sin tocar
+// cada formulario.
 function Input({ label, value, onChange, type = "text", placeholder, prefix, options, decimals = false, style = {} }) {
   const inputStyle = {
-    width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
-    borderRadius: 8, padding: prefix ? "8px 12px 8px 28px" : "8px 12px",
-    color: COLORS.text, fontFamily: "inherit", fontSize: 14, boxSizing: "border-box",
+    width: "100%", background: COLORS.pillBg, border: "none",
+    borderRadius: 999, padding: prefix ? "14px 16px 14px 30px" : "14px 18px",
+    color: COLORS.text, fontFamily: "inherit", fontSize: 15, fontWeight: 500, boxSizing: "border-box",
     outline: "none",
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, ...style }}>
-      {label && <label style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, letterSpacing: ".5px", textTransform: "uppercase" }}>{label}</label>}
+      {label && <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase" }}>{label}</label>}
       <div style={{ position: "relative" }}>
-        {prefix && <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: COLORS.textMuted, fontSize: 14 }}>{prefix}</span>}
+        {prefix && <span style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: COLORS.textMuted, fontSize: 15, fontWeight: 500 }}>{prefix}</span>}
         {options ? (
           <select value={value} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, appearance: "none" }}>
             {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -475,16 +516,74 @@ function Input({ label, value, onChange, type = "text", placeholder, prefix, opt
   );
 }
 
+// Selector por píldoras (segmented control): reemplaza los <select> nativos de
+// Input(options=...) en los formularios "Nueva X" -- Gasto/Ingreso, tipo de
+// turno, ARS/USD, tipo de evento -- calcado de la app real. `options` acepta
+// strings simples o { value, label }.
+function SegmentedControl({ label, options, value, onChange, style = {} }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, ...style }}>
+      {label && <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase" }}>{label}</label>}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map(opt => {
+          const val = typeof opt === "string" ? opt : opt.value;
+          const lbl = typeof opt === "string" ? opt : opt.label;
+          const active = value === val;
+          return (
+            <button key={val} type="button" onClick={() => onChange(val)} style={{
+              background: active ? COLORS.accent : COLORS.pillBg,
+              color: active ? "#ffffff" : COLORS.accent,
+              border: "none", borderRadius: 999, padding: "10px 18px",
+              fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              transition: "all var(--dur-fast) var(--ease-standard)", whiteSpace: "nowrap",
+            }}>{lbl}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Bottom sheet: identidad pinneada de los formularios "Nueva X" (deuda,
+// transacción, meta, turno, evento, categoría) -- sube desde abajo con
+// barrita de agarre en mobile, modal centrado desde 1024px (ver .sheet-* en
+// <style>). Reemplaza el patrón anterior de sección inline expandida dentro
+// del panel: ahora es un overlay real, con su propia animación de
+// entrada/salida vía useClosable igual que PanelModal.
+function BottomSheet({ title, onClose, children }) {
+  const { closing, requestClose } = useClosable(onClose);
+  return (
+    <div className={`sheet-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose}>
+      <div className={`sheet-card ${closing ? "sheet-closing" : ""}`} onClick={e => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div className="sheet-header">{title}</div>
+        <div className="sheet-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// Fila Cancelar/Guardar lado a lado al pie de cada bottom sheet, calcada de
+// la app real: Cancelar en "soft" (menta), Guardar en primary (verde sólido).
+function SheetActions({ onCancel, onSave, saveLabel = "Guardar", cancelLabel = "Cancelar", saveDisabled = false }) {
+  return (
+    <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+      <Button variant="soft" onClick={onCancel} style={{ flex: 1 }}>{cancelLabel}</Button>
+      <Button onClick={onSave} disabled={saveDisabled} style={{ flex: 1 }}>{saveLabel}</Button>
+    </div>
+  );
+}
+
 function IconPicker({ value, onChange }) {
   return (
     <div>
-      <label style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, letterSpacing: ".5px", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Ícono</label>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Ícono</label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {ICON_OPTIONS.map(ic => (
           <div key={ic} onClick={() => onChange(ic)} style={{
-            width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, cursor: "pointer", background: value === ic ? COLORS.accent : "#f8faf8",
-            border: `1px solid ${value === ic ? COLORS.accent : COLORS.border}`,
+            width: 40, height: 40, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, cursor: "pointer", background: value === ic ? COLORS.accent : COLORS.pillBg,
+            border: "none",
           }}>{ic}</div>
         ))}
       </div>
@@ -534,60 +633,48 @@ function Removable({ onRemove, duration = 140, children }) {
   return children({ leaving, remove, rowClass: leaving ? "row-exit" : "row-enter" });
 }
 
-// ---- MONTH YEAR PICKER (custom, no browser select) ----
-function MonthYearPicker({ selectedMonth, selectedYear, onChangeMonth, onChangeYear }) {
-  const [openM, setOpenM] = useState(false);
-  const [openY, setOpenY] = useState(false);
-  const btnStyle = {
-    background: "#ffffff", border: `1px solid ${COLORS.border}`, borderRadius: 8,
-    color: COLORS.text, padding: "6px 14px", fontFamily: "inherit", fontSize: 13,
-    cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontWeight: 500,
-  };
-  const dropStyle = {
-    position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 100,
-    background: "#ffffff", border: `1px solid ${COLORS.border}`, borderRadius: 10,
-    boxShadow: "0 8px 32px #00000060", padding: 6, minWidth: 120,
-  };
-  const optStyle = (active) => ({
-    padding: "7px 14px", borderRadius: 6, cursor: "pointer", fontSize: 13,
-    color: active ? "#ffffff" : COLORS.text,
-    background: active ? COLORS.accent : "transparent",
-    fontWeight: active ? 700 : 400,
-  });
+// ---- DATE PILL PICKER (custom, no browser select) ----
+// Reemplaza los dos dropdowns separados "Ago ▾" + "2026 ▾" por una sola
+// píldora "11 / Ago / 2026 ▾", calcada de la app real. El día siempre es el
+// de hoy (informativo, no seleccionable): el modelo de datos de esta app solo
+// filtra por mes/año, igual que antes -- unificar visualmente los dos
+// selectores no cambia qué se puede elegir.
+function DatePillPicker({ selectedMonth, selectedYear, onChangeMonth, onChangeYear }) {
+  const [open, setOpen] = useState(false);
+  const day = new Date().getDate();
   return (
-    <div style={{ display: "flex", gap: 8 }}>
-      {/* Mes */}
-      <div style={{ position: "relative" }}>
-        <button onClick={() => { setOpenM(!openM); setOpenY(false); }} style={btnStyle}>
-          {MONTH_NAMES[selectedMonth]} <span style={{ fontSize: 10, opacity: .6 }}>▼</span>
-        </button>
-        {openM && (
-          <div style={dropStyle}>
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        background: "#ffffff1c", border: "none", borderRadius: 999, color: "#fff",
+        padding: "8px 16px", fontFamily: "inherit", fontSize: 13, fontWeight: 700,
+        cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+      }}>
+        {day} / {MONTH_NAMES[selectedMonth]} / {selectedYear} <span style={{ fontSize: 10, opacity: .7 }}>▾</span>
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 100, background: "#ffffff", borderRadius: 16, boxShadow: "0 12px 32px #00000030", padding: 14, minWidth: 230 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>Mes</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
             {MONTH_NAMES.map((m, i) => (
-              <div key={i} style={optStyle(i === selectedMonth)}
-                onClick={() => { onChangeMonth(i); setOpenM(false); }}>
-                {m}
-              </div>
+              <button key={m} onClick={() => { onChangeMonth(i); setOpen(false); }} style={{
+                background: i === selectedMonth ? COLORS.accent : COLORS.pillBg,
+                color: i === selectedMonth ? "#fff" : COLORS.accent,
+                border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{m}</button>
             ))}
           </div>
-        )}
-      </div>
-      {/* Año */}
-      <div style={{ position: "relative" }}>
-        <button onClick={() => { setOpenY(!openY); setOpenM(false); }} style={btnStyle}>
-          {selectedYear} <span style={{ fontSize: 10, opacity: .6 }}>▼</span>
-        </button>
-        {openY && (
-          <div style={dropStyle}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>Año</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[2026, 2027, 2028, 2029].map(y => (
-              <div key={y} style={optStyle(y === selectedYear)}
-                onClick={() => { onChangeYear(y); setOpenY(false); }}>
-                {y}
-              </div>
+              <button key={y} onClick={() => { onChangeYear(y); setOpen(false); }} style={{
+                background: y === selectedYear ? COLORS.accent : COLORS.pillBg,
+                color: y === selectedYear ? "#fff" : COLORS.accent,
+                border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{y}</button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1155,7 +1242,7 @@ function FinanzasApp() {
           <div className="topbar-brand" style={{ display: "flex", alignItems: "center" }}>
             <img src="assets/orbe-icon-64.png" alt="Orbe" style={{ width: 44, height: 44, borderRadius: 11, display: "block" }} />
           </div>
-          <MonthYearPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
+          <DatePillPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
         </div>
 
         {/* ── CONTENIDO: una sola columna centrada en mobile, dashboard ancho desde 1024px ── */}
@@ -1178,8 +1265,15 @@ function FinanzasApp() {
               <div style={{ fontSize: 9, color: mainTab === key ? COLORS.accent : COLORS.textDim, fontWeight: mainTab === key ? 700 : 400 }}>{label}</div>
             </button>
           ))}
-          <button onClick={() => setPanel("transacciones")} style={{ background: COLORS.accent, border: "none", borderRadius: "50%", width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: `0 4px 16px ${COLORS.accent}50`, marginTop: -14, flexShrink: 0 }}>
-            <span style={{ color: "#fff", fontSize: 24, fontWeight: 700, lineHeight: 1 }}>+</span>
+          {/* Integrado a la fila, mismo alto que los demás íconos -- no un FAB
+              circular flotando arriba de la barra como antes -- pero se
+              mantiene distinguible (círculo verde sólido) porque sigue siendo
+              la acción principal. */}
+          <button onClick={() => setPanel("transacciones")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 2px 8px ${COLORS.accent}50` }}>
+              <span style={{ color: "#fff", fontSize: 17, fontWeight: 700, lineHeight: 1 }}>+</span>
+            </div>
+            <div style={{ fontSize: 9, color: COLORS.accent, fontWeight: 700 }}>Nuevo</div>
           </button>
           <button onClick={openWa} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "4px 10px" }}>
             <div style={{ display: "flex", filter: waPhone ? "none" : "grayscale(1) opacity(0.4)" }}><WhatsAppIcon size={20} /></div>
@@ -1193,7 +1287,7 @@ function FinanzasApp() {
       </div>
 
       {/* ── PANELES: pantalla completa en mobile, card centrado en escritorio (Ahorros, Deudas, Presupuesto, etc.) ── */}
-      {panel && (
+      {panel && panel !== "transacciones" && (
         <PanelModal title={PANEL_LABELS[panel]} onClose={() => setPanel(null)}>
           {panel === "ahorros" && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
           {panel === "deudas" && <Deudas data={data} save={save} dolarRate={dolarRate} />}
@@ -1204,8 +1298,15 @@ function FinanzasApp() {
           {panel === "suscripciones" && <Suscripciones data={data} />}
           {panel === "gastosfijos" && <GastosFijos data={data} />}
           {panel === "presupuesto" && <Presupuesto data={data} save={save} expByCat={expByCat} />}
-          {panel === "transacciones" && <Transacciones data={data} save={save} monthTxs={monthTxs} startOpen />}
         </PanelModal>
+      )}
+
+      {/* ── "+" / "Nueva transacción": bottom sheet dedicado (calcado de "Nuevo
+          movimiento" en la app real), no el panel de lista completa -- la
+          lista completa del mes ya vive embebida en Inicio (con buscador y
+          filtros), así que este atajo va directo al alta. ── */}
+      {panel === "transacciones" && (
+        <NuevaTransaccionSheet data={data} save={save} onClose={() => setPanel(null)} />
       )}
 
       {/* ── MODAL: Conectar WhatsApp ── */}
@@ -1339,12 +1440,17 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
         </div>
 
-        {/* Hero balance */}
+        {/* Hero balance -- calcado de la app real: "BALANCE DISPONIBLE" (antes
+            "Balance del mes"), Ingresos/Gastos en una sola línea con puntos de
+            color en vez del grid de 4 stats con flechas de antes. Deuda total
+            y Ahorro total siguen viéndose en sus propios accesos rápidos
+            (Deudas/Ahorros) más abajo -- no se pierde el dato, solo se saca
+            del hero para calcar el diseño real, que no lo incluye acá. */}
         <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "22px 24px 20px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance del mes</div>
+              <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance disponible</div>
               <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
@@ -1357,14 +1463,16 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 </>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#ffffff70" }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, marginTop: 14, paddingTop: 14, borderTop: "1px solid #ffffff18" }}>
-              {[["↑ Ingresos", totalIncome], ["↓ Gastos", totalExpense], ["◆ Deudas", totalDebt], ["🐷 Ahorros", totalSavings]].map(([label, val]) => (
-                <div key={label}>
-                  <div style={{ fontSize: 10, color: "#ffffff60", marginBottom: 4, textTransform: "uppercase", letterSpacing: .5 }}>{label}</div>
-                  <div style={{ fontSize: 16, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>{hideBalance ? "••••" : formatFull(val)}</div>
-                </div>
-              ))}
+            <div style={{ fontSize: 13, color: "#ffffff70", marginBottom: 12 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", flexShrink: 0 }} />
+                Ingresos {hideBalance ? "••••" : formatFull(totalIncome)}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#F87171", flexShrink: 0 }} />
+                Gastos {hideBalance ? "••••" : formatFull(totalExpense)}
+              </div>
             </div>
           </div>
         </div>
@@ -1384,10 +1492,14 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           el resto de Inicio, ya no una columna lateral angosta al costado. */}
       <div className="inicio-rail">
         <div className="inicio-shortcuts">
+          {/* Mismo grid ya alineado (3 columnas fijas en mobile, auto-fill
+              desde 1024px) -- solo restyle visual de las cards, calcado de las
+              cards blancas redondeadas de la app real (ícono arriba, label
+              abajo, sin borde, sombra suave). */}
           {PLAN_PANELS.map(p => (
-            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 16, padding: "12px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", boxShadow: "0 2px 8px #00000008" }}>
-              <span style={{ fontSize: 20 }}>{p.icon}</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
+            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: "none", borderRadius: 20, padding: "18px 8px 14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", boxShadow: "0 4px 16px #00000010" }}>
+              <span style={{ fontSize: 26 }}>{p.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
             </button>
           ))}
         </div>
@@ -1563,6 +1675,21 @@ function AnalisisTab({ data }) {
 }
 
 // ---- PERFIL ----
+// Fila tipo lista con chevron, calcada de la app real (Editar nombre, Cambiar
+// contraseña, WhatsApp conectado). El chevron rota 90° cuando la fila está
+// expandida, como feedback de que "abrió hacia abajo" en vez de navegar afuera.
+function ProfileRow({ label, sub, onClick, open }) {
+  return (
+    <button onClick={onClick} style={{ width: "100%", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "16px 20px", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: COLORS.text }}>{label}</div>
+        {sub && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sub}</div>}
+      </div>
+      <span style={{ color: COLORS.textDim, fontSize: 20, flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform var(--dur-fast) var(--ease-standard)" }}>›</span>
+    </button>
+  );
+}
+
 function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
   const [editingName, setEditingName] = useState(false);
   const [nombre, setNombre] = useState(user?.user_metadata?.nombre || "");
@@ -1601,172 +1728,137 @@ function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Perfil</div>
-
-      <Card style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: COLORS.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, flexShrink: 0 }}>
+      {/* Header verde con avatar + nombre + email, calcado de la app real.
+          "Huella / Face ID" se omite (concepto nativo de celular, no aplica en
+          un navegador) y "Modo oscuro" se omite también -- descartado
+          explícitamente por el dueño del proyecto (ver PRODUCT.md), no se
+          agrega ni el toggle ni la lógica, ni siquiera deshabilitado. */}
+      <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "32px 24px 28px", textAlign: "center", boxShadow: `0 12px 48px ${COLORS.accent}28` }}>
+        <div style={{ width: 84, height: 84, borderRadius: "50%", background: "#ffffff22", border: "2px solid #ffffff33", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 700, margin: "0 auto 14px" }}>
           {(displayName || "?").charAt(0).toUpperCase()}
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{displayName}</div>
-          <div style={{ fontSize: 12, color: COLORS.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</div>
-        </div>
-      </Card>
+        <div style={{ fontWeight: 800, fontSize: 19, color: "#fff" }}>{displayName}</div>
+        <div style={{ fontSize: 13, color: "#ffffffaa", marginTop: 2 }}>{user?.email}</div>
+      </div>
 
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>✏️ Nombre</div>
-          {!editingName && <button onClick={() => setEditingName(true)} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Editar</button>}
-        </div>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <ProfileRow label="Editar nombre" sub={displayName} onClick={() => setEditingName(v => !v)} open={editingName} />
         {editingName && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+          <div className="form-pop" style={{ padding: "0 20px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
-              <input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Apellido" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+              <Input value={nombre} onChange={setNombre} placeholder="Nombre" />
+              <Input value={apellido} onChange={setApellido} placeholder="Apellido" />
             </div>
             {nameMsg && <div style={{ fontSize: 12, color: nameMsg.includes("Guardado") ? COLORS.green : COLORS.red }}>{nameMsg}</div>}
             <div style={{ display: "flex", gap: 8 }}>
               <Button size="sm" onClick={saveName} disabled={savingName}>{savingName ? "Guardando..." : "Guardar"}</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancelar</Button>
+              <Button size="sm" variant="soft" onClick={() => setEditingName(false)}>Cancelar</Button>
             </div>
           </div>
         )}
-      </Card>
-
-      <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>🔒 Contraseña</div>
-          {!changingPw && <button onClick={() => setChangingPw(true)} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Cambiar</button>}
-        </div>
+        <div style={{ borderTop: `1px solid ${COLORS.border}` }} />
+        <ProfileRow label="Cambiar contraseña" sub="Actualizá tu contraseña de acceso" onClick={() => setChangingPw(v => !v)} open={changingPw} />
         {changingPw && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
-            <input type="password" value={pw1} onChange={e => setPw1(e.target.value)} placeholder="Nueva contraseña" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
-            <input type="password" value={pw2} onChange={e => setPw2(e.target.value)} placeholder="Confirmar contraseña" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13 }} />
+          <div className="form-pop" style={{ padding: "0 20px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <Input type="password" value={pw1} onChange={setPw1} placeholder="Nueva contraseña" />
+            <Input type="password" value={pw2} onChange={setPw2} placeholder="Confirmar contraseña" />
             {pwMsg && <div style={{ fontSize: 12, color: pwMsg.includes("actualizada") ? COLORS.green : COLORS.red }}>{pwMsg}</div>}
             <div style={{ display: "flex", gap: 8 }}>
               <Button size="sm" onClick={changePassword} disabled={pwLoading}>{pwLoading ? "Guardando..." : "Guardar"}</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setChangingPw(false); setPw1(""); setPw2(""); setPwMsg(""); }}>Cancelar</Button>
+              <Button size="sm" variant="soft" onClick={() => { setChangingPw(false); setPw1(""); setPw2(""); setPwMsg(""); }}>Cancelar</Button>
             </div>
           </div>
         )}
       </Card>
 
-      <Card>
-        <button onClick={onConnectWa} style={{ width: "100%", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
-          <span style={{ fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><WhatsAppIcon size={16} /> WhatsApp</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: waPhone ? COLORS.green : COLORS.accent }}>{waPhone ? `Vinculado (${waPhone})` : "Conectar →"}</span>
-        </button>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <ProfileRow
+          label={<span style={{ display: "flex", alignItems: "center", gap: 8 }}><WhatsAppIcon size={16} /> WhatsApp {waPhone && "conectado ✓"}</span>}
+          sub={waPhone ? `Vinculado al ${waPhone}` : "Conectá tu WhatsApp para hablar con Orbe"}
+          onClick={onConnectWa}
+        />
       </Card>
 
-      <Button variant="danger" onClick={onLogout} style={{ width: "100%" }}>🚪 Cerrar sesión</Button>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <button onClick={onLogout} style={{ width: "100%", background: "none", border: "none", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", cursor: "pointer", fontFamily: "inherit" }}>
+          <span style={{ color: COLORS.red, fontWeight: 700, fontSize: 15 }}>Cerrar sesión</span>
+          <span style={{ color: COLORS.red, fontSize: 20 }}>›</span>
+        </button>
+      </Card>
     </div>
   );
 }
 
-// ---- TRANSACCIONES ----
-function Transacciones({ data, save, monthTxs, startOpen = false }) {
+// ---- NUEVA TRANSACCIÓN (bottom sheet, calcado de "Nuevo movimiento") ----
+// Antes este componente también mostraba la lista completa del mes con
+// edición/borrado inline (era el panel detrás del botón "+"). Esa lista ya
+// vive embebida en Inicio (con buscador y filtros semana/mes/anterior, edición
+// y borrado incluidos) -- mostrarla de nuevo acá era redundante y, sobre todo,
+// no es lo que hace la app real: en la app, "+" abre únicamente el formulario
+// de alta como bottom sheet. Editar/eliminar transacciones existentes se sigue
+// haciendo desde la lista de Inicio, sin pérdida de funcionalidad.
+function NuevaTransaccionSheet({ data, save, onClose }) {
   const catNames = Object.keys(data.categories);
   const [form, setForm] = useState({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
-  const [showForm, setShowForm] = useState(startOpen);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState(null);
+  const [showCatForm, setShowCatForm] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+
+  const needsCat = form.type === "gasto";
 
   const add = () => {
     if (!form.amount || !parseAmountInput(form.amount)) return;
     const category = form.type === "gasto" ? form.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const tx = { ...form, category, amount: parseAmountInput(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
-    setForm({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
-    setShowForm(false);
+    onClose();
   };
 
-  const del = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
-
-  const startEdit = (t) => { setEditingId(t.id); setEditForm({ type: t.type, amount: formatAmountInput(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
-  const cancelEdit = () => { setEditingId(null); setEditForm(null); };
-  const saveEdit = () => {
-    if (!editForm.amount || !parseAmountInput(editForm.amount)) return;
-    const category = editForm.type === "gasto" ? editForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
-    const transactions = data.transactions.map(t => t.id === editingId
-      ? { ...t, type: editForm.type, amount: parseAmountInput(editForm.amount), description: editForm.description, category, date: editForm.date }
-      : t);
-    save({ ...data, transactions });
-    cancelEdit();
+  const addCategoryQuick = () => {
+    const name = newCatName.trim();
+    if (!name || data.categories[name]) return;
+    const categories = { ...data.categories, [name]: "📦" };
+    const budgets = [...data.budgets, { cat: name, limit: 0 }];
+    save({ ...data, categories, budgets });
+    setForm(f => ({ ...f, category: name }));
+    setNewCatName("");
+    setShowCatForm(false);
   };
-  const needsCatEdit = editForm && editForm.type === "gasto";
-  // Ingreso/Sueldo no se categorizan: la categoría solo se usa para desglosar
-  // gastos (Presupuesto/Análisis). Se etiquetan como "Sueldos" automáticamente
-  // (ver `add`/`saveEdit`), sin pedirle nada al usuario ni mostrarla en el form.
-  const needsCat = form.type === "gasto";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nueva transacción"}</Button>
-      </div>
-
-      {showForm && (
-        <Card className="form-pop">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva transacción</div>
-          <div style={{ display: "grid", gridTemplateColumns: needsCat ? "1fr 1fr 1fr" : "1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={["gasto", "ingreso"]} />
-            <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
-            {needsCat && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Supermercado" />
-            <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
-          </div>
-          <Button onClick={add}>Guardar transacción</Button>
-        </Card>
-      )}
-
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15 }}>
-          Transacciones — {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}
-        </div>
-        {monthTxs.length === 0 ? (
-          <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones este mes. ¡Agregá la primera!</div>
-        ) : (
-          [...monthTxs].reverse().sort((a, b) => b.date.localeCompare(a.date)).map(t => editingId === t.id ? (
-            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
-              <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <Input label="Tipo" value={editForm.type} onChange={v => setEditForm({ ...editForm, type: v })} options={TX_TYPES} />
-                <Input label="Monto" value={editForm.amount} onChange={v => setEditForm({ ...editForm, amount: v })} type="amount" prefix="$" />
-                {needsCatEdit && <Input label="Categoría" value={editForm.category} onChange={v => setEditForm({ ...editForm, category: v })} options={catNames} />}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <Input label="Descripción" value={editForm.description} onChange={v => setEditForm({ ...editForm, description: v })} />
-                <Input label="Fecha" value={editForm.date} onChange={v => setEditForm({ ...editForm, date: v })} type="date" />
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button size="sm" onClick={saveEdit}>Guardar</Button>
-                <Button size="sm" variant="ghost" onClick={cancelEdit}>Cancelar</Button>
-              </div>
+    <BottomSheet title="Nuevo movimiento" onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <SegmentedControl
+          options={[{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }]}
+          value={form.type}
+          onChange={v => setForm({ ...form, type: v })}
+        />
+        <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
+        <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
+        {needsCat && (
+          <div>
+            <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
+              {catNames.map(c => (
+                <button key={c} onClick={() => setForm({ ...form, category: c })} style={{
+                  background: form.category === c ? COLORS.accent : COLORS.pillBg,
+                  color: form.category === c ? "#fff" : COLORS.accent,
+                  border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                }}>{catIcon(data, c)} {c}</button>
+              ))}
             </div>
-          ) : (
-            <Removable key={t.id} onRemove={() => del(t.id)}>
-              {({ remove, rowClass }) => (
-                <div className={rowClass} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-                    {catIcon(data, t.category)}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: 14 }}>{t.description || t.category}</div>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>{t.date} · {t.category}{t.type === "ahorro_meta" ? " · aporte a ahorro" : t.type === "sueldo" ? " · sueldo" : ""}</div>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>
-                    {isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}
-                  </div>
-                  <button onClick={() => startEdit(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
-                  <button onClick={remove} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
-                </div>
-              )}
-            </Removable>
-          ))
+            {showCatForm && (
+              <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre de categoría" style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
+                <Button onClick={addCategoryQuick} variant="gold" style={{ flexShrink: 0 }}>Agregar</Button>
+              </div>
+            )}
+          </div>
         )}
-      </Card>
-    </div>
+        <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+      </div>
+      <SheetActions onCancel={onClose} onSave={add} saveLabel="Guardar" />
+    </BottomSheet>
   );
 }
 
@@ -1848,17 +1940,16 @@ function Presupuesto({ data, save, expByCat }) {
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Categorías y límites</div>
-          <Button size="sm" onClick={() => setShowCatForm(!showCatForm)}>{showCatForm ? "✕ Cancelar" : "+ Nueva categoría"}</Button>
+          <Button size="sm" onClick={() => setShowCatForm(true)}>+ Nueva categoría</Button>
         </div>
 
         {showCatForm && (
-          <div className="form-pop" style={{ background: COLORS.bg, borderRadius: 14, padding: 16, marginBottom: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <BottomSheet title="Nueva categoría" onClose={() => setShowCatForm(false)}>
             <IconPicker value={newCat.icon} onChange={ic => setNewCat({ ...newCat, icon: ic })} />
-            <div style={{ display: "flex", gap: 10 }}>
-              <input value={newCat.name} onChange={e => setNewCat({ ...newCat, name: e.target.value })} placeholder="Nombre de la categoría" style={{ flex: 1, background: "#fff", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 14 }} />
-              <Button size="sm" onClick={addCategory}>Agregar</Button>
-            </div>
-          </div>
+            <div style={{ height: 14 }} />
+            <Input label="Nombre" value={newCat.name} onChange={v => setNewCat({ ...newCat, name: v })} placeholder="Ej: Mascotas" />
+            <SheetActions onCancel={() => setShowCatForm(false)} onSave={addCategory} />
+          </BottomSheet>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1990,25 +2081,28 @@ function Ahorros({ data, save, dolarRate }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nueva meta"}</Button>
+        <Button onClick={() => setShowForm(true)}>+ Nueva meta</Button>
       </div>
       {showForm && (
-        <Card className="form-pop">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva meta de ahorro</div>
-          <div className="form-grid-4">
-            <Input label="Nombre de la meta" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Vacaciones" />
-            <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
-            <Input label="Meta total" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="100000" />
+        <BottomSheet title="Nueva meta de ahorro" onClose={() => setShowForm(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Nombre" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Ej: Vacaciones" />
+            <SegmentedControl
+              options={[{ value: "ars", label: "🇦🇷 ARS" }, { value: "usd", label: "🇺🇸 USD" }]}
+              value={form.currency}
+              onChange={v => setForm({ ...form, currency: v })}
+            />
+            <Input label="Meta" value={form.target} onChange={v => setForm({ ...form, target: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
             <Input label="Ya tengo" value={form.current} onChange={v => setForm({ ...form, current: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            {parseAmountInput(form.current) > 0 && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted }}>
+                <input type="checkbox" checked={fromSalary} onChange={e => setFromSalary(e.target.checked)} />
+                Ese monto ya lo desconté de mi sueldo (afecta el balance del mes)
+              </label>
+            )}
           </div>
-          {parseAmountInput(form.current) > 0 && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
-              <input type="checkbox" checked={fromSalary} onChange={e => setFromSalary(e.target.checked)} />
-              Ese monto ya lo desconté de mi sueldo (afecta el balance del mes)
-            </label>
-          )}
-          <Button onClick={add}>Crear meta</Button>
-        </Card>
+          <SheetActions onCancel={() => setShowForm(false)} onSave={add} saveLabel="Crear meta" />
+        </BottomSheet>
       )}
 
       {data.savings.length === 0 ? (
@@ -2193,34 +2287,37 @@ function Deudas({ data, save, dolarRate }) {
             </Card>
           )}
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>{showForm ? "✕ Cancelar" : "+ Nueva deuda"}</Button>
+        <Button onClick={() => setShowForm(true)}>+ Nueva deuda</Button>
       </div>
 
       {showForm && (
-        <Card className="form-pop">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>Nueva deuda</div>
-          <div className="form-grid-4">
-            <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="ej. Tarjeta Visa" />
-            <Input label="Moneda" value={form.currency} onChange={v => setForm({ ...form, currency: v })} options={["ars", "usd"]} />
-            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-            <Input label="Saldo restante" value={form.remaining} onChange={v => {
+        <BottomSheet title="Nueva deuda" onClose={() => setShowForm(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Ej: Tarjeta Visa" />
+            <SegmentedControl
+              options={[{ value: "ars", label: "🇦🇷 ARS" }, { value: "usd", label: "🇺🇸 USD" }]}
+              value={form.currency}
+              onChange={v => setForm({ ...form, currency: v })}
+            />
+            <Input label="Monto pendiente" value={form.remaining} onChange={v => {
               const next = { ...form, remaining: v };
               if (!installmentEdited) next.installment = autoInstallment(v, form.remainingInstallments);
               setForm(next);
             }} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-          </div>
-          <div className="form-grid-4" style={{ marginBottom: 16 }}>
+            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
             <Input label="Cuota mensual" value={form.installment} onChange={v => { setInstallmentEdited(true); setForm({ ...form, installment: v }); }} type="amount" prefix="$" placeholder="0" />
-            <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
-              const next = { ...form, remainingInstallments: v };
-              if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
-              setForm(next);
-            }} type="number" placeholder="ej. 9" />
-            <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
-            <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
+            <div className="form-grid-4" style={{ margin: 0 }}>
+              <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
+                const next = { ...form, remainingInstallments: v };
+                if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
+                setForm(next);
+              }} type="number" placeholder="Ej: 9" />
+              <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
+              <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
+            </div>
           </div>
-          <Button onClick={add}>Agregar deuda</Button>
-        </Card>
+          <SheetActions onCancel={() => setShowForm(false)} onSave={add} saveLabel="Agregar deuda" />
+        </BottomSheet>
       )}
 
       {data.debts.length === 0 ? (
@@ -2494,29 +2591,26 @@ function Turnos({ data, save }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => showForm ? closeForm() : setShowForm(true)}>{showForm ? "✕ Cancelar" : "+ Nuevo turno"}</Button>
+        <Button onClick={() => setShowForm(true)}>+ Nuevo turno</Button>
       </div>
 
       {showForm && (
-        <Card className="form-pop">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar turno" : "Nuevo turno"}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="ej. Dentista" />
-            <Input label="Tipo" value={form.turnoType} onChange={v => setForm({ ...form, turnoType: v })} options={TIPOS_TURNO} />
+        <BottomSheet title={editingId ? "Editar turno" : "Nuevo turno"} onClose={closeForm}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Médico clínico, Banco Galicia" />
+            <Input label="Fecha (YYYY-MM-DD)" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+            <Input label="Hora (opcional)" value={form.time} onChange={v => setForm({ ...form, time: v })} type="time" />
+            <Input label="Lugar (opcional)" value={form.location} onChange={v => setForm({ ...form, location: v })} placeholder="Ej: Av. Corrientes 1234" />
+            <SegmentedControl label="Tipo" options={TIPOS_TURNO} value={form.turnoType} onChange={v => setForm({ ...form, turnoType: v })} />
+            {!editingId && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted }}>
+                <input type="checkbox" checked={form.addToCal} onChange={e => setForm({ ...form, addToCal: e.target.checked })} />
+                Agregar al calendario
+              </label>
+            )}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
-            <Input label="Hora" value={form.time} onChange={v => setForm({ ...form, time: v })} type="time" />
-            <Input label="Lugar" value={form.location} onChange={v => setForm({ ...form, location: v })} placeholder="opcional" />
-          </div>
-          {!editingId && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
-              <input type="checkbox" checked={form.addToCal} onChange={e => setForm({ ...form, addToCal: e.target.checked })} />
-              Agregar recordatorio al calendario
-            </label>
-          )}
-          <Button onClick={save_}>{editingId ? "Guardar cambios" : "Guardar turno"}</Button>
-        </Card>
+          <SheetActions onCancel={closeForm} onSave={save_} saveLabel={editingId ? "Guardar cambios" : "Guardar"} />
+        </BottomSheet>
       )}
 
       <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -2596,19 +2690,23 @@ function Calendario({ data, save }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button onClick={() => showForm ? closeForm() : setShowForm(true)}>{showForm ? "✕ Cancelar" : "+ Nuevo evento"}</Button>
+        <Button onClick={() => setShowForm(true)}>+ Nuevo evento</Button>
       </div>
 
       {showForm && (
-        <Card className="form-pop">
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>{editingId ? "Editar evento" : `Nuevo evento — ${MONTH_NAMES[data.selectedMonth]} ${data.selectedYear}`}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-            <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="ej. Alquiler" style={{ gridColumn: "span 2" }} />
+        <BottomSheet title={editingId ? "Editar evento" : "Nuevo evento"} onClose={closeForm}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Título" value={form.title} onChange={v => setForm({ ...form, title: v })} placeholder="Ej: Vencimiento luz" />
             <Input label="Día del mes" value={form.day} onChange={v => setForm({ ...form, day: v })} type="number" placeholder={`1-${daysInMonth}`} />
-            <Input label="Tipo" value={form.type} onChange={v => setForm({ ...form, type: v })} options={Object.keys(EVENT_TYPES)} />
+            <SegmentedControl
+              label="Tipo"
+              options={Object.entries(EVENT_TYPES).map(([key, v]) => ({ value: key, label: v.label }))}
+              value={form.type}
+              onChange={v => setForm({ ...form, type: v })}
+            />
           </div>
-          <Button onClick={save_}>{editingId ? "Guardar cambios" : "Guardar evento"}</Button>
-        </Card>
+          <SheetActions onCancel={closeForm} onSave={save_} saveLabel={editingId ? "Guardar cambios" : "Guardar"} />
+        </BottomSheet>
       )}
 
       {/* Grilla del mes */}
