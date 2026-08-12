@@ -148,7 +148,14 @@
        (verde arriba, crema abajo, mismos botones) se contiene en una card
        centrada de ancho máximo razonable con esquinas redondeadas en las 4
        puntas y sombra, sobre el fondo neutro habitual de la web. ── */
-    .auth-page { min-height: 100vh; width: 100%; background: #005247; display: flex; flex-direction: column; }
+    /* La app real (LoginScreen.jsx) nunca declara fontFamily en ningún lado, así
+       que React Native renderiza con la fuente del sistema (Roboto en Android,
+       San Francisco en iOS) — no hay una "fuente de Orbe" propia. Para calcar
+       eso de verdad (y no solo el color/forma), esta pantalla usa la fuente del
+       sistema del visitante en vez de heredar la Nunito/DM Sans que sí es la
+       identidad tipográfica del resto de la web (que solo se aplica una vez
+       logueado, vía .app-shell — esta pantalla vive afuera de eso). */
+    .auth-page { min-height: 100vh; width: 100%; background: #005247; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     .auth-visual { flex: 1; display: flex; flex-direction: column; width: 100%; }
     .auth-header { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 56px 24px 18px; flex-shrink: 0; background: #005247; }
     .auth-blob { position: absolute; border-radius: 50%; pointer-events: none; }
