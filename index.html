@@ -1252,7 +1252,7 @@ function FinanzasApp() {
         {/* ── TOP HEADER (solo marca + mes/año, como el header fijo verde de la app) ── */}
         <div className="topbar" style={{ background: COLORS.accent, padding: "0 20px", boxShadow: "0 1px 8px #00000020", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
           <div className="topbar-brand" style={{ display: "flex", alignItems: "center" }}>
-            <img src="assets/orbe-icon-64.png" alt="Orbe" style={{ width: 44, height: 44, borderRadius: 11, display: "block" }} />
+            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 108, height: "auto", display: "block" }} />
           </div>
           <DatePillPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
         </div>
