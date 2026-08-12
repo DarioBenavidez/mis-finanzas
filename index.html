@@ -139,9 +139,15 @@
 
     @media (min-width: 1024px) {
       .app-shell { flex-direction: row; }
+      /* Verde sólido + dorado calcado del panel izquierdo del LoginScreen (ver
+         AUTH/.auth-header): antes era un sidebar blanco liso con un borde
+         derecho de 1px que quedaba como una costura sin sentido contra el
+         topbar y el fondo menta vacío arriba del contenido. Ahora sidebar y
+         topbar comparten el mismo verde de punta a punta -- no hay costura
+         que tapar porque no hay corte de color. */
       .desktop-sidebar {
         display: flex; flex-direction: column; width: 264px; flex-shrink: 0;
-        background: #FFFFFF; border-right: 1px solid #C8DDD6; padding: 24px 16px;
+        background: linear-gradient(180deg, #005247 0%, #002f28 100%); border-right: none; padding: 24px 16px;
         position: sticky; top: 0; height: 100vh; overflow-y: auto; box-sizing: border-box;
       }
       /* !important: pisa el display:flex inline que estos elementos usan en mobile */
@@ -1025,23 +1031,28 @@ function PanelModal({ title, onClose, children }) {
 // con acceso directo a todos los paneles de "Planificar" (en mobile viven detrás
 // de la grilla de Inicio) ──
 function DesktopSidebar({ mainTab, onSelectTab, panel, onOpenPanel, waPhone, onConnectWa }) {
+  // Texto claro sobre el verde sólido del sidebar (antes era texto oscuro
+  // sobre blanco): activo = dorado sobre un velo blanco translúcido, calcado
+  // del tratamiento que ya usa el LoginScreen para su estado activo/foco.
   const navBtnStyle = (active) => ({
     display: "flex", alignItems: "center", gap: 10, width: "100%",
-    background: active ? COLORS.accentDim : "transparent",
+    background: active ? "#ffffff22" : "transparent",
     border: "none", borderRadius: 10, padding: "9px 12px",
-    color: active ? COLORS.accent : COLORS.textMuted,
+    color: active ? COLORS.gold : "#EAF3EFbb",
     fontWeight: active ? 700 : 600, fontSize: 13, cursor: "pointer",
     fontFamily: "inherit", textAlign: "left",
   });
 
+  // Wordmark real (mismo asset que LoginScreen) en vez de ícono+texto chico:
+  // el sidebar pasa a sentirse "portada de marca" en vez de barra utilitaria.
   return (
-    <div className="desktop-sidebar">
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 8px", marginBottom: 24 }}>
-        <img src="assets/orbe-icon-64.png" alt="Orbe" style={{ width: 32, height: 32, borderRadius: 9, display: "block" }} />
-        <div style={{ fontFamily: "'Nunito', 'DM Sans', sans-serif", fontSize: 19, color: COLORS.text, fontWeight: 800, letterSpacing: "-.3px" }}>Orbe</div>
+    <div className="desktop-sidebar" style={{ position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", bottom: -40, left: -40, width: 180, height: 180, borderRadius: "50%", background: "#C9A84C12", pointerEvents: "none" }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "12px 8px 28px", marginBottom: 8, position: "relative", zIndex: 1 }}>
+        <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 120, height: "auto", display: "block" }} />
       </div>
 
-      <button onClick={() => onOpenPanel("transacciones")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: COLORS.accent, border: "none", borderRadius: 10, padding: "10px 12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 20 }}>
+      <button onClick={() => onOpenPanel("transacciones")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: COLORS.gold, border: "none", borderRadius: 10, padding: "10px 12px", color: "#2b2205", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 20 }}>
         <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nueva transacción
       </button>
 
@@ -1051,7 +1062,7 @@ function DesktopSidebar({ mainTab, onSelectTab, panel, onOpenPanel, waPhone, onC
       </div>
 
       <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-        <button onClick={onConnectWa} style={{ ...navBtnStyle(false), color: waPhone ? COLORS.green : COLORS.textMuted, fontWeight: waPhone ? 700 : 600, display: "flex", alignItems: "center", gap: 8 }}>
+        <button onClick={onConnectWa} style={{ ...navBtnStyle(false), color: waPhone ? "#4ADE80" : "#EAF3EFbb", fontWeight: waPhone ? 700 : 600, display: "flex", alignItems: "center", gap: 8 }}>
           <WhatsAppIcon size={16} /> {waPhone ? `WhatsApp · ${waPhone}` : "Conectar WhatsApp"}
         </button>
         <button onClick={() => onSelectTab("perfil")} style={navBtnStyle(mainTab === "perfil" && !panel)}>👤 Perfil</button>
