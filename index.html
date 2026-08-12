@@ -1252,7 +1252,7 @@ function FinanzasApp() {
         {/* ── TOP HEADER (solo marca + mes/año, como el header fijo verde de la app) ── */}
         <div className="topbar" style={{ background: COLORS.accent, padding: "0 20px", boxShadow: "0 1px 8px #00000020", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, position: "sticky", top: 0, zIndex: 50, flexShrink: 0 }}>
           <div className="topbar-brand" style={{ display: "flex", alignItems: "center" }}>
-            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 108, height: "auto", display: "block" }} />
+            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 84, height: "auto", display: "block" }} />
           </div>
           <DatePillPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
         </div>
@@ -1429,14 +1429,12 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
   const saveEditTx = () => {
     if (!editTxForm.amount || !parseAmountInput(editTxForm.amount)) return;
-    const category = editTxForm.type === "gasto" ? editTxForm.category : (findCatCI(data, "Sueldos") || "Sueldos");
     const transactions = data.transactions.map(t => t.id === editingTxId
-      ? { ...t, type: editTxForm.type, amount: parseAmountInput(editTxForm.amount), description: editTxForm.description, category, date: editTxForm.date }
+      ? { ...t, type: editTxForm.type, amount: parseAmountInput(editTxForm.amount), description: editTxForm.description, category: editTxForm.category, date: editTxForm.date }
       : t);
     save({ ...data, transactions });
     cancelEditTx();
   };
-  const needsCatEdit = editTxForm && editTxForm.type === "gasto";
 
   return (
     <div className="inicio-layout">
@@ -1565,10 +1563,10 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
           ) : listTxs.map(t => editingTxId === t.id ? (
             <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
-              <div style={{ display: "grid", gridTemplateColumns: needsCatEdit ? "1fr 1fr 1fr" : "1fr 1fr", gap: 10, marginBottom: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
                 <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
-                {needsCatEdit && <Input label="Categoría" value={editTxForm.category} onChange={v => setEditTxForm({ ...editTxForm, category: v })} options={catNames} />}
+                <Input label="Categoría" value={editTxForm.category} onChange={v => setEditTxForm({ ...editTxForm, category: v })} options={catNames} />
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Descripción" value={editTxForm.description} onChange={v => setEditTxForm({ ...editTxForm, description: v })} />
@@ -1809,12 +1807,9 @@ function NuevaTransaccionSheet({ data, save, onClose }) {
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
-  const needsCat = form.type === "gasto";
-
   const add = () => {
     if (!form.amount || !parseAmountInput(form.amount)) return;
-    const category = form.type === "gasto" ? form.category : (findCatCI(data, "Sueldos") || "Sueldos");
-    const tx = { ...form, category, amount: parseAmountInput(form.amount), id: Date.now() };
+    const tx = { ...form, amount: parseAmountInput(form.amount), id: Date.now() };
     save({ ...data, transactions: [...data.transactions, tx] });
     onClose();
   };
@@ -1840,27 +1835,27 @@ function NuevaTransaccionSheet({ data, save, onClose }) {
         />
         <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
         <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
-        {needsCat && (
-          <div>
-            <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
-              {catNames.map(c => (
-                <button key={c} onClick={() => setForm({ ...form, category: c })} style={{
-                  background: form.category === c ? COLORS.accent : COLORS.pillBg,
-                  color: form.category === c ? "#fff" : COLORS.accent,
-                  border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                }}>{catIcon(data, c)} {c}</button>
-              ))}
-            </div>
-            {showCatForm && (
-              <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre de categoría" style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
-                <Button onClick={addCategoryQuick} variant="gold" style={{ flexShrink: 0 }}>Agregar</Button>
-              </div>
-            )}
+        {/* Igual que la app real: las categorías se muestran siempre, sin
+            filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
+        <div>
+          <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
+            {catNames.map(c => (
+              <button key={c} onClick={() => setForm({ ...form, category: c })} style={{
+                background: form.category === c ? COLORS.accent : COLORS.pillBg,
+                color: form.category === c ? "#fff" : COLORS.accent,
+                border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{catIcon(data, c)} {c}</button>
+            ))}
           </div>
-        )}
+          {showCatForm && (
+            <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre de categoría" style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
+              <Button onClick={addCategoryQuick} variant="gold" style={{ flexShrink: 0 }}>Agregar</Button>
+            </div>
+          )}
+        </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
       </div>
       <SheetActions onCancel={onClose} onSave={add} saveLabel="Guardar" />
@@ -2205,6 +2200,7 @@ function Ahorros({ data, save, dolarRate }) {
 function Deudas({ data, save, dolarRate }) {
   const [form, setForm] = useState({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
   const [showForm, setShowForm] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [payAmt, setPayAmt] = useState({});
   const [editId, setEditId] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "" });
@@ -2217,6 +2213,18 @@ function Deudas({ data, save, dolarRate }) {
     const r = parseAmountInput(remainingVal || "0");
     const c = parseInt(cuotasVal) || 0;
     return r > 0 && c > 0 ? formatAmountInput(String(Math.round(r / c))) : "";
+  };
+  // Preview "N cuotas · Termina {mes} {año}", calcado de la app real: se
+  // deduce solo de Monto pendiente ÷ Cuota mensual, sin pedir cuotas restantes
+  // a mano (eso queda en "Más opciones" para cuando la cuenta no da exacta).
+  const calcPreview = (remainingVal, installmentVal) => {
+    const r = parseAmountInput(remainingVal || "0");
+    const inst = parseAmountInput(installmentVal || "0");
+    if (r <= 0 || inst <= 0) return null;
+    const cuotas = Math.ceil(r / inst);
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth() + cuotas - 1, 1);
+    return { cuotas, label: `${MONTH_NAMES[end.getMonth()]} ${end.getFullYear()}` };
   };
 
   const add = () => {
@@ -2241,6 +2249,7 @@ function Deudas({ data, save, dolarRate }) {
     save({ ...data, debts: [...data.debts, d] });
     setForm({ name: "", total: "", remaining: "", installment: "", remainingInstallments: "", dueDay: "", interest: "", currency: "ars" });
     setInstallmentEdited(false);
+    setShowAdvanced(false);
     setShowForm(false);
   };
 
@@ -2345,28 +2354,50 @@ function Deudas({ data, save, dolarRate }) {
       {showForm && (
         <BottomSheet title="Nueva deuda" onClose={() => setShowForm(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Calcado de la app real: 3 campos + auto-cálculo de cuotas y
+                fecha fin. Moneda/interés/vencimiento/cuotas manuales, que la
+                app no tiene, quedan detrás de "Más opciones" para no perder
+                lo que la web ya soportaba (deudas en USD, por ejemplo). */}
             <Input label="Nombre / Acreedor" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Ej: Tarjeta Visa" />
-            <SegmentedControl
-              options={[{ value: "ars", label: "🇦🇷 ARS" }, { value: "usd", label: "🇺🇸 USD" }]}
-              value={form.currency}
-              onChange={v => setForm({ ...form, currency: v })}
-            />
             <Input label="Monto pendiente" value={form.remaining} onChange={v => {
               const next = { ...form, remaining: v };
               if (!installmentEdited) next.installment = autoInstallment(v, form.remainingInstallments);
               setForm(next);
             }} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-            <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
             <Input label="Cuota mensual" value={form.installment} onChange={v => { setInstallmentEdited(true); setForm({ ...form, installment: v }); }} type="amount" prefix="$" placeholder="0" />
-            <div className="form-grid-4" style={{ margin: 0 }}>
-              <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
-                const next = { ...form, remainingInstallments: v };
-                if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
-                setForm(next);
-              }} type="number" placeholder="Ej: 9" />
-              <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
-              <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
-            </div>
+
+            {(() => {
+              const preview = calcPreview(form.remaining, form.installment);
+              return (
+                <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.textMuted }}>
+                  {preview ? <>📅 <strong style={{ color: COLORS.text }}>{preview.cuotas} cuotas</strong> · Termina {preview.label}</> : "📅 Ingresá monto y cuota para calcular"}
+                </div>
+              );
+            })()}
+
+            <button type="button" onClick={() => setShowAdvanced(s => !s)} style={{ background: "none", border: "none", color: COLORS.accent, fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "left", padding: 0 }}>
+              {showAdvanced ? "− Menos opciones" : "+ Más opciones (moneda, interés, vencimiento...)"}
+            </button>
+
+            {showAdvanced && (
+              <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <SegmentedControl
+                  options={[{ value: "ars", label: "🇦🇷 ARS" }, { value: "usd", label: "🇺🇸 USD" }]}
+                  value={form.currency}
+                  onChange={v => setForm({ ...form, currency: v })}
+                />
+                <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+                <div className="form-grid-4" style={{ margin: 0 }}>
+                  <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
+                    const next = { ...form, remainingInstallments: v };
+                    if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
+                    setForm(next);
+                  }} type="number" placeholder="Ej: 9" />
+                  <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
+                  <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
+                </div>
+              </div>
+            )}
           </div>
           <SheetActions onCancel={() => setShowForm(false)} onSave={add} saveLabel="Agregar deuda" />
         </BottomSheet>
@@ -2780,6 +2811,7 @@ function Calendario({ data, save }) {
               value={form.type}
               onChange={v => setForm({ ...form, type: v })}
             />
+            <Input label="Notificar por WhatsApp (días antes)" value={form.notifyDaysBefore} onChange={v => setForm({ ...form, notifyDaysBefore: v })} type="number" placeholder="3" />
           </div>
           <SheetActions onCancel={closeForm} onSave={save_} saveLabel={editingId ? "Guardar cambios" : "Guardar"} />
         </BottomSheet>
