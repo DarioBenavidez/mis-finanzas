@@ -190,6 +190,24 @@
       .auth-visual { flex: none; width: 100%; max-width: 440px; border-radius: 32px; overflow: hidden; box-shadow: 0 24px 64px #00000030; }
       .auth-header { padding: 44px 24px 24px; }
     }
+
+    /* Pantallas grandes: en vez de una card angosta flotando en un mar de fondo
+       vacío, el diseño pasa a ocupar toda la página, partida en dos mitades de
+       alto completo — verde con el logo a la izquierda, formulario a la
+       derecha. Se probó también apilado (verde arriba/crema abajo, como en
+       mobile pero a pantalla completa) y Dario prefirió esta versión.
+       .auth-logo usa el ancho de su propia proporción (el archivo ya viene
+       recortado a su contenido real, sin margen transparente de sobra — ver
+       assets/orbe-logo-wordmark.png) en vez de una caja cuadrada. */
+    @media (min-width: 1024px) {
+      .auth-page { padding: 0; }
+      .auth-visual { flex-direction: row; width: 100%; max-width: none; height: 100vh; border-radius: 0; box-shadow: none; }
+      .auth-header { flex: 1; height: 100%; padding: 40px; }
+      .auth-logo { width: min(50%, 380px); height: auto; }
+      .auth-tagline { margin-top: 14px; font-size: 16px; }
+      .auth-cardbody { flex: 1; height: 100%; overflow-y: auto; border-radius: 48px 0 0 48px; display: flex; flex-direction: column; justify-content: center; }
+      .auth-cardbody > * { width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; }
+    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
