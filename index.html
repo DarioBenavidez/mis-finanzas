@@ -138,6 +138,51 @@
       .panel-card-header { border-radius: 20px 20px 0 0; }
       .form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
     }
+
+    /* ── Pantalla de login/registro/reset: identidad visual pinneada calcada de
+       la app real (LoginScreen.jsx), distinta del resto de la web (paleta y
+       radios propios, ver const AUTH en el script). Mobile: la card ocupa toda
+       la pantalla, igual que en la app (header verde fijo + card crema que
+       "sube" con las esquinas superiores muy redondeadas). Desde 640px no tiene
+       sentido estirar eso a lo ancho/alto de un monitor, así que la identidad
+       (verde arriba, crema abajo, mismos botones) se contiene en una card
+       centrada de ancho máximo razonable con esquinas redondeadas en las 4
+       puntas y sombra, sobre el fondo neutro habitual de la web. ── */
+    .auth-page { min-height: 100vh; width: 100%; background: #005247; display: flex; flex-direction: column; }
+    .auth-visual { flex: 1; display: flex; flex-direction: column; width: 100%; }
+    .auth-header { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 56px 24px 18px; flex-shrink: 0; background: #005247; }
+    .auth-blob { position: absolute; border-radius: 50%; pointer-events: none; }
+    .auth-blob-1 { top: -60px; right: -60px; width: 220px; height: 220px; background: #FFFFFF06; }
+    .auth-blob-2 { bottom: -40px; left: -80px; width: 200px; height: 200px; background: #C9A84C08; }
+    .auth-logo { position: relative; width: 200px; height: 200px; object-fit: contain; display: block; margin: 0 auto; }
+    .auth-tagline { position: relative; margin-top: -38px; text-align: center; color: #FFFFFFB0; font-size: 13px; font-weight: 500; letter-spacing: 0.3px; pointer-events: none; }
+    .auth-cardbody { background: #FAFAF8; border-top-left-radius: 36px; border-top-right-radius: 36px; padding: 28px 28px 48px; flex: 1; }
+    .auth-greeting { font-size: 22px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.5px; margin-bottom: 22px; text-align: center; }
+    .auth-field { display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; margin-bottom: 12px; padding-left: 16px; }
+    .auth-input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; padding: 15px 16px 15px 0; font-size: 15px; color: #1A1A1A; font-family: inherit; }
+    .auth-input::placeholder { color: #7A7A7A; opacity: 1; }
+    .auth-eye { background: none; border: none; cursor: pointer; font-size: 15px; padding: 0 14px 0 4px; line-height: 1; flex-shrink: 0; }
+    .auth-pwrules { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: -4px; margin-bottom: 12px; padding: 0 4px; }
+    .auth-pwrule { font-size: 11px; font-weight: 600; }
+    .auth-error { background: #FFF3F3; border: 1px solid #F5C5C5; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #E53935; }
+    .auth-success { background: #F0FBF7; border: 1px solid #A8DFC9; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #005247; }
+    .auth-hint { font-size: 13px; color: #7A7A7A; background: #F2EFE8; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+    .auth-btn-main { width: 100%; background: #005247; border: 1px solid #C9A84C; border-radius: 18px; padding: 17px; color: #E8C97A; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 8px 16px #C9A84C66; transition: opacity var(--dur-base) var(--ease-standard); }
+    .auth-btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
+    .auth-btn-secondary { width: 100%; background: transparent; border: 1.5px solid #005247; border-radius: 18px; padding: 17px; color: #005247; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; margin-top: 12px; }
+    .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; }
+    .auth-divider span { flex: 1; height: 1px; background: #E8E4DC; }
+    .auth-divider em { font-style: normal; font-size: 11px; font-weight: 700; color: #A9A297; text-transform: uppercase; letter-spacing: 0.5px; }
+    .auth-btn-google { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; padding: 14px; color: #1A1A1A; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .auth-links { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .auth-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; color: #7A7A7A; padding: 4px; }
+    .auth-link strong { color: #005247; font-weight: 700; }
+
+    @media (min-width: 640px) {
+      .auth-page { background: #F2F7F5; align-items: center; justify-content: center; padding: 40px 20px; }
+      .auth-visual { flex: none; width: 100%; max-width: 440px; border-radius: 32px; overflow: hidden; box-shadow: 0 24px 64px #00000030; }
+      .auth-header { padding: 44px 24px 24px; }
+    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -270,6 +315,19 @@ function validatePassword(pw) {
   if (!/[0-9]/.test(pw)) return "Debe incluir al menos un número";
   if (!/[^A-Za-z0-9]/.test(pw)) return "Debe incluir al menos un carácter especial";
   return null;
+}
+// Mismas reglas que validatePassword, pero como checklist granular (una entrada
+// por regla) para el checklist visual de registro/reset -- calcado del que usa
+// la app real (LoginScreen.jsx), que tilda en dorado cada regla a medida que se
+// cumple en vez de mostrar un solo mensaje de error generico.
+function passwordRuleList(pw) {
+  return [
+    { ok: pw.length >= 8, label: "8 caracteres mínimo" },
+    { ok: /[A-Z]/.test(pw), label: "Una mayúscula" },
+    { ok: /[a-z]/.test(pw), label: "Una minúscula" },
+    { ok: /[0-9]/.test(pw), label: "Un número" },
+    { ok: /[^A-Za-z0-9]/.test(pw), label: "Un carácter especial (!@#$...)" },
+  ];
 }
 
 const formatCurrency = (n) => {
@@ -524,19 +582,38 @@ const PLAN_PANELS = [
 ];
 const PANEL_LABELS = { ...Object.fromEntries(PLAN_PANELS.map(p => [p.key, p.label])), transacciones: "Nueva transacción" };
 
+// ---- IDENTIDAD VISUAL DE AUTH (login/registro/reset) ----
+// Paleta y radios calcados 1:1 de la app real (LoginScreen.jsx, Expo/React
+// Native) para esta superficie puntual. A propósito NO se mezcla con el
+// COLORS global de la web (que usa bg #F2F7F5, radios chicos, etc.): esta
+// pantalla tiene su propia identidad pinneada, igual que en la app.
+const AUTH = {
+  green: "#005247",
+  gold: "#C9A84C",
+  goldLight: "#E8C97A",
+  bg: "#FAFAF8",
+  border: "#E8E4DC",
+  text: "#1A1A1A",
+  textMuted: "#7A7A7A",
+  red: "#E53935",
+};
+
 // ---- RESET PASSWORD SCREEN ----
+// Se llega acá vía el link del email de recuperación (hash #type=recovery),
+// no desde los botones de LoginScreen -- pero es el mismo flujo de auth, así
+// que comparte la identidad visual (header verde + card crema) en vez de
+// quedar con el estilo viejo y desentonar apenas el usuario completa el reset.
 function ResetPasswordScreen({ onDone }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showCf, setShowCf] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const inputStyle = {
-    width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
-    borderRadius: 10, padding: "11px 14px", color: COLORS.text,
-    fontFamily: "inherit", fontSize: 14, outline: "none",
-  };
+  const pwRules = passwordRuleList(password);
+  const confirmOk = confirm.length > 0 && confirm === password;
 
   const handleReset = async () => {
     const pwErr = validatePassword(password);
@@ -558,35 +635,63 @@ function ResetPasswordScreen({ onDone }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 16, background: COLORS.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 16px" }}>🔑</div>
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 26, color: COLORS.text, fontWeight: 700 }}>Nueva contraseña</div>
-          <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>Ingresá tu nueva contraseña</div>
+    <div className="auth-page">
+      <div className="auth-visual">
+        <div className="auth-header">
+          <div className="auth-blob auth-blob-1" />
+          <div className="auth-blob auth-blob-2" />
+          <div style={{ position: "relative" }}>
+            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" className="auth-logo" />
+            <div className="auth-tagline">Tu asistente financiero personal</div>
+          </div>
         </div>
-        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 24px #00000012" }}>
+
+        <div className="auth-cardbody">
+          <div className="auth-greeting">Nueva contraseña</div>
+
           {success ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-              <div style={{ fontSize: 15, color: COLORS.accent, fontWeight: 600 }}>¡Contraseña actualizada!</div>
-              <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 6 }}>Redirigiendo al login...</div>
+              <div style={{ fontSize: 15, color: AUTH.green, fontWeight: 600 }}>¡Contraseña actualizada!</div>
+              <div style={{ fontSize: 13, color: AUTH.textMuted, marginTop: 6 }}>Redirigiendo al login...</div>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <>
               <div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Nueva contraseña</div>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" style={inputStyle} />
+                <div className="auth-field">
+                  <input className="auth-input" type={showPw ? "text" : "password"} value={password}
+                    onChange={e => setPassword(e.target.value)} placeholder="Nueva contraseña" />
+                  <button type="button" className="auth-eye" onClick={() => setShowPw(p => !p)}>{showPw ? "🙈" : "👁"}</button>
+                </div>
+                {password.length > 0 && (
+                  <div className="auth-pwrules">
+                    {pwRules.map((r, i) => (
+                      <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.gold : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
+                    ))}
+                  </div>
+                )}
               </div>
+
               <div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Confirmar contraseña</div>
-                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repetí la contraseña" style={inputStyle} onKeyDown={e => e.key === "Enter" && handleReset()} />
+                <div className="auth-field">
+                  <input className="auth-input" type={showCf ? "text" : "password"} value={confirm}
+                    onChange={e => setConfirm(e.target.value)} placeholder="Repetir contraseña"
+                    onKeyDown={e => e.key === "Enter" && handleReset()} />
+                  <button type="button" className="auth-eye" onClick={() => setShowCf(c => !c)}>{showCf ? "🙈" : "👁"}</button>
+                </div>
+                {confirm.length > 0 && (
+                  <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
+                    {confirmOk ? "✓ Las contraseñas coinciden" : "✗ No coinciden"}
+                  </div>
+                )}
               </div>
-              {error && <div style={{ background: "#fff5f5", border: "1px solid #f0c8c8", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red }}>{error}</div>}
-              <button onClick={handleReset} disabled={loading} style={{ background: loading ? "#c8dcd4" : COLORS.accent, color: "#ffffff", border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", marginTop: 4 }}>
+
+              {error && <div className="auth-error">⚠️ {error}</div>}
+
+              <button className="auth-btn-main" onClick={handleReset} disabled={loading}>
                 {loading ? "Actualizando..." : "Guardar contraseña"}
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -610,17 +715,23 @@ function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login"); // "login" | "register" | "reset"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [showCf, setShowCf] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
-  const inputStyle = {
-    width: "100%", background: "#f8faf8", border: `1px solid ${COLORS.border}`,
-    borderRadius: 10, padding: "11px 14px", color: COLORS.text,
-    fontFamily: "inherit", fontSize: 14, outline: "none",
-  };
+  const isLogin = mode === "login";
+  const isRegister = mode === "register";
+  const isReset = mode === "reset";
+
+  const pwRules = passwordRuleList(password);
+  const confirmOk = confirm.length > 0 && confirm === password;
+
+  const clear = () => { setError(""); setSuccess(""); };
 
   const handleSubmit = async () => {
     setError(""); setSuccess(""); setLoading(true);
@@ -628,6 +739,7 @@ function LoginScreen({ onLogin }) {
       if (mode === "register") {
         const pwErr = validatePassword(password);
         if (pwErr) throw new Error(pwErr);
+        if (!confirmOk) throw new Error("Las contraseñas no coinciden");
         const full_name = [nombre, apellido].filter(Boolean).join(" ");
         const { error } = await supabaseClient.auth.signUp({
           email, password,
@@ -666,93 +778,110 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Nunito', 'DM Sans', sans-serif", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <img src="assets/orbe-icon-64.png" alt="Orbe" style={{ width: 60, height: 60, borderRadius: 16, display: "block", margin: "0 auto 16px" }} />
-          <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 28, color: COLORS.text, fontWeight: 700 }}>Orbe</div>
-          <div style={{ fontSize: 13, color: COLORS.textMuted, marginTop: 4 }}>Tu asistente financiero personal</div>
+    <div className="auth-page">
+      <div className="auth-visual">
+        {/* Header verde con logo, calcado del de la app real */}
+        <div className="auth-header">
+          <div className="auth-blob auth-blob-1" />
+          <div className="auth-blob auth-blob-2" />
+          <div style={{ position: "relative" }}>
+            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" className="auth-logo" />
+            <div className="auth-tagline">Tu asistente financiero personal</div>
+          </div>
         </div>
 
-        {/* Card */}
-        <div style={{ background: "#ffffff", borderRadius: 22, padding: 32, border: `1px solid ${COLORS.border}`, boxShadow: "0 4px 24px #00000012" }}>
-          {/* Tabs */}
-          <div style={{ display: "flex", marginBottom: 28, background: COLORS.bg, borderRadius: 10, padding: 4 }}>
-            {[["login","Iniciar sesión"], ["register","Registrarse"], ["reset","Olvidé clave"]].map(([m, label]) => (
-              <button key={m} onClick={() => { setMode(m); setError(""); setSuccess(""); }} style={{
-                flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer",
-                fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 600, transition: "all var(--dur-base) var(--ease-standard)",
-                background: mode === m ? COLORS.accent : "transparent",
-                color: mode === m ? "#ffffff" : COLORS.textMuted,
-              }}>
-                {label}
-              </button>
-            ))}
+        {/* Card crema: sin tabs, el modo se controla con los botones/links de abajo */}
+        <div className="auth-cardbody">
+          {!isLogin && (
+            <div className="auth-greeting">{isRegister ? "¡Creá tu cuenta!" : "Recuperar contraseña"}</div>
+          )}
+
+          {isRegister && (
+            <div style={{ display: "flex", gap: 10 }}>
+              <div className="auth-field" style={{ flex: 1, minWidth: 0 }}>
+                <input className="auth-input" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre" autoCapitalize="words" />
+              </div>
+              <div className="auth-field" style={{ flex: 1, minWidth: 0 }}>
+                <input className="auth-input" value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Apellido" autoCapitalize="words" />
+              </div>
+            </div>
+          )}
+
+          <div className="auth-field">
+            <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="Email" onKeyDown={e => e.key === "Enter" && handleSubmit()} />
           </div>
 
-          {/* Fields */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {mode === "register" && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Nombre</div>
-                  <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" style={inputStyle} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Apellido</div>
-                  <input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Tu apellido" style={inputStyle} />
-                </div>
-              </div>
-            )}
+          {!isReset && (
             <div>
-              <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Email</div>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="tu@email.com" style={inputStyle}
-                onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-            </div>
-            {mode !== "reset" && (
-              <div>
-                <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Contraseña</div>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder={mode === "register" ? "Mín. 8 car., mayús., minús., número y símbolo" : "Tu contraseña"} style={inputStyle}
+              <div className="auth-field">
+                <input className="auth-input" type={showPw ? "text" : "password"} value={password}
+                  onChange={e => setPassword(e.target.value)} placeholder="Contraseña"
                   onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+                <button type="button" className="auth-eye" onClick={() => setShowPw(p => !p)}>{showPw ? "🙈" : "👁"}</button>
               </div>
-            )}
-            {mode === "reset" && (
-              <div style={{ fontSize: 13, color: COLORS.textMuted, background: COLORS.bg, borderRadius: 8, padding: "10px 14px" }}>
-                Te enviaremos un email para restablecer tu contraseña.
-              </div>
-            )}
-
-            {error && <div style={{ background: COLORS.redDim, border: "1px solid #f0c8c8", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.red }}>{error}</div>}
-            {success && <div style={{ background: COLORS.greenDim, border: `1px solid ${COLORS.green}40`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: COLORS.green }}>{success}</div>}
-
-            <button onClick={handleSubmit} disabled={loading} style={{
-              background: loading ? "#c8dcd4" : COLORS.accent, color: "#ffffff",
-              border: "none", borderRadius: 10, padding: "12px", fontFamily: "inherit",
-              fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
-              marginTop: 4, transition: "all var(--dur-base) var(--ease-standard)",
-            }}>
-              {loading ? "Procesando..." : mode === "login" ? "Entrar" : mode === "register" ? "Crear cuenta" : "Enviar email"}
-            </button>
-
-            {mode !== "reset" && (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "2px 0" }}>
-                  <div style={{ flex: 1, height: 1, background: COLORS.border }} />
-                  <span style={{ fontSize: 11, color: COLORS.textDim, fontWeight: 600 }}>O</span>
-                  <div style={{ flex: 1, height: 1, background: COLORS.border }} />
+              {isRegister && password.length > 0 && (
+                <div className="auth-pwrules">
+                  {pwRules.map((r, i) => (
+                    <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.gold : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
+                  ))}
                 </div>
-                <button onClick={handleGoogleLogin} style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  background: "#ffffff", color: COLORS.text, border: `1px solid ${COLORS.border}`,
-                  borderRadius: 10, padding: "11px", fontFamily: "inherit", fontSize: 14,
-                  fontWeight: 600, cursor: "pointer",
-                }}>
-                  <GoogleIcon size={18} /> Continuar con Google
-                </button>
-              </>
+              )}
+            </div>
+          )}
+
+          {isRegister && (
+            <div>
+              <div className="auth-field">
+                <input className="auth-input" type={showCf ? "text" : "password"} value={confirm}
+                  onChange={e => setConfirm(e.target.value)} placeholder="Repetir contraseña"
+                  onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+                <button type="button" className="auth-eye" onClick={() => setShowCf(c => !c)}>{showCf ? "🙈" : "👁"}</button>
+              </div>
+              {confirm.length > 0 && (
+                <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
+                  {confirmOk ? "✓ Las contraseñas coinciden" : "✗ No coinciden"}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isReset && (
+            <div className="auth-hint">Te enviaremos un email para restablecer tu contraseña.</div>
+          )}
+
+          {error && <div className="auth-error">⚠️ {error}</div>}
+          {success && <div className="auth-success">✅ {success}</div>}
+
+          <button className="auth-btn-main" onClick={handleSubmit} disabled={loading}>
+            {loading ? "Procesando..." : isLogin ? "Iniciar sesión" : isRegister ? "Crear cuenta" : "Enviar email"}
+          </button>
+
+          {isLogin && (
+            <button className="auth-btn-secondary" onClick={() => { setMode("register"); clear(); }}>
+              Registrarse
+            </button>
+          )}
+
+          {!isReset && (
+            <>
+              <div className="auth-divider"><span /><em>o</em><span /></div>
+              <button className="auth-btn-google" onClick={handleGoogleLogin}>
+                <GoogleIcon size={18} /> Continuar con Google
+              </button>
+            </>
+          )}
+
+          <div className="auth-links">
+            {!isLogin && (
+              <button className="auth-link" onClick={() => { setMode("login"); clear(); }}>
+                ¿Ya tenés cuenta? <strong>Iniciá sesión</strong>
+              </button>
+            )}
+            {isLogin && (
+              <button className="auth-link" onClick={() => { setMode("reset"); clear(); }}>
+                ¿Olvidaste tu contraseña?
+              </button>
             )}
           </div>
         </div>
