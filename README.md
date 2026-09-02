@@ -75,6 +75,35 @@ Verificado con esbuild (sintaxis) y visualmente en Chrome headless a 500px (mobi
 800px y 1440px (desktop) con la técnica de copia+mock (ver memoria del proyecto) —
 sin errores de consola ni fallos visuales en los paneles tocados.
 
+## Préstamos, Gastos Fijos y Suscripciones editables desde la web (2026-09-02)
+
+Los tres paneles que eran de solo lectura ("pedíselo al bot de WhatsApp") ahora se
+gestionan desde la web, con **paridad total de esquema y de efectos** con el backend
+del bot (`~/Documents/ORBE - PROYECTO/backend/actions/index.js`):
+
+- **Gastos Fijos** (`data.recurringExpenses`): alta / edición / baja. La baja es soft
+  (`active:false`), igual que `eliminar_gasto_fijo`. El alta no genera transacción
+  (igual que `agregar_gasto_fijo`).
+- **Suscripciones** (`data.suscripciones`): alta / edición / baja replicando
+  `agregar_suscripcion` — crea y mantiene sincronizado el gasto fijo "espejo" en
+  `recurringExpenses`, y registra el gasto del mes actual (checkbox, on por defecto).
+  El alta con un nombre ya existente actualiza en vez de duplicar. La baja desactiva
+  suscripción y espejo.
+- **Préstamos / Fiados** (`data.loans` + `data.credits`): alta de préstamo (genera
+  transacción de gasto categoría `Préstamos` con `loanId`, descuenta saldo a favor
+  previo) y de fiado (sin transacción); **registro de cobros** por persona con reparto
+  FIFO entre los préstamos activos (transacción de ingreso por lo aplicado, el
+  excedente va a `credits`); edición de cada registro (no toca `payments`); borrado; y
+  poner en cero un saldo a favor. Soporta USD con la cotización blue en vivo.
+
+Sin cambios de esquema: la web solo escribe los mismos campos que ya escribe el bot,
+así un registro creado desde la web es indistinguible para la app móvil y el bot.
+
+Verificado con esbuild (sintaxis) + 45 asserts sobre las transformaciones de datos de
+los tres paneles con `react-test-renderer` (shape exacto vs. esquema del bot,
+efectos secundarios, FIFO, saldo a favor, USD) y visualmente en Chrome con la técnica
+copia+mock a 390 / 800 / 1440px. No se probó con cuenta real.
+
 ## Pendiente
 
 - Probar el flujo logueado completo (login, cada panel, vinculación de WhatsApp) con una

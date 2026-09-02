@@ -1301,8 +1301,8 @@ function FinanzasApp() {
           {panel === "turnos" && <Turnos data={data} save={save} />}
           {panel === "calendario" && <Calendario data={data} save={save} />}
           {panel === "proyeccion" && <Proyeccion data={data} save={save} />}
-          {panel === "suscripciones" && <Suscripciones data={data} />}
-          {panel === "gastosfijos" && <GastosFijos data={data} />}
+          {panel === "suscripciones" && <Suscripciones data={data} save={save} />}
+          {panel === "gastosfijos" && <GastosFijos data={data} save={save} />}
           {panel === "presupuesto" && <Presupuesto data={data} save={save} expByCat={expByCat} />}
         </PanelModal>
       )}
@@ -2487,67 +2487,286 @@ function Deudas({ data, save, dolarRate }) {
 }
 
 // ---- PRÉSTAMOS (dinero prestado a terceros) ----
-// Igual que en la app: crear préstamos y registrar cobros es una función del
-// bot de WhatsApp (necesita conversación para tomar todos los datos). Acá se
-// puede ver el estado y eliminar registros.
+// Editable desde la web con paridad total con el bot: alta de préstamo/fiado
+// (agregar_prestamo / agregar_fiado — préstamo descuenta del balance con una
+// transacción de gasto categoría "Préstamos", fiado no), registro de cobros con
+// reparto FIFO entre los préstamos activos de la persona (registrar_pago_prestamo:
+// transacción de ingreso por lo efectivamente aplicado, el excedente va a
+// data.credits como saldo a favor) y edición/borrado de cada registro.
+const CURRENCY_OPTS = [{ value: "ars", label: "🇦🇷 ARS" }, { value: "usd", label: "🇺🇸 USD" }];
+
 function Prestamos({ data, save, dolarRate }) {
   const loans = data.loans || [];
   const credits = data.credits || {};
+  const rate = dolarRate || 0;
+
+  const emptyForm = { loanType: "prestamo", name: "", reason: "", amount: "", currency: "ars" };
+  const [form, setForm] = useState(emptyForm);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editForm, setEditForm] = useState({ name: "", reason: "", amount: "", remaining: "" });
+  const [payState, setPayState] = useState({});
+
+  const closeForm = () => { setShowForm(false); setForm(emptyForm); };
 
   const totalPrestado = loans.reduce((s, l) => s + (l.currency === "usd" ? (l.amountUSD || 0) * (dolarRate || l.arsRate || 0) : (l.amount || 0)), 0);
-  const totalPendiente = loans.reduce((s, l) => s + (l.currency === "usd" ? (l.remainingUSD || 0) * (dolarRate || l.arsRate || 0) : (l.remaining || 0)), 0);
+  const totalPendiente = loans.reduce((s, l) => s + (l.currency === "usd" ? ((l.remainingUSD ?? l.amountUSD ?? 0)) * (dolarRate || l.arsRate || 0) : (l.remaining || 0)), 0);
 
+  // ---- alta ----
+  const addLoan = () => {
+    const name = form.name.trim();
+    if (!name) return;
+    const isUsd = form.currency === "usd";
+    if (isUsd && !rate) { window.alert("Sin cotización del dólar disponible, intentá más tarde."); return; }
+    const amountInput = parseAmountInput(form.amount);
+    if (amountInput <= 0) return;
+    const amountUSD = isUsd ? amountInput : null;
+    const amountARS = isUsd ? Math.round(amountInput * rate) : amountInput;
+    const reason = form.reason.trim();
+    const key = name.toLowerCase();
+
+    const creditsNext = { ...credits };
+    let remaining = amountARS;
+    if (creditsNext[key] && creditsNext[key].amount > 0) {
+      const credito = creditsNext[key].amount;
+      if (credito >= remaining) {
+        creditsNext[key] = { ...creditsNext[key], amount: credito - remaining };
+        save({ ...data, credits: creditsNext });
+        window.alert(`${name} tenía un saldo a favor de ${formatFull(credito)}. Este ${form.loanType === "fiado" ? "fiado" : "préstamo"} (${formatFull(remaining)}) queda cubierto con ese saldo.`);
+        closeForm();
+        return;
+      }
+      remaining -= credito;
+      creditsNext[key] = { ...creditsNext[key], amount: 0 };
+    }
+
+    const loanId = crypto.randomUUID();
+    const loan = {
+      id: loanId, name, reason, amount: remaining, remaining, payments: [],
+      loanType: form.loanType, createdAt: todayStr(),
+      ...(isUsd ? { currency: "usd", amountUSD } : {}),
+    };
+    const next = { ...data, credits: creditsNext, loans: [...loans, loan] };
+    if (form.loanType === "prestamo") {
+      next.categories = catExists(data, "Préstamos") ? data.categories : { ...data.categories, "Préstamos": "🤝" };
+      next.transactions = [...(data.transactions || []), {
+        id: crypto.randomUUID(), type: "gasto", amount: remaining,
+        description: `Préstamo a ${name}${reason ? ` — ${reason}` : ""}`,
+        category: "Préstamos", date: todayStr(), loanId,
+        ...(isUsd ? { currency: "usd", amountUSD } : {}),
+      }];
+    }
+    save(next);
+    closeForm();
+  };
+
+  // ---- cobro (reparto FIFO entre los préstamos activos de la persona) ----
+  const registrarCobro = (key, personName) => {
+    const ps = payState[key] || {};
+    const isUsd = ps.currency === "usd";
+    if (isUsd && !rate) { window.alert("Sin cotización del dólar disponible, intentá más tarde."); return; }
+    const input = parseAmountInput(ps.amount || "0");
+    if (input <= 0) return;
+    const amountUSD = isUsd ? input : null;
+    const amountARS = isUsd ? Math.round(input * rate) : input;
+
+    let restante = amountARS;
+    const loansNext = loans.map(l => {
+      if (l.name.toLowerCase() !== key || l.remaining <= 0 || restante <= 0) return l;
+      const aplicar = Math.min(l.remaining, restante);
+      let usdUpd = {};
+      if (l.currency === "usd" && l.amountUSD && isUsd && amountUSD) {
+        const paidUSD = Math.min(amountUSD, l.remainingUSD ?? l.amountUSD);
+        usdUpd = { remainingUSD: Math.max(0, (l.remainingUSD ?? l.amountUSD) - paidUSD) };
+      }
+      restante -= aplicar;
+      return { ...l, ...usdUpd, remaining: l.remaining - aplicar, payments: [...(l.payments || []), { date: todayStr(), amount: aplicar }] };
+    });
+
+    const creditsNext = { ...credits };
+    if (restante > 0) creditsNext[key] = { name: personName, amount: (creditsNext[key]?.amount || 0) + restante };
+    const pagado = amountARS - Math.max(restante, 0);
+    save({
+      ...data,
+      loans: loansNext,
+      credits: creditsNext,
+      categories: catExists(data, "Préstamos") ? data.categories : { ...data.categories, "Préstamos": "🤝" },
+      transactions: [...(data.transactions || []), {
+        id: crypto.randomUUID(), type: "ingreso", amount: pagado,
+        description: `Cobro préstamo — ${personName}`, category: "Préstamos", date: todayStr(),
+        ...(isUsd && amountUSD ? { currency: "usd", amountUSD } : {}),
+      }],
+    });
+    setPayState({ ...payState, [key]: { amount: "", currency: ps.currency || "ars" } });
+  };
+
+  // ---- edición / borrado ----
+  const startEdit = (l) => {
+    setEditId(l.id);
+    const isUsd = l.currency === "usd";
+    setEditForm({
+      name: l.name,
+      reason: l.reason || "",
+      amount: formatAmountInput(String(isUsd ? (l.amountUSD || 0) : (l.amount || 0))),
+      remaining: formatAmountInput(String(isUsd ? (l.remainingUSD ?? l.amountUSD ?? 0) : (l.remaining ?? l.amount ?? 0))),
+    });
+  };
+  const saveEdit = () => {
+    if (!editForm.name.trim()) return;
+    const loansNext = loans.map(l => {
+      if (l.id !== editId) return l;
+      const isUsd = l.currency === "usd";
+      const r = dolarRate || l.arsRate || 0;
+      const amtVal = parseAmountInput(editForm.amount);
+      const remVal = parseAmountInput(editForm.remaining);
+      const upd = { ...l, name: editForm.name.trim(), reason: editForm.reason.trim() };
+      if (isUsd) {
+        upd.amountUSD = amtVal; upd.remainingUSD = remVal;
+        upd.amount = Math.round(amtVal * r); upd.remaining = Math.round(remVal * r);
+      } else {
+        upd.amount = amtVal; upd.remaining = remVal;
+      }
+      return upd;
+    });
+    save({ ...data, loans: loansNext });
+    setEditId(null);
+  };
   const del = (id) => { if (window.confirm("¿Eliminar este préstamo?")) save({ ...data, loans: loans.filter(l => l.id !== id) }); };
+  const clearCredit = (k) => {
+    if (!window.confirm("¿Poner en cero este saldo a favor?")) return;
+    const creditsNext = { ...credits };
+    if (creditsNext[k]) creditsNext[k] = { ...creditsNext[k], amount: 0 };
+    save({ ...data, credits: creditsNext });
+  };
+
+  // agrupar préstamos por persona conservando el orden de aparición
+  const groups = [];
+  const gIdx = {};
+  loans.forEach(l => {
+    const k = l.name.toLowerCase();
+    if (gIdx[k] === undefined) { gIdx[k] = groups.length; groups.push({ key: k, name: l.name, loans: [] }); }
+    groups[gIdx[k]].loans.push(l);
+  });
+
+  const inputStyle = { background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <InfoBanner>💬 Para registrar nuevos préstamos o cobros, usá el bot de WhatsApp.</InfoBanner>
-
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <Card style={{ padding: "12px 20px" }}>
-          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total prestado</div>
-          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPrestado)}</div>
-        </Card>
-        <Card style={{ padding: "12px 20px" }}>
-          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total pendiente</div>
-          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPendiente)}</div>
-        </Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <Card style={{ padding: "12px 20px" }}>
+            <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total prestado</div>
+            <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPrestado)}</div>
+          </Card>
+          <Card style={{ padding: "12px 20px" }}>
+            <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total pendiente</div>
+            <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(totalPendiente)}</div>
+          </Card>
+        </div>
+        <Button onClick={() => setShowForm(true)}>+ Nuevo préstamo / fiado</Button>
       </div>
 
-      {loans.length === 0 ? (
+      {showForm && (
+        <BottomSheet title="Nuevo préstamo / fiado" onClose={closeForm}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <SegmentedControl label="Tipo" options={[{ value: "prestamo", label: "Préstamo" }, { value: "fiado", label: "Fiado" }]} value={form.loanType} onChange={v => setForm({ ...form, loanType: v })} />
+            <Input label="Persona" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Ej: Juan" />
+            <Input label="Motivo (opcional)" value={form.reason} onChange={v => setForm({ ...form, reason: v })} placeholder="Ej: para el auto" />
+            <SegmentedControl label="Moneda" options={CURRENCY_OPTS} value={form.currency} onChange={v => setForm({ ...form, currency: v })} />
+            <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" decimals={form.currency === "usd"} prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
+            <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", fontSize: 12.5, color: COLORS.textMuted }}>
+              {form.loanType === "fiado"
+                ? "El fiado no descuenta de tu balance (fue mercadería o servicio)."
+                : "El préstamo se registra como gasto y descuenta de tu balance."}
+              {form.currency === "usd" && rate > 0 && parseAmountInput(form.amount) > 0 && <> {" · ≈ "}{formatFull(Math.round(parseAmountInput(form.amount) * rate))}</>}
+            </div>
+          </div>
+          <SheetActions onCancel={closeForm} onSave={addLoan} saveLabel="Agregar" />
+        </BottomSheet>
+      )}
+
+      {groups.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 48 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🤝</div>
           <div style={{ color: COLORS.textMuted }}>No tenés préstamos registrados.</div>
         </Card>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {loans.map(l => {
-            const amount = l.currency === "usd" ? l.amountUSD : l.amount;
-            // Recién creado (antes del primer pago), remainingUSD todavía no existe:
-            // el bot solo lo agrega en el primer pago parcial. Sin este fallback al
-            // monto original se mostraba "USD NaN" y "NaN% cobrado".
-            const remaining = l.currency === "usd" ? (l.remainingUSD ?? l.amountUSD ?? 0) : (l.remaining ?? l.amount ?? 0);
-            const fmt = l.currency === "usd" ? formatUSD : formatFull;
-            const pct = amount > 0 ? Math.min(100, ((amount - remaining) / amount) * 100) : 0;
+          {groups.map(g => {
+            const pendiente = g.loans.reduce((s, l) => s + (l.remaining || 0), 0);
+            const ps = payState[g.key] || { amount: "", currency: "ars" };
             return (
-              <Card key={l.id}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>
-                      🤝 {l.name} {l.loanType === "fiado" && <Pill color={COLORS.gold}>Fiado</Pill>} {l.currency === "usd" && <Pill color={COLORS.green}>USD</Pill>}
-                    </div>
-                    {l.reason && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{l.reason}</div>}
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 20, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{fmt(remaining)}</div>
-                    <div style={{ fontSize: 12, color: COLORS.textMuted }}>de {fmt(amount)}</div>
-                  </div>
+              <Card key={g.key}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>🤝 {g.name}</div>
+                  <div style={{ fontSize: 13, color: COLORS.textMuted }}>Pendiente {formatFull(pendiente)}</div>
                 </div>
-                <ProgressBar value={amount - remaining} max={amount || 1} color={COLORS.accent} height={8} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                  <span style={{ fontSize: 12, color: COLORS.textMuted }}>{pct.toFixed(0)}% cobrado</span>
-                  <Button onClick={() => del(l.id)} variant="danger" size="sm">Eliminar</Button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {g.loans.map(l => {
+                    const isUsd = l.currency === "usd";
+                    const amount = isUsd ? (l.amountUSD || 0) : (l.amount || 0);
+                    const remaining = isUsd ? (l.remainingUSD ?? l.amountUSD ?? 0) : (l.remaining ?? l.amount ?? 0);
+                    const fmt = isUsd ? formatUSD : formatFull;
+                    const pct = amount > 0 ? Math.min(100, ((amount - remaining) / amount) * 100) : 0;
+                    if (editId === l.id) {
+                      return (
+                        <div key={l.id} className="form-pop" style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 10 }}>
+                          <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 13 }}>✏️ Editar {l.loanType === "fiado" ? "fiado" : "préstamo"}</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="Persona" style={inputStyle} />
+                            <input value={editForm.reason} onChange={e => setEditForm({ ...editForm, reason: e.target.value })} placeholder="Motivo" style={inputStyle} />
+                            <input type="text" inputMode="numeric" value={editForm.amount} onChange={e => setEditForm({ ...editForm, amount: formatAmountInput(e.target.value) })} placeholder={isUsd ? "Monto original (US$)" : "Monto original"} style={inputStyle} />
+                            <input type="text" inputMode="numeric" value={editForm.remaining} onChange={e => setEditForm({ ...editForm, remaining: formatAmountInput(e.target.value) })} placeholder={isUsd ? "Pendiente (US$)" : "Pendiente"} style={inputStyle} />
+                            <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+                              <Button onClick={saveEdit} size="sm">Guardar</Button>
+                              <Button onClick={() => setEditId(null)} variant="soft" size="sm">Cancelar</Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={l.id} style={{ borderTop: `1px solid ${COLORS.border}`, paddingTop: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>
+                              {l.loanType === "fiado" ? <Pill color={COLORS.gold}>Fiado</Pill> : <Pill color={COLORS.accent}>Préstamo</Pill>} {isUsd && <Pill color={COLORS.green}>USD</Pill>}
+                            </div>
+                            {l.reason && <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 3 }}>{l.reason}</div>}
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: 17, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{fmt(remaining)}</div>
+                            <div style={{ fontSize: 11, color: COLORS.textMuted }}>de {fmt(amount)}</div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 8 }}><ProgressBar value={amount - remaining} max={amount || 1} color={COLORS.accent} height={7} /></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                          <span style={{ fontSize: 11, color: COLORS.textMuted }}>{pct.toFixed(0)}% cobrado</span>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button onClick={() => startEdit(l)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+                            <button onClick={() => del(l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
+                {pendiente > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 12, borderTop: `1px solid ${COLORS.border}`, paddingTop: 12 }}>
+                    <select value={ps.currency || "ars"} onChange={e => setPayState({ ...payState, [g.key]: { ...ps, currency: e.target.value } })} style={{ ...inputStyle, padding: "7px 8px" }}>
+                      <option value="ars">$</option>
+                      <option value="usd">US$</option>
+                    </select>
+                    <input
+                      type="text" inputMode="numeric"
+                      value={ps.amount || ""}
+                      onChange={e => setPayState({ ...payState, [g.key]: { ...ps, amount: formatAmountInput(e.target.value) } })}
+                      placeholder="Monto cobrado"
+                      style={{ ...inputStyle, flex: 1, minWidth: 120 }}
+                    />
+                    <Button onClick={() => registrarCobro(g.key, g.name)} size="sm">💵 Registrar cobro</Button>
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -2558,10 +2777,13 @@ function Prestamos({ data, save, dolarRate }) {
         <Card>
           <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>💰 Saldo a favor</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {Object.values(credits).filter(c => c.amount > 0).map(c => (
-              <div key={c.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+            {Object.entries(credits).filter(([, c]) => c.amount > 0).map(([k, c]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
                 <span style={{ color: COLORS.textMuted }}>{c.name}</span>
-                <span style={{ fontWeight: 600 }}>{formatFull(c.amount)}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{formatFull(c.amount)}</span>
+                  <button onClick={() => clearCredit(k)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 2 }}>✕</button>
+                </span>
               </div>
             ))}
           </div>
@@ -2572,17 +2794,63 @@ function Prestamos({ data, save, dolarRate }) {
 }
 
 // ---- GASTOS FIJOS ----
-// Solo lectura, igual que en la app: se gestionan desde el bot de WhatsApp.
-function GastosFijos({ data }) {
+// Editable desde la web con el mismo esquema que escribe el bot:
+// data.recurringExpenses[] = { id, description, amount, category, day, active }.
+// Alta sin transacción (igual que agregar_gasto_fijo); baja = active:false.
+function GastosFijos({ data, save }) {
   const items = (data.recurringExpenses || []).filter(g => g.active !== false);
   const total = items.reduce((s, g) => s + (g.amount || 0), 0);
+  const catNames = Object.keys(data.categories || {});
+  const emptyForm = { description: "", amount: "", category: catNames[0] || "Otros", day: "1" };
+  const [form, setForm] = useState(emptyForm);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(emptyForm); };
+  const startEdit = (g) => {
+    setForm({ description: g.description || "", amount: formatAmountInput(String(g.amount || 0)), category: g.category || catNames[0] || "Otros", day: String(g.day || 1) });
+    setEditingId(g.id);
+    setShowForm(true);
+  };
+  const submit = () => {
+    const amount = parseAmountInput(form.amount);
+    if (!form.description.trim() || amount <= 0) return;
+    const day = Math.min(31, Math.max(1, parseInt(form.day) || 1));
+    const list = data.recurringExpenses || [];
+    if (editingId) {
+      save({ ...data, recurringExpenses: list.map(g => g.id === editingId ? { ...g, description: form.description.trim(), amount, category: form.category, day } : g) });
+    } else {
+      save({ ...data, recurringExpenses: [...list, { id: crypto.randomUUID(), description: form.description.trim(), amount, category: form.category, day, active: true }] });
+    }
+    closeForm();
+  };
+  const del = (id) => {
+    if (!window.confirm("¿Eliminar este gasto fijo?")) return;
+    save({ ...data, recurringExpenses: (data.recurringExpenses || []).map(g => g.id === id ? { ...g, active: false } : g) });
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <InfoBanner>💬 Pedile al bot de WhatsApp que agregue tus gastos fijos.</InfoBanner>
-      <Card>
-        <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>Total mensual</div>
-        <div style={{ fontSize: 28, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
-      </Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <Card style={{ padding: "12px 20px" }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total mensual</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
+        </Card>
+        <Button onClick={() => setShowForm(true)}>+ Nuevo gasto fijo</Button>
+      </div>
+
+      {showForm && (
+        <BottomSheet title={editingId ? "Editar gasto fijo" : "Nuevo gasto fijo"} onClose={closeForm}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Nombre" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Alquiler, Expensas" />
+            <Input label="Monto mensual" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
+            {catNames.length > 0 && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
+            <Input label="Día del mes" value={form.day} onChange={v => setForm({ ...form, day: v })} type="number" placeholder="1-31" />
+          </div>
+          <SheetActions onCancel={closeForm} onSave={submit} saveLabel={editingId ? "Guardar cambios" : "Agregar"} />
+        </BottomSheet>
+      )}
+
       {items.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 48 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📌</div>
@@ -2598,6 +2866,8 @@ function GastosFijos({ data }) {
                 <div style={{ fontSize: 12, color: COLORS.textMuted }}>{g.category}{g.day ? ` · día ${g.day}` : ""}</div>
               </div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{formatFull(g.amount)}</div>
+              <button onClick={() => startEdit(g)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+              <button onClick={() => del(g.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
             </div>
           ))}
         </Card>
@@ -2607,17 +2877,102 @@ function GastosFijos({ data }) {
 }
 
 // ---- SUSCRIPCIONES ----
-// Solo lectura, igual que en la app: se gestionan desde el bot de WhatsApp.
-function Suscripciones({ data }) {
+// Editable desde la web replicando agregar_suscripcion / cancelar_suscripcion del
+// bot: el alta/edición crea y sincroniza el gasto fijo "espejo" en
+// data.recurringExpenses y (opcional) registra el gasto del mes actual.
+function Suscripciones({ data, save }) {
   const items = (data.suscripciones || []).filter(s => s.active !== false);
   const total = items.reduce((s, x) => s + (x.amount || 0), 0);
+  const catNames = Object.keys(data.categories || {});
+  const emptyForm = { name: "", amount: "", category: "Entretenimiento", day: "1", registerTx: true };
+  const [form, setForm] = useState(emptyForm);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(emptyForm); };
+  const startEdit = (s) => {
+    setForm({ name: s.name || "", amount: formatAmountInput(String(s.amount || 0)), category: s.category || "Entretenimiento", day: String(s.day || 1), registerTx: false });
+    setEditingId(s.id);
+    setShowForm(true);
+  };
+
+  const submit = () => {
+    const amount = parseAmountInput(form.amount);
+    const name = form.name.trim();
+    if (!name || amount <= 0) return;
+    const day = Math.min(31, Math.max(1, parseInt(form.day) || 1));
+    const category = form.category || "Entretenimiento";
+    const subs = data.suscripciones || [];
+    const recs = data.recurringExpenses || [];
+
+    if (editingId) {
+      const prev = subs.find(s => s.id === editingId);
+      const oldKey = (prev?.name || "").toLowerCase();
+      const nextSubs = subs.map(s => s.id === editingId ? { ...s, name, amount, category, day, active: true } : s);
+      const nextRecs = recs.map(g => (g.description || "").toLowerCase() === oldKey ? { ...g, description: name, amount, category, day, active: true } : g);
+      save({ ...data, suscripciones: nextSubs, recurringExpenses: nextRecs });
+      closeForm();
+      return;
+    }
+
+    const key = name.toLowerCase();
+    const existingIdx = subs.findIndex(s => (s.name || "").toLowerCase() === key);
+    const hasMirror = recs.some(g => (g.description || "").toLowerCase() === key);
+    let nextSubs, nextRecs;
+    if (existingIdx !== -1) {
+      nextSubs = subs.map((s, i) => i === existingIdx ? { ...s, amount, day, category, active: true } : s);
+      nextRecs = recs.map(g => (g.description || "").toLowerCase() === key ? { ...g, amount, category, active: true } : g);
+      if (!hasMirror) nextRecs = [...nextRecs, { id: crypto.randomUUID(), description: name, amount, category, day, active: true }];
+    } else {
+      nextSubs = [...subs, { id: crypto.randomUUID(), name, amount, day, category, active: true }];
+      nextRecs = hasMirror ? recs : [...recs, { id: crypto.randomUUID(), description: name, amount, category, day, active: true }];
+    }
+    const nextData = { ...data, suscripciones: nextSubs, recurringExpenses: nextRecs };
+    if (form.registerTx) {
+      nextData.transactions = [...(data.transactions || []), { id: crypto.randomUUID(), type: "gasto", amount, description: `Suscripción ${name}`, category, date: todayStr() }];
+    }
+    save(nextData);
+    closeForm();
+  };
+
+  const del = (s) => {
+    if (!window.confirm(`¿Cancelar la suscripción "${s.name}"?`)) return;
+    const key = (s.name || "").toLowerCase();
+    save({
+      ...data,
+      suscripciones: (data.suscripciones || []).map(x => x.id === s.id ? { ...x, active: false } : x),
+      recurringExpenses: (data.recurringExpenses || []).map(g => (g.description || "").toLowerCase() === key ? { ...g, active: false } : g),
+    });
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <InfoBanner>💬 Pedile al bot de WhatsApp que agregue tus suscripciones.</InfoBanner>
-      <Card>
-        <div style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 6 }}>Total mensual</div>
-        <div style={{ fontSize: 28, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
-      </Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <Card style={{ padding: "12px 20px" }}>
+          <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>Total mensual</div>
+          <div style={{ fontSize: 22, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(total)}</div>
+        </Card>
+        <Button onClick={() => setShowForm(true)}>+ Nueva suscripción</Button>
+      </div>
+
+      {showForm && (
+        <BottomSheet title={editingId ? "Editar suscripción" : "Nueva suscripción"} onClose={closeForm}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <Input label="Nombre" value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Ej: Netflix, Spotify" />
+            <Input label="Monto mensual" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
+            {catNames.length > 0 && <Input label="Categoría" value={form.category} onChange={v => setForm({ ...form, category: v })} options={catNames} />}
+            <Input label="Día del mes" value={form.day} onChange={v => setForm({ ...form, day: v })} type="number" placeholder="1-31" />
+            {!editingId && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: COLORS.textMuted }}>
+                <input type="checkbox" checked={form.registerTx} onChange={e => setForm({ ...form, registerTx: e.target.checked })} />
+                Registrar el gasto de este mes
+              </label>
+            )}
+          </div>
+          <SheetActions onCancel={closeForm} onSave={submit} saveLabel={editingId ? "Guardar cambios" : "Agregar"} />
+        </BottomSheet>
+      )}
+
       {items.length === 0 ? (
         <Card style={{ textAlign: "center", padding: 48 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📺</div>
@@ -2633,6 +2988,8 @@ function Suscripciones({ data }) {
                 <div style={{ fontSize: 12, color: COLORS.textMuted }}>{s.category}{s.day ? ` · día ${s.day}` : ""}</div>
               </div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>{formatFull(s.amount)}</div>
+              <button onClick={() => startEdit(s)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+              <button onClick={() => del(s)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 16, padding: 4 }}>✕</button>
             </div>
           ))}
         </Card>

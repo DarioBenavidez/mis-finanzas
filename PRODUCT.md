@@ -34,9 +34,9 @@ diferenciador no es una superficie particular sino que ninguna de las tres es la
   cualquier cambio de esquema en la web tiene que mantener paridad con esos dos.
 - Categorías de gastos son dinámicas y editables por el usuario (`data.categories`), no
   una lista fija en código.
-- Préstamos, Gastos Fijos y Suscripciones son de solo lectura en la web, con aviso de
-  "pedíselo al bot de WhatsApp" — así está diseñada también la app real, no es una
-  limitación técnica de esta versión.
+- Préstamos, Gastos Fijos y Suscripciones se gestionan desde la web (alta, edición,
+  baja y, en Préstamos, registro de cobros) con paridad total de esquema y efectos
+  con el bot de WhatsApp. Antes eran de solo lectura; la app móvil todavía lo es.
 - Soporte de USD en Ahorros/Deudas/Préstamos con cotización blue en vivo
   (`{BACKEND_URL}/api/dolar`).
 - Vinculación de WhatsApp desde la web genera un código y abre `wa.me` con el mensaje
@@ -77,9 +77,11 @@ diferenciador no es una superficie particular sino que ninguna de las tres es la
   esa paridad rompe la sincronización entre las tres superficies.
 - Mobile-first no significa mobile-only: el layout debe extenderse a escritorio sin
   descartar los patrones de navegación que ya funcionan en el teléfono.
-- No inventar datos ni estados de ejemplo: los paneles de solo lectura (Préstamos,
-  Gastos Fijos, Suscripciones) reflejan una limitación de producto real, no un
-  placeholder a completar.
+- No inventar datos ni estados de ejemplo: los paneles reflejan el estado real de
+  `finanzas.data`, nunca placeholders a completar.
+- Cualquier alta/edición desde la web (incluidos Préstamos, Gastos Fijos y
+  Suscripciones) escribe exactamente los mismos campos y dispara los mismos efectos
+  secundarios que el backend del bot, para no romper la interoperabilidad.
 - Cambios visuales no deben tocar el esquema de datos ni la lógica de sincronización
   con Supabase.
 
