@@ -283,7 +283,21 @@
       // Merge con los defaults: así nunca pisamos campos que solo usa el bot
       // de WhatsApp (memoria, vocabulario, negocio, etc.) aunque esta página
       // no los conozca ni los muestre.
-      return { ...makeDefaultData(), ...data.data };
+      const merged = { ...makeDefaultData(), ...data.data };
+      // Los usuarios creados por el bot de WhatsApp o la app Expo arrancan con
+      // `categories: {}` guardado en la fila, lo que pisa los defaults del merge
+      // de arriba y deja la web sin ninguna categoría (nada para elegir al cargar
+      // una transacción, presupuesto vacío, etc.). Si el usuario todavía no tiene
+      // categorías propias, sembramos las predeterminadas — después son editables
+      // y borrables como cualquier otra, y si borró alguna no reaparece porque la
+      // lista ya no está vacía.
+      if (!merged.categories || Object.keys(merged.categories).length === 0) {
+        merged.categories = { ...DEFAULT_CATEGORIES };
+        if (!Array.isArray(merged.budgets) || merged.budgets.length === 0) {
+          merged.budgets = Object.keys(DEFAULT_CATEGORIES).map(cat => ({ cat, limit: 0 }));
+        }
+      }
+      return merged;
     }
 
     async function saveData(uid, payload) {
