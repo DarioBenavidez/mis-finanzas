@@ -202,18 +202,21 @@
       .boceto-hi { font-size: 13px; color: #4A6B62; flex-shrink: 0; }
       .boceto-balance {
         background: linear-gradient(155deg, #005247 0%, #00332c 100%); color: #fff;
-        border-radius: 20px; padding: 16px 18px; box-shadow: 0 16px 34px -18px rgba(13,31,28,0.4);
+        border-radius: 20px; padding: 20px 22px; box-shadow: 0 16px 34px -18px rgba(13,31,28,0.4);
         flex-shrink: 0;
       }
       .boceto-balance .k { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #ffffffbf; }
-      .boceto-balance .v { font-family: 'Nunito', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 30px; margin-top: 2px; font-variant-numeric: tabular-nums; }
-      .boceto-balance .split { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; font-size: 11.5px; }
+      .boceto-balance .v { font-family: 'Nunito', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 38px; line-height: 1.05; margin-top: 4px; font-variant-numeric: tabular-nums; }
+      .boceto-balance .delta { font-size: 11.5px; font-weight: 700; margin-top: 6px; color: #ffffffcc; }
+      .boceto-balance .split { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; font-size: 11.5px; }
       .boceto-balance .split span { display: flex; align-items: center; gap: 6px; color: #ffffffdd; }
       .boceto-balance .split .d { width: 7px; height: 7px; border-radius: 50%; flex: none; }
       .boceto-nav { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; flex: 1; min-height: 0; padding-right: 5px; padding-bottom: 20px; }
+      .boceto-navgroup { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #6E8B82; padding: 14px 4px 4px; }
+      .boceto-navgroup:first-child { padding-top: 2px; }
       .boceto-nav::-webkit-scrollbar { width: 6px; }
       .boceto-nav::-webkit-scrollbar-thumb { background: #bcd8cd; border-radius: 999px; }
-      .boceto-panel { min-width: 0; overflow-y: auto; padding-right: 6px; padding-bottom: 40px; }
+      .boceto-panel { min-width: 0; max-width: 880px; overflow-y: auto; padding-right: 6px; padding-bottom: 40px; }
       .boceto-panel::-webkit-scrollbar { width: 8px; }
       .boceto-panel::-webkit-scrollbar-thumb { background: #cfe4db; border-radius: 999px; }
     }
@@ -1899,17 +1902,34 @@ function MovimientosList({ data, save, monthTxs, showSnack }) {
 // arriba (fijo) y la lista de TODAS las secciones que scrollea sola (sin "ver
 // todos"); a la derecha, el detalle de la sección elegida. En mobile la home
 // sigue siendo InicioTab, sin tocar.
+// Agrupadas por intención de uso en vez de una lista plana de 11: "Dinero" es
+// el estado actual (lo que mirás seguido), "Planificación" es lo que se
+// proyecta hacia adelante. El grupo "Cuenta" (Análisis + WhatsApp + Perfil) se
+// arma en el render porque WhatsApp/Perfil no son secciones de panel normales.
+const BOCETO_GROUPS = [
+  {
+    label: "Dinero",
+    items: [
+      { key: "movimientos", label: "Movimientos", icon: "list" },
+      { key: "ahorros", label: "Ahorros", icon: "coins" },
+      { key: "deudas", label: "Deudas", icon: "card" },
+      { key: "prestamos", label: "Préstamos", icon: "hand" },
+    ],
+  },
+  {
+    label: "Planificación",
+    items: [
+      { key: "presupuesto", label: "Presupuesto", icon: "tag" },
+      { key: "gastosfijos", label: "Gastos fijos", icon: "repeat" },
+      { key: "suscripciones", label: "Suscripciones", icon: "tv" },
+      { key: "proyeccion", label: "Proyección", icon: "trend" },
+      { key: "calendario", label: "Calendario", icon: "cal" },
+      { key: "turnos", label: "Turnos", icon: "clock" },
+    ],
+  },
+];
 const BOCETO_SECTIONS = [
-  { key: "movimientos", label: "Movimientos", icon: "list" },
-  { key: "ahorros", label: "Ahorros", icon: "coins" },
-  { key: "deudas", label: "Deudas", icon: "card" },
-  { key: "prestamos", label: "Préstamos", icon: "hand" },
-  { key: "presupuesto", label: "Presupuesto", icon: "tag" },
-  { key: "gastosfijos", label: "Gastos fijos", icon: "repeat" },
-  { key: "suscripciones", label: "Suscripciones", icon: "tv" },
-  { key: "turnos", label: "Turnos", icon: "clock" },
-  { key: "calendario", label: "Calendario", icon: "cal" },
-  { key: "proyeccion", label: "Proyección", icon: "trend" },
+  ...BOCETO_GROUPS.flatMap(g => g.items),
   { key: "analisis", label: "Análisis", icon: "chart" },
 ];
 
@@ -1917,6 +1937,19 @@ function BocetoLayout({ data, save, dolarRate, expByCat, monthTxs, totalIncome, 
   const [sec, setSec] = useState("movimientos");
   const balance = totalIncome - totalExpense;
   const cur = BOCETO_SECTIONS.find(s => s.key === sec);
+
+  // Variación del balance vs. el mes anterior al seleccionado. Mismo criterio de
+  // filtrado por mes/año que AnalisisTab (parseDateParts + isIncomeType/
+  // isExpenseType). Solo se muestra si el mes anterior tiene movimientos, para
+  // no mostrar "+100%" contra un mes vacío.
+  const prevBal = (() => {
+    let pm = data.selectedMonth - 1, py = data.selectedYear;
+    if (pm < 0) { pm = 11; py--; }
+    const pts = data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === pm && p.year === py; });
+    if (!pts.length) return null;
+    return pts.filter(isIncomeType).reduce((s, t) => s + t.amount, 0) - pts.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+  })();
+  const balDelta = prevBal == null ? null : balance - prevBal;
 
   const panel = (() => {
     switch (sec) {
@@ -1953,6 +1986,11 @@ function BocetoLayout({ data, save, dolarRate, expByCat, monthTxs, totalIncome, 
         <div className="boceto-balance">
           <div className="k">Balance · {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
           <div className="v">{balance < 0 ? "−" : ""}{formatFull(balance).replace(/^-/, "")}</div>
+          {balDelta != null && (
+            <div className="delta" style={{ color: balDelta >= 0 ? "#8CE6B4" : "#F8A9A9" }}>
+              {balDelta >= 0 ? "▲" : "▼"} {formatFull(Math.abs(balDelta))} vs. {MONTH_NAMES[(data.selectedMonth + 11) % 12]}
+            </div>
+          )}
           <div className="split">
             <span><span className="d" style={{ background: "#4ADE80" }} /> Ingresos {formatFull(totalIncome)}</span>
             <span><span className="d" style={{ background: "#F87171" }} /> Gastos {formatFull(totalExpense)}</span>
@@ -1960,11 +1998,20 @@ function BocetoLayout({ data, save, dolarRate, expByCat, monthTxs, totalIncome, 
         </div>
 
         <div className="boceto-nav">
-          {BOCETO_SECTIONS.map(s => (
-            <button key={s.key} onClick={() => setSec(s.key)} style={navBtn(sec === s.key)}>
-              <span style={{ color: sec === s.key ? COLORS.gold : COLORS.accent, display: "flex" }}><Icon name={s.icon} /></span> {s.label}
-            </button>
+          {BOCETO_GROUPS.map(g => (
+            <React.Fragment key={g.label}>
+              <div className="boceto-navgroup">{g.label}</div>
+              {g.items.map(s => (
+                <button key={s.key} onClick={() => setSec(s.key)} style={navBtn(sec === s.key)}>
+                  <span style={{ color: sec === s.key ? COLORS.gold : COLORS.accent, display: "flex" }}><Icon name={s.icon} /></span> {s.label}
+                </button>
+              ))}
+            </React.Fragment>
           ))}
+          <div className="boceto-navgroup">Cuenta</div>
+          <button onClick={() => setSec("analisis")} style={navBtn(sec === "analisis")}>
+            <span style={{ color: sec === "analisis" ? COLORS.gold : COLORS.accent, display: "flex" }}><Icon name="chart" /></span> Análisis
+          </button>
           <button onClick={openWa} style={{ ...navBtn(false), color: waPhone ? COLORS.green : COLORS.text }}>
             <span style={{ display: "flex", color: waPhone ? COLORS.green : COLORS.accent }}><WhatsAppIcon size={17} color="currentColor" /></span>
             {waPhone ? "WhatsApp conectado" : "Conectar WhatsApp"}
@@ -2249,7 +2296,7 @@ function AnalisisTab({ data }) {
 
       <Card>
         <div style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Últimos 6 meses</div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 140 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 180 }}>
           {months.map(mo => (
             <div key={`${mo.m}-${mo.y}`} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%" }}>
               <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: 3, width: "100%", justifyContent: "center" }}>
