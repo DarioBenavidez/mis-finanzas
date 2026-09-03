@@ -110,14 +110,60 @@
     .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .desktop-sidebar { display: none; }
     .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 110px; box-sizing: border-box; }
-    .inicio-layout { display: flex; flex-direction: column; gap: 16px; }
-    .inicio-primary { display: flex; flex-direction: column; gap: 16px; }
-    .inicio-rail { display: flex; flex-direction: column; gap: 16px; }
-    /* 3 columnas fijas en mobile (como antes); desde 1024px pasa a auto-fill
-       para aprovechar el ancho completo sin quedar en una columna angosta. */
-    .inicio-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .inicio-upcoming { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    /* Inicio: mobile apilado (banda de estado → índice de módulos → movimientos);
+       desde 1024px pasa a un grid de dos columnas con la banda a lo ancho. */
+    .inicio-layout { display: flex; flex-direction: column; gap: 18px; }
+    .inicio-main { min-width: 0; }
+    .inicio-index { display: flex; flex-direction: column; gap: 20px; }
     .panel-card { width: 100%; }
+
+    /* ── Banda de estado del mes: lectura horizontal (balance · disponible/día ·
+       presupuesto), no un card-hero apilado. Wrappea a columna en mobile. ── */
+    .state-band { display: flex; flex-direction: column; align-items: stretch; gap: 4px 0;
+      background: linear-gradient(120deg, #005247 0%, #00382f 62%, #002b25 100%);
+      border-radius: 20px; padding: 18px 6px; position: relative; overflow: hidden;
+      box-shadow: 0 14px 44px #00291f33; }
+    .state-band.is-negative { background: linear-gradient(120deg, #0a3d34 0%, #2a1613 100%); box-shadow: 0 14px 44px #3a0f0a2e; }
+    .state-cell { flex: 1 1 190px; min-width: 0; padding: 4px 18px; position: relative; z-index: 1; }
+    .state-cell + .state-cell { border-top: 1px solid #ffffff2b; margin-top: 8px; padding-top: 16px; }
+    .state-k { font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: #ffffffb0; margin-bottom: 8px; }
+    .state-big { font-family: 'Nunito', sans-serif; font-weight: 300; color: #fff; line-height: .95; letter-spacing: -1.5px; display: flex; align-items: baseline; gap: 3px; }
+    .state-big .cur { font-size: 22px; font-weight: 400; color: #ffffffbf; letter-spacing: 0; }
+    .state-big .num { font-size: 44px; }
+    .state-sub { font-size: 12px; color: #ffffffa3; margin-top: 7px; }
+    .state-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
+    .state-legend span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ffffffd8; font-weight: 500; }
+    .state-legend i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; font-style: normal; }
+    .state-daynum { font-family: 'Nunito', sans-serif; font-weight: 400; color: #fff; font-size: 26px; letter-spacing: -.5px; }
+    .state-bar { height: 6px; border-radius: 3px; background: #ffffff26; overflow: hidden; margin-top: 10px; }
+    .state-bar > i { display: block; height: 100%; border-radius: 3px; background: #E8C97A; font-style: normal; transition: width var(--dur-layout) var(--ease-standard); }
+    .state-bar > i.over { background: #F6A672; }
+
+    /* ── Índice de módulos: label + su número, no una grilla de emojis. ── */
+    .idx-group { display: flex; flex-direction: column; }
+    .idx-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #4A6B62; padding: 0 4px 8px; }
+    .idx-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px;
+      width: 100%; background: none; border: none; text-align: left; cursor: pointer;
+      padding: 11px 4px; border-bottom: 1px solid #E4EDE9; font-family: inherit; }
+    .idx-row:last-child { border-bottom: none; }
+    .idx-row:hover .idx-label { color: #005247; }
+    .idx-label { font-size: 13.5px; font-weight: 700; color: #16302B; transition: color var(--dur-fast) var(--ease-standard); }
+    .idx-val { font-size: 13px; font-weight: 700; color: #16302B; font-variant-numeric: tabular-nums; }
+    .idx-val.muted { color: #6B7F79; font-weight: 600; }
+    .idx-meta { grid-column: 1 / -1; font-size: 11px; color: #6B7F79; margin-top: 1px; }
+    .idx-mini { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: #E4EDE9; overflow: hidden; margin-top: 7px; }
+    .idx-mini > i { display: block; height: 100%; background: #C9A84C; font-style: normal; }
+    .idx-mini > i.over { background: #E0655A; }
+
+    /* ── Carga rápida siempre visible arriba de los movimientos ── */
+    .quick-add { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+      background: #fff; border: 1.5px dashed #C6D8D1; border-radius: 12px;
+      padding: 13px 16px; cursor: pointer; font-family: inherit; color: #4A6B62; font-size: 13.5px; font-weight: 600;
+      transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard); }
+    .quick-add:hover { border-color: #005247; background: #F6FBF9; color: #005247; }
+    .quick-add .plus { width: 22px; height: 22px; border-radius: 7px; background: #C9A84C; color: #2b2205;
+      display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex-shrink: 0; }
+    .topbar-quickadd { display: none; }
 
     /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
        "Nueva deuda"): 1 columna en mobile angosto (~360-412px Android), 2
@@ -156,15 +202,19 @@
       .mobile-fab { display: none !important; }
       .topbar-brand { display: none !important; }
       .topbar { justify-content: flex-end; }
-      .content-area { max-width: 1160px; padding: 32px 40px 40px; }
+      .content-area { max-width: 1280px; padding: 28px 40px 48px; }
       .narrow-col { max-width: 720px; margin: 0 auto; }
-      /* Inicio se queda apilado en una sola columna a todos los anchos: la card de
-         Balance quedaba más angosta que Transacciones de abajo cuando el rail de
-         accesos rápidos vivía al costado en un grid de 2 columnas — todo comparte
-         el mismo borde izq./der. así. Con más ancho disponible, los accesos
-         rápidos y las cards de turnos/vencimientos aprovechan el espacio extra. */
-      .inicio-shortcuts { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-      .inicio-upcoming { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+      .topbar { justify-content: space-between; }
+      .topbar-quickadd { display: flex; }
+      .state-band { flex-direction: row; padding: 20px 8px; }
+      .state-cell { padding: 4px 24px; }
+      .state-cell + .state-cell { border-top: none; border-left: 1px solid #ffffff2b; margin-top: 0; padding-top: 4px; }
+      /* Inicio en escritorio: banda de estado a lo ancho, luego movimientos
+         (columna vertebral) + índice de módulos sticky al costado. */
+      .inicio-layout { display: grid; grid-template-columns: minmax(0, 1fr) 336px; gap: 26px 30px; align-items: start; }
+      .inicio-band { grid-column: 1 / -1; }
+      .inicio-main { grid-column: 1; }
+      .inicio-index { grid-column: 2; position: sticky; top: 24px; }
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
@@ -1449,6 +1499,10 @@ function FinanzasApp() {
             <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 84, height: "auto", display: "block" }} />
           </div>
           <DatePillPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
+          <button className="topbar-quickadd" onClick={() => setPanel("transacciones")} style={{ alignItems: "center", gap: 8, background: "#ffffff1a", border: "1px solid #ffffff33", borderRadius: 999, padding: "7px 16px 7px 12px", color: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+            <span style={{ width: 20, height: 20, borderRadius: 6, background: COLORS.gold, color: "#2b2205", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>+</span>
+            Cargá un movimiento
+          </button>
         </div>
 
         {/* ── CONTENIDO: una sola columna centrada en mobile, dashboard ancho desde 1024px ── */}
@@ -1630,122 +1684,124 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
     cancelEditTx();
   };
 
+  // ── Banda de estado: disponible por día para lo que resta del mes ──
+  const daysLeftInMonth = (() => {
+    if (!isCurrentMonth) return null;
+    const now = new Date();
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Math.max(1, last - now.getDate() + 1);
+  })();
+  const perDay = daysLeftInMonth && balance > 0 ? balance / daysLeftInMonth : null;
+  const budgetPct = totalBudget > 0 ? spentThisMonth / totalBudget : null;
+
+  // ── Índice de módulos: cada fila muestra su propio número ──
+  const savingsTarget = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.target || 0)), 0);
+  const savingsCurrent = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.current || 0)), 0);
+  const loansOwed = (data.loans || []).reduce((s, l) => s + (l.currency === "usd" ? 0 : (l.remaining || 0)), 0);
+  const fixedMonthly = (data.recurringExpenses || []).filter(g => g.active).reduce((s, g) => s + (g.amount || 0), 0);
+  const subs = data.suscripciones || [];
+  const subsMonthly = subs.reduce((s, x) => s + (x.currency === "usd" ? 0 : (x.amount || 0)), 0);
+  const debtCount = (data.debts || []).length;
+
+  const money = (n) => n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
+  const idxPlata = [
+    { key: "presupuesto", label: "Presupuesto",
+      val: totalBudget > 0 ? `${formatFull(spentThisMonth)} / ${formatFull(totalBudget)}` : "Sin límites",
+      muted: totalBudget === 0, bar: budgetPct },
+    { key: "ahorros", label: "Ahorros",
+      val: formatFull(savingsCurrent), meta: savingsTarget > 0 ? `de ${formatFull(savingsTarget)}` : null,
+      bar: savingsTarget > 0 ? savingsCurrent / savingsTarget : null },
+    { key: "deudas", label: "Deudas",
+      val: totalDebt > 0 ? formatFull(totalDebt) : "Al día", muted: totalDebt === 0,
+      meta: debtCount > 0 ? `${debtCount} activa${debtCount === 1 ? "" : "s"}` : null },
+    { key: "prestamos", label: "Préstamos",
+      val: loansOwed > 0 ? `+${formatFull(loansOwed)}` : "—", muted: loansOwed === 0,
+      meta: loansOwed > 0 ? "te deben" : null },
+    { key: "gastosfijos", label: "Gastos fijos",
+      val: fixedMonthly > 0 ? `${formatFull(fixedMonthly)}/mes` : "—", muted: fixedMonthly === 0 },
+    { key: "suscripciones", label: "Suscripciones",
+      val: subs.length > 0 ? `${formatFull(subsMonthly)}/mes` : "—", muted: subs.length === 0,
+      meta: subs.length > 0 ? `${subs.length} activa${subs.length === 1 ? "" : "s"}` : null },
+    { key: "proyeccion", label: "Proyección", val: "Ver a fin de mes", muted: true },
+  ];
+  const idxAgenda = [
+    { key: "turnos", label: "Turnos",
+      val: proximosTurnos.length > 0 ? "Próximo" : ((data.turnos || []).length > 0 ? "—" : "Sin turnos"),
+      muted: proximosTurnos.length === 0,
+      meta: proximosTurnos.length > 0 ? `${proximosTurnos[0].description} · ${proximosTurnos[0].date.split("-").reverse().join("/")}` : null },
+    { key: "calendario", label: "Vencimientos",
+      val: proximosVencimientos.length > 0 ? `${proximosVencimientos.length} en 7 días` : "Nada cerca",
+      muted: proximosVencimientos.length === 0,
+      meta: proximosVencimientos.length > 0 ? `${EVENT_TYPES[proximosVencimientos[0].type]?.label || ""} ${proximosVencimientos[0].title}`.trim() : null },
+  ];
+
+  const IdxRow = ({ row }) => (
+    <button className="idx-row" onClick={() => onOpenPanel(row.key)}>
+      <span className="idx-label">{row.label}</span>
+      <span className={"idx-val" + (row.muted ? " muted" : "")}>{row.val}</span>
+      {row.meta && <span className="idx-meta">{row.meta}</span>}
+      {row.bar != null && (
+        <span className="idx-mini"><i className={row.bar > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(3, row.bar * 100)) + "%" }} /></span>
+      )}
+    </button>
+  );
+
   return (
     <div className="inicio-layout">
-      <div className="inicio-primary">
-        <div>
-          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 2 }}>{greeting},</div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
+      {/* ── Banda de estado del mes: balance · disponible por día · presupuesto,
+          leídos como una sola frase de situación (no un card-hero apilado). ── */}
+      <div className="inicio-band">
+        <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12, paddingLeft: 2 }}>
+          {greeting}, <b style={{ color: COLORS.text }}>{displayName}</b>
         </div>
+        <div className={"state-band" + (balance < 0 ? " is-negative" : "")}>
+          <div style={{ position: "absolute", top: -60, right: -40, width: 220, height: 220, borderRadius: "50%", background: "#ffffff08", pointerEvents: "none" }} />
 
-        {/* Hero balance -- calcado de la app real: "BALANCE DISPONIBLE" (antes
-            "Balance del mes"), Ingresos/Gastos en una sola línea con puntos de
-            color en vez del grid de 4 stats con flechas de antes. Deuda total
-            y Ahorro total siguen viéndose en sus propios accesos rápidos
-            (Deudas/Ahorros) más abajo -- no se pierde el dato, solo se saca
-            del hero para calcar el diseño real, que no lo incluye acá. */}
-        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "22px 24px 20px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance disponible</div>
-              <button onClick={() => setHideBalance(!hideBalance)} aria-label={hideBalance ? "Mostrar balance" : "Ocultar balance"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}><EyeToggleIcon shown={!hideBalance} color="#ffffffcc" size={17} /></button>
+          <div className="state-cell">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div className="state-k">{balance < 0 ? "En rojo este mes" : "Balance disponible"}</div>
+              <button onClick={() => setHideBalance(!hideBalance)} aria-label={hideBalance ? "Mostrar balance" : "Ocultar balance"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", marginTop: -2 }}><EyeToggleIcon shown={!hideBalance} color="#ffffffcc" size={16} /></button>
             </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
-              {hideBalance ? (
-                <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
-              ) : (
-                <>
-                  <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>{balance < 0 ? "-$" : "$"}</span>
-                  <span style={{ fontSize: 52, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
-                </>
-              )}
+            <div className="state-big">
+              {hideBalance ? <span className="num">••••••</span> : <>
+                <span className="cur">{balance < 0 ? "-$" : "$"}</span>
+                <span className="num">{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
+              </>}
             </div>
-            <div style={{ fontSize: 13, color: "#ffffff70", marginBottom: 12 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", flexShrink: 0 }} />
-                Ingresos {hideBalance ? "••••" : formatFull(totalIncome)}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#F87171", flexShrink: 0 }} />
-                Gastos {hideBalance ? "••••" : formatFull(totalExpense)}
-              </div>
+            <div className="state-sub">{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+            <div className="state-legend">
+              <span><i style={{ background: "#4ADE80" }} />Ingresos {hideBalance ? "••••" : formatFull(totalIncome)}</span>
+              <span><i style={{ background: "#F87171" }} />Gastos {hideBalance ? "••••" : formatFull(totalExpense)}</span>
             </div>
           </div>
-        </div>
 
-        {totalBudget > 0 && (
-          <Card style={{ padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
-              <span>Presupuesto del mes</span>
-              <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
+          {perDay != null && (
+            <div className="state-cell">
+              <div className="state-k">Te queda por día</div>
+              <div className="state-daynum">{hideBalance ? "••••" : formatFull(perDay)}</div>
+              <div className="state-sub">para los {daysLeftInMonth} días que restan del mes</div>
             </div>
-            <ProgressBar value={spentThisMonth} max={totalBudget} height={8} />
-          </Card>
-        )}
-      </div>
+          )}
 
-      {/* Accesos rápidos + próximos turnos/vencimientos: mismo ancho completo que
-          el resto de Inicio, ya no una columna lateral angosta al costado. */}
-      <div className="inicio-rail">
-        <div className="inicio-shortcuts">
-          {/* Mismo grid ya alineado (3 columnas fijas en mobile, auto-fill
-              desde 1024px) -- solo restyle visual de las cards, calcado de las
-              cards blancas redondeadas de la app real (ícono arriba, label
-              abajo, sin borde, sombra suave). */}
-          {PLAN_PANELS.map(p => (
-            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: "none", borderRadius: 20, padding: "18px 8px 14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", boxShadow: "0 4px 16px #00000010" }}>
-              <span style={{ fontSize: 26 }}>{p.icon}</span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
-            </button>
-          ))}
+          {totalBudget > 0 && (
+            <div className="state-cell">
+              <div className="state-k">Presupuesto</div>
+              <div style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>{hideBalance ? "••••" : `${formatFull(spentThisMonth)} de ${formatFull(totalBudget)}`}</div>
+              <div className="state-sub">{Math.round((budgetPct || 0) * 100)}% usado{budgetPct > 1 ? " · pasado" : ""}</div>
+              <div className="state-bar"><i className={budgetPct > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(2, (budgetPct || 0) * 100)) + "%" }} /></div>
+            </div>
+          )}
         </div>
-
-        {(proximosTurnos.length > 0 || proximosVencimientos.length > 0) && (
-          <div className="inicio-upcoming">
-            {proximosTurnos.length > 0 && (
-              <Card style={{ padding: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
-                  <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {proximosTurnos.map(t => (
-                    <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                      <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
-                      <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-
-            {proximosVencimientos.length > 0 && (
-              <Card style={{ padding: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
-                  <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {proximosVencimientos.map(e => (
-                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                      <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
-                      <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Transacciones embebidas, con filtros y buscador como en la app */}
-      <div className="inicio-tx">
+      {/* ── Columna vertebral: carga rápida siempre visible + los movimientos ── */}
+      <div className="inicio-main">
+        <button className="quick-add" onClick={() => onOpenPanel("transacciones")} style={{ marginBottom: 14 }}>
+          <span className="plus">+</span> Cargá un gasto o ingreso…
+        </button>
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Transacciones</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Movimientos</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
               {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
                 <button key={k} onClick={() => { setTxFilter(k); setTxPage(0); }} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
@@ -1795,6 +1851,18 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             </div>
           )}
         </Card>
+      </div>
+
+      {/* ── Índice de módulos: cada fila lleva su propio número, no una puerta con emoji ── */}
+      <div className="inicio-index">
+        <div className="idx-group">
+          <div className="idx-title">Tu situación</div>
+          {idxPlata.map(row => <IdxRow key={row.key} row={row} />)}
+        </div>
+        <div className="idx-group">
+          <div className="idx-title">Agenda</div>
+          {idxAgenda.map(row => <IdxRow key={row.key} row={row} />)}
+        </div>
       </div>
     </div>
   );
