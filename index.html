@@ -138,34 +138,6 @@
     .estado-position .ep-d { font-size: 12.5px; color: #E8C97A; font-weight: 700; margin-top: 4px; }
     .ico-mut { color: #5C7C72; }
     .topbar-mobile-only { display: grid; }
-
-    /* ── SOBRES (solo escritorio; en mobile la home es "Estado") ── */
-    .bar { height: 6px; border-radius: 999px; background: #d7ebe2; overflow: hidden; }
-    .bar > span { display: block; height: 100%; border-radius: 999px; background: #005247; }
-    .bar.warn > span { background: #C9A84C; }
-    .bar.over > span { background: #d64d54; }
-    .sobres-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 22px; align-items: start; max-width: 1040px; margin: 0 auto; }
-    .sobres-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
-    .sobre-card { background: #fff; border: 1px solid #cfe4db; border-radius: 14px; padding: 13px 14px; text-align: left; cursor: pointer; font-family: inherit; display: block; transition: box-shadow var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
-    .sobre-card:hover { border-color: #a9c4bc; }
-    .sobre-card.sel { border-color: #005247; box-shadow: 0 0 0 3px rgba(0, 82, 71, 0.12); }
-    .sobre-card.hot { border-color: #ecc4bf; background: linear-gradient(180deg, #fdf2f0, #fff); }
-    .sobre-mk { width: 28px; height: 28px; border-radius: 8px; background: #e4f1eb; color: #005247; display: grid; place-items: center; }
-    .sobre-mk.hot { background: #fbeceb; color: #d64d54; }
-    .sobre-mk.gold { background: #f7efd9; color: #8A6A16; }
-    .sobre-nm { font-weight: 700; font-size: 13px; margin-top: 9px; }
-    .sobre-fig { font-size: 11px; color: #5C7C72; font-variant-numeric: tabular-nums; margin-top: 2px; }
-    .sobre-card .bar { margin-top: 9px; height: 6px; }
-
-    .sobres-room { background: #fff; border: 1px solid #cfe4db; border-radius: 16px; padding: 20px 20px 22px; position: sticky; top: 88px; }
-    .sobres-room .sr-h { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 9px; }
-    .sobres-room .sr-kv { display: flex; gap: 26px; margin-top: 16px; flex-wrap: wrap; }
-    .sobres-room .sr-kv .k { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.11em; color: #5C7C72; }
-    .sobres-room .sr-kv .v { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 1px; }
-    .sobres-room .sr-lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.11em; color: #5C7C72; margin-top: 20px; margin-bottom: 4px; }
-    .sobres-room .sr-mv { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid #e4f1eb; font-size: 12.5px; }
-    .sobres-room .sr-mv .amt { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .sobres-room .sr-link { margin-top: 16px; background: none; border: none; color: #005247; font-family: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 4px 0; }
     .inicio-rail { display: flex; flex-direction: column; gap: 16px; }
     /* 3 columnas fijas en mobile (como antes); desde 1024px pasa a auto-fill
        para aprovechar el ancho completo sin quedar en una columna angosta. */
@@ -961,16 +933,6 @@ const ICON_PATHS = {
   plus:      "M12 6v12M6 12h12",
   chevron:   "M9 5l7 7-7 7",
   wallet:    "M4 7h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4zM4 7V6a2 2 0 0 1 2-2h9M16 12.5h.01",
-  // marcas de sobre por categoría (line-icons, sin emoji)
-  home:      "M4 11l8-6 8 6M6 10v9h12v-9",
-  cart:      "M4 5h2l2 11h9l2-8H7M9 20h.01M17 20h.01",
-  bolt:      "M13 3 5 14h6l-1 7 8-11h-6l1-7Z",
-  plug:      "M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0zM12 16v5",
-  car:       "M5 13l1.5-5h11L19 13M4 13h16v5H4zM7 18v2M17 18v2M7.5 15h.01M16.5 15h.01",
-  health:    "M12 21C7 17 4 13.5 4 9.5A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 8 3.5c0 4-3 7.5-8 11.5ZM12 9v5M9.5 11.5h5",
-  book:      "M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM5 18a2 2 0 0 1 2-2h11",
-  dots:      "M6 12h.01M12 12h.01M18 12h.01",
-  grid:      "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
 };
 function Icon({ name, size = 18, className }) {
   const d = ICON_PATHS[name] || ICON_PATHS.estado;
@@ -981,31 +943,6 @@ function Icon({ name, size = 18, className }) {
       <path d={d} />
     </svg>
   );
-}
-
-// Marca de sobre por categoría (mapa fijo para las predeterminadas; el resto
-// cae en "tag"). Nada de emoji ni monograma.
-const CAT_ICON = {
-  "Vivienda": "home", "Alimentación": "cart", "Transporte": "car", "Salud": "health",
-  "Entretenimiento": "bolt", "Ropa": "tag", "Educación": "book", "Servicios": "plug",
-  "Préstamo tarjeta": "card", "Otros": "dots",
-};
-const catEnvIcon = (name) => CAT_ICON[name] || "tag";
-
-// Media query como estado de React (para renderizar layouts distintos, no solo
-// esconder con CSS). Se usa para que en escritorio la home sea el tablero de
-// "Sobres" y en mobile siga siendo "Estado".
-function useMinWidth(px) {
-  const query = `(min-width: ${px}px)`;
-  const [match, setMatch] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const onChange = (e) => setMatch(e.matches);
-    setMatch(mq.matches);
-    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
-    return () => (mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange));
-  }, [query]);
-  return match;
 }
 
 // ---- RESET PASSWORD SCREEN ----
@@ -1328,7 +1265,7 @@ function PanelModal({ title, onClose, children }) {
 // lista lateral. "Ahorros" y "Deudas" abren su panel (overlay) directo; el
 // resto cambia de mainTab.
 const NAV_SECTIONS = [
-  { key: "estado", label: "Sobres", icon: "grid", kind: "tab" }, // en PC la home es el tablero de sobres
+  { key: "estado", label: "Estado", icon: "estado", kind: "tab" },
   { key: "movimientos", label: "Movimientos", icon: "movimientos", kind: "tab" },
   { key: "ahorros", label: "Ahorros", icon: "ahorros", kind: "panel" },
   { key: "deudas", label: "Deudas", icon: "deudas", kind: "panel" },
@@ -1878,144 +1815,10 @@ function TxRow({ t, rowClass, onEdit, onRemove, compact }) {
   );
 }
 
-// ---- SOBRES (solo escritorio) — tablero de presupuesto por categoría ----
-// A pedido de Dario: en PC la home es este tablero de "sobres"; en mobile sigue
-// siendo "Estado" (ver EstadoTab, que ramifica por ancho con useMinWidth).
-// El sobre más comprometido va primero; se abre a su "cuarto" al costado.
-function SobresTablero({ data, monthTxs, totalIncome, totalSavings, onOpenPanel, onSelectTab }) {
-  const spentByCat = {};
-  monthTxs.filter(t => t.type === "gasto").forEach(t => { spentByCat[t.category] = (spentByCat[t.category] || 0) + t.amount; });
-
-  const catEnvs = data.budgets.filter(b => b.limit > 0).map(b => ({
-    key: "c:" + b.cat, kind: "cat", name: b.cat,
-    spent: spentByCat[b.cat] || 0, limit: b.limit,
-  })).sort((a, b) => (b.spent / b.limit) - (a.spent / a.limit));
-
-  const topMeta = [...(data.savings || [])].sort((a, b) => ((b.current || 0) / (b.target || 1)) - ((a.current || 0) / (a.target || 1)))[0];
-  const envs = [
-    ...catEnvs,
-    { key: "__ing", kind: "ingreso", name: "Ingresos", spent: totalIncome, limit: 0 },
-    ...(topMeta ? [{ key: "__ah", kind: "ahorro", name: `Ahorro «${topMeta.name}»`, spent: topMeta.current || 0, limit: topMeta.target || 0, meta: topMeta }] : []),
-  ];
-
-  const [selKey, setSelKey] = useState(envs[0]?.key);
-  const sel = envs.find(e => e.key === selKey) || envs[0];
-
-  const pct = (e) => e.limit > 0 ? Math.min(100, Math.round(e.spent / e.limit * 100)) : (e.kind === "ingreso" ? 100 : 0);
-  const barClass = (e) => {
-    if (e.kind !== "cat") return "";
-    const p = e.spent / e.limit;
-    return p >= 1 ? "over" : p >= 0.8 ? "warn" : "";
-  };
-
-  // "cuarto" del sobre seleccionado
-  const roomTxs = sel && sel.kind === "cat"
-    ? [...data.transactions].filter(t => t.category === sel.name).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6)
-    : sel && sel.kind === "ingreso"
-      ? [...data.transactions].filter(isIncomeType).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6)
-      : [];
-  let trend6 = 0;
-  if (sel && sel.kind === "cat") {
-    let tot = 0;
-    for (let i = 1; i <= 6; i++) {
-      let m = data.selectedMonth - i, y = data.selectedYear;
-      while (m < 0) { m += 12; y -= 1; }
-      tot += data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === m && p.year === y && t.category === sel.name && t.type === "gasto"; }).reduce((s, t) => s + t.amount, 0);
-    }
-    trend6 = Math.round(tot / 6);
-  }
-
-  const EnvCard = (e) => {
-    const p = pct(e);
-    const over = e.kind === "cat" && e.spent > e.limit;
-    return (
-      <button key={e.key} onClick={() => setSelKey(e.key)} className={`sobre-card${selKey === e.key ? " sel" : ""}${over ? " hot" : ""}`}>
-        <span className={`sobre-mk${over ? " hot" : ""}${e.kind !== "cat" ? " gold" : ""}`}>
-          <Icon name={e.kind === "ingreso" ? "arrowIn" : e.kind === "ahorro" ? "ahorros" : catEnvIcon(e.name)} size={15} />
-        </span>
-        <div className="sobre-nm">{e.name}</div>
-        <div className="sobre-fig">
-          {e.kind === "cat" ? `${formatFull(e.spent)} de ${formatFull(e.limit)}`
-            : e.kind === "ingreso" ? `${formatFull(e.spent)} este mes`
-            : `${formatFull(e.spent)} de ${formatFull(e.limit)}`}
-        </div>
-        <div className={`bar ${barClass(e)}`}><span style={{ width: p + "%" }} /></div>
-      </button>
-    );
-  };
-
-  return (
-    <div className="sobres-wrap">
-      <div className="sobres-grid">{envs.map(EnvCard)}</div>
-
-      <div className="sobres-room">
-        {!sel ? (
-          <div style={{ color: COLORS.textMuted, fontSize: 13 }}>Todavía no hay sobres. Poné un límite a una categoría en Presupuesto para empezar.</div>
-        ) : sel.kind === "cat" ? (
-          <>
-            <div className="sr-h"><span className="sobre-mk"><Icon name={catEnvIcon(sel.name)} size={16} /></span> {sel.name}</div>
-            <div className="sr-kv">
-              <div><div className="k">Gastado</div><div className="v" style={{ color: sel.spent > sel.limit ? COLORS.red : COLORS.text }}>{formatFull(sel.spent)}</div></div>
-              <div><div className="k">Límite</div><div className="v">{formatFull(sel.limit)}</div></div>
-              <div><div className="k">{sel.spent > sel.limit ? "Excedido" : "Queda"}</div><div className="v" style={{ color: sel.spent > sel.limit ? COLORS.red : COLORS.green }}>{formatFull(Math.abs(sel.limit - sel.spent))}</div></div>
-            </div>
-            <div className={`bar ${barClass(sel)}`} style={{ height: 8, marginTop: 14 }}><span style={{ width: pct(sel) + "%" }} /></div>
-            <div className="sr-lbl">Movimientos de este sobre</div>
-            {roomTxs.length === 0
-              ? <div style={{ fontSize: 12.5, color: COLORS.textMuted, padding: "8px 0" }}>Sin movimientos este mes.</div>
-              : roomTxs.map(t => (
-                <div key={t.id} className="sr-mv">
-                  <span style={{ color: COLORS.textMuted, display: "flex" }}><Icon name={isIncomeType(t) ? "arrowIn" : "arrowOut"} size={14} /></span>
-                  {t.description || t.category}
-                  <span style={{ color: COLORS.textMuted, fontSize: 11 }}>{t.date}</span>
-                  <span className="amt" style={{ color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "−"}{formatFull(t.amount).replace(/^-/, "")}</span>
-                </div>
-              ))}
-            <div className="sr-lbl">Tendencia</div>
-            <div style={{ fontSize: 12.5, color: COLORS.textMuted }}>Promedio últimos 6 meses: {formatFull(trend6)} / mes</div>
-          </>
-        ) : sel.kind === "ingreso" ? (
-          <>
-            <div className="sr-h"><span className="sobre-mk gold"><Icon name="arrowIn" size={16} /></span> Ingresos</div>
-            <div className="sr-kv"><div><div className="k">Este mes</div><div className="v" style={{ color: COLORS.green }}>{formatFull(totalIncome)}</div></div></div>
-            <div className="sr-lbl">Últimos ingresos</div>
-            {roomTxs.length === 0
-              ? <div style={{ fontSize: 12.5, color: COLORS.textMuted, padding: "8px 0" }}>Sin ingresos registrados.</div>
-              : roomTxs.map(t => (
-                <div key={t.id} className="sr-mv">
-                  <span style={{ color: COLORS.textMuted, display: "flex" }}><Icon name="arrowIn" size={14} /></span>
-                  {t.description || t.category}
-                  <span style={{ color: COLORS.textMuted, fontSize: 11 }}>{t.date}</span>
-                  <span className="amt" style={{ color: COLORS.green }}>+{formatFull(t.amount).replace(/^-/, "")}</span>
-                </div>
-              ))}
-            <button onClick={() => onSelectTab("movimientos")} className="sr-link">Ver todos los movimientos</button>
-          </>
-        ) : (
-          <>
-            <div className="sr-h"><span className="sobre-mk gold"><Icon name="ahorros" size={16} /></span> {sel.name}</div>
-            <div className="sr-kv">
-              <div><div className="k">Ahorrado</div><div className="v">{formatFull(sel.spent)}</div></div>
-              <div><div className="k">Meta</div><div className="v">{formatFull(sel.limit)}</div></div>
-              <div><div className="k">Falta</div><div className="v" style={{ color: COLORS.green }}>{formatFull(Math.max(0, sel.limit - sel.spent))}</div></div>
-            </div>
-            <div className="bar" style={{ height: 8, marginTop: 14 }}><span style={{ width: pct(sel) + "%" }} /></div>
-            <button onClick={() => onOpenPanel("ahorros")} className="sr-link">Abrir Ahorros</button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ---- ESTADO (home) — la app abre como un estado de cuenta ----
-// En escritorio ramifica a SobresTablero (decisión de Dario: Sobres solo en PC).
-// En mobile: un número (resultado del mes + variación vs. mes anterior) y las 3
-// fuerzas que lo mueven — entra/sale, tenés, debés.
+// Un número (resultado del mes + variación vs. mes anterior) y las 3 fuerzas
+// que lo mueven: entra/sale, tenés, debés. Cada fuerza se abre a su detalle.
 function EstadoTab({ data, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel, onSelectTab }) {
-  const isDesktop = useMinWidth(1024);
-  if (isDesktop) return <SobresTablero data={data} monthTxs={monthTxs} totalIncome={totalIncome} totalSavings={totalSavings} onOpenPanel={onOpenPanel} onSelectTab={onSelectTab} />;
-
   const greeting = (() => { const h = new Date().getHours(); return h < 12 ? "Buen día" : h < 20 ? "Buenas tardes" : "Buenas noches"; })();
   const flujo = totalIncome - totalExpense;
 
