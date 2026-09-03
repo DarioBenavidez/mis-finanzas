@@ -1,4 +1,6 @@
-const CACHE = "mis-finanzas-v3";
+// Bump este número en cada deploy que cambie la lógica del SW o cuando haya que
+// invalidar caches viejos. `activate` borra todo lo que no sea este CACHE.
+const CACHE = "mis-finanzas-v4";
 const ASSETS = [
   "/",
   "/index.html",
@@ -10,30 +12,57 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {}))
-  );
-  self.skipWaiting();
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    // Guardar cada asset por separado: si uno falla (404, red caída) no se
+    // aborta el precache entero, y nunca se guarda una respuesta con error.
+    await Promise.allSettled(ASSETS.map(async url => {
+      try {
+        const res = await fetch(url, { cache: "no-cache" });
+        if (res && res.ok) await c.put(url, res.clone());
+      } catch (_) {}
+    }));
+    self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
+// Solo se cachean respuestas 2xx reales. Nunca un 404/500 ni una respuesta
+// opaca de error — eso era lo que dejaba la página "rota" pegada tras una caída
+// del hosting aunque el sitio ya hubiera vuelto.
+function isCacheable(res) {
+  return res && res.ok && (res.type === "basic" || res.type === "cors");
+}
+
 self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
+  const req = e.request;
+  if (req.method !== "GET") return;
+
+  e.respondWith((async () => {
+    try {
+      const res = await fetch(req);
+      if (isCacheable(res)) {
         const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
-  );
+        caches.open(CACHE).then(c => c.put(req, clone)).catch(() => {});
+      }
+      return res;
+    } catch (_) {
+      // Sin red: servir de cache si lo tenemos.
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      // Para navegaciones, caer al index cacheado como último recurso.
+      if (req.mode === "navigate") {
+        const shell = await caches.match("/index.html") || await caches.match("/");
+        if (shell) return shell;
+      }
+      return Response.error();
+    }
+  })());
 });

@@ -252,6 +252,17 @@
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/sw.js").catch(() => {});
+        // Si ya había un SW controlando la página y aparece uno nuevo (deploy),
+        // recargar una sola vez para descartar la versión vieja y su cache.
+        // Esto es lo que saca la página "pegada" tras una caída del hosting.
+        if (navigator.serviceWorker.controller) {
+          var swRefreshed = false;
+          navigator.serviceWorker.addEventListener("controllerchange", function () {
+            if (swRefreshed) return;
+            swRefreshed = true;
+            window.location.reload();
+          });
+        }
       });
     }
   </script>
