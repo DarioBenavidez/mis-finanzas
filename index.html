@@ -7,10 +7,12 @@
   <title>Orbe</title>
   <link rel="icon" type="image/png" href="assets/orbe-icon-64.png" />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- Versiones pinneadas (antes @18 / sin pin): un deploy nuevo del CDN no puede
+       cambiar el runtime bajo los pies ni romper el sitio sin aviso. -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     /* Menta pálido más saturado que el gris-verdoso original (#F2F7F5), calcado
@@ -207,22 +209,22 @@
     .auth-greeting { font-size: 22px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.5px; margin-bottom: 22px; text-align: center; }
     .auth-field { display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; margin-bottom: 12px; padding-left: 16px; }
     .auth-input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; padding: 15px 16px 15px 0; font-size: 15px; color: #1A1A1A; font-family: inherit; }
-    .auth-input::placeholder { color: #7A7A7A; opacity: 1; }
+    .auth-input::placeholder { color: #5F5E58; opacity: 1; }
     .auth-eye { background: none; border: none; cursor: pointer; padding: 0 14px 0 4px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; }
     .auth-pwrules { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: -4px; margin-bottom: 12px; padding: 0 4px; }
     .auth-pwrule { font-size: 11px; font-weight: 600; }
     .auth-error { background: #FFF3F3; border: 1px solid #F5C5C5; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #E53935; }
     .auth-success { background: #F0FBF7; border: 1px solid #A8DFC9; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #005247; }
-    .auth-hint { font-size: 13px; color: #7A7A7A; background: #F2EFE8; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
-    .auth-btn-main { width: 100%; background: #005247; border: 1px solid #C9A84C; border-radius: 18px; padding: 17px; color: #E8C97A; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 8px 16px #C9A84C66; transition: opacity var(--dur-base) var(--ease-standard); }
+    .auth-hint { font-size: 13px; color: #5F5E58; background: #F2EFE8; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+    .auth-btn-main { width: 100%; background: #005247; border: 1px solid #C9A84C; border-radius: 18px; padding: 17px; color: #E8C97A; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; box-shadow: 0 6px 18px #00291F26; transition: opacity var(--dur-base) var(--ease-standard); }
     .auth-btn-main:disabled { opacity: 0.7; cursor: not-allowed; }
     .auth-btn-secondary { width: 100%; background: transparent; border: 1.5px solid #005247; border-radius: 18px; padding: 17px; color: #005247; font-family: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.3px; cursor: pointer; margin-top: 12px; }
     .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; }
     .auth-divider span { flex: 1; height: 1px; background: #E8E4DC; }
-    .auth-divider em { font-style: normal; font-size: 11px; font-weight: 700; color: #A9A297; text-transform: uppercase; letter-spacing: 0.5px; }
+    .auth-divider em { font-style: normal; font-size: 11px; font-weight: 700; color: #6E665A; text-transform: uppercase; letter-spacing: 0.5px; }
     .auth-btn-google { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; padding: 14px; color: #1A1A1A; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .auth-links { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .auth-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; color: #7A7A7A; padding: 4px; }
+    .auth-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 13px; color: #5F5E58; padding: 4px; }
     .auth-link strong { color: #005247; font-weight: 700; }
 
     @media (min-width: 640px) {
@@ -260,23 +262,23 @@
     .fob-progress { display: flex; align-items: flex-start; justify-content: center; flex: 1; gap: 60px; }
     .fob-pitem { display: flex; flex-direction: column; align-items: center; position: relative; }
     .fob-plabel, .fob-pline { white-space: nowrap; }
-    .fob-pdot { width: 30px; height: 30px; border-radius: 15px; background: #F2EFE8; border: 1.5px solid #E8E4DC; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #A9A297; margin-bottom: 6px; }
+    .fob-pdot { width: 30px; height: 30px; border-radius: 15px; background: #F2EFE8; border: 1.5px solid #E8E4DC; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #6E665A; margin-bottom: 6px; }
     .fob-pdot.active { border-color: #C9A84C; background: #C9A84C22; color: #005247; }
     .fob-pdot.current { background: #C9A84C; border-color: #E8C97A; color: #005247; }
-    .fob-plabel { font-size: 10px; color: #A9A297; font-weight: 700; letter-spacing: 0.3px; }
+    .fob-plabel { font-size: 10px; color: #6E665A; font-weight: 700; letter-spacing: 0.3px; }
     .fob-plabel.active { color: #005247; }
     .fob-pline { position: absolute; top: 15px; left: 30px; width: 60px; height: 1.5px; background: #E8E4DC; }
     .fob-pline.active { background: #C9A84C; }
-    .fob-skip { background: none; border: none; color: #7A7A7A; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; flex-shrink: 0; }
+    .fob-skip { background: none; border: none; color: #5F5E58; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; flex-shrink: 0; }
     .fob-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 18px 0 10px; }
     .fob-icon { width: 84px; height: 84px; border-radius: 42px; background: #F2F9F6; border: 1px solid #E8E4DC; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 18px; flex-shrink: 0; }
     .fob-icon.wa { background: #25D3660F; border-color: #25D36633; }
     .fob-title { font-size: 25px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 10px; }
-    .fob-sub { font-size: 14px; color: #7A7A7A; line-height: 1.55; margin-bottom: 20px; max-width: 380px; }
+    .fob-sub { font-size: 14px; color: #5F5E58; line-height: 1.55; margin-bottom: 20px; max-width: 380px; }
     .fob-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; margin-bottom: 4px; }
     .fob-cat { aspect-ratio: 1; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
     .fob-cat .e { font-size: 20px; }
-    .fob-cat .n { font-size: 9px; color: #7A7A7A; font-weight: 700; padding: 0 2px; }
+    .fob-cat .n { font-size: 9px; color: #5F5E58; font-weight: 700; padding: 0 2px; }
     .fob-info { display: flex; align-items: flex-start; gap: 10px; background: #F2EFE8; border: 1px solid #E8E4DC; border-radius: 14px; padding: 14px; width: 100%; text-align: left; font-size: 13px; color: #5A5A5A; line-height: 1.5; margin-top: 10px; }
     .fob-info > span:first-child { font-size: 16px; line-height: 1.3; flex-shrink: 0; }
     .fob-info b { color: #005247; font-weight: 800; }
@@ -287,7 +289,7 @@
     .fob-wastep .t { font-size: 13px; color: #1A1A1A; line-height: 1.45; }
     .fob-btns { display: flex; gap: 12px; padding-top: 12px; flex-shrink: 0; }
     .fob-btn-back { flex: 1; padding: 16px; border-radius: 18px; border: 1.5px solid #005247; background: transparent; color: #005247; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
-    .fob-btn-next { flex: 2; padding: 16px; border-radius: 18px; border: 1px solid #C9A84C; background: #005247; color: #E8C97A; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 16px #C9A84C55; }
+    .fob-btn-next { flex: 2; padding: 16px; border-radius: 18px; border: 1px solid #C9A84C; background: #005247; color: #E8C97A; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 18px #00291F26; }
     /* Desktop: en el panel derecho de alto completo, centrar el grupo (progress +
        paso + botones) verticalmente como hace el form del login, en vez de clavar
        el botón abajo de todo con un hueco enorme en el medio. */
@@ -389,9 +391,14 @@ const COLORS = {
   accentDim: "#D6EDE7",
   gold: "#C9A84C",
   goldDim: "#C9A84C22",
-  green: "#059669",
+  // Oro legible como TEXTO sobre fondos claros (el #C9A84C daba 2.2:1). Solo
+  // para texto; los fondos/bordes siguen con `gold`.
+  goldText: "#8A6A16",
+  // green/red se oscurecieron para pasar AA (4.5:1) como monto de ingreso/gasto
+  // sobre blanco: antes #059669 (3.8:1) y #F43F5E (3.7:1).
+  green: "#047857",
   greenDim: "#D1F5E8",
-  red: "#F43F5E",
+  red: "#E11D48",
   redDim: "#FFF1F6",
   blue: "#3B82F6",
   blueDim: "#EAF1FF",
@@ -399,7 +406,9 @@ const COLORS = {
   purpleDim: "#D6EDE7",
   text: "#0D1F1C",
   textMuted: "#4A6B62",
-  textDim: "#A9C4BC",
+  // Antes #A9C4BC (1.9:1) — ilegible en paginación, "Sin transacciones",
+  // labels de la bottom-nav. Ahora ~4.7:1 sobre blanco/menta.
+  textDim: "#5C7C72",
 };
 
 const DEFAULT_CATEGORIES = {
@@ -844,10 +853,15 @@ const AUTH = {
   green: "#005247",
   gold: "#C9A84C",
   goldLight: "#E8C97A",
+  // Oro para TEXTO de feedback ("✓ 8 caracteres", "✓ coinciden") sobre el bg
+  // casi blanco: el #C9A84C daba 2.2:1. Este ~5:1.
+  goldText: "#8A6A16",
   bg: "#FAFAF8",
   border: "#E8E4DC",
   text: "#1A1A1A",
-  textMuted: "#7A7A7A",
+  // Antes #7A7A7A (4.1:1 sobre #FAFAF8): links "Saltar"/"¿Olvidaste...?",
+  // placeholders, cuerpo del onboarding. Ahora ~5.7:1.
+  textMuted: "#5F5E58",
   red: "#E53935",
 };
 
@@ -940,7 +954,7 @@ function ResetPasswordScreen({ onDone }) {
                 {password.length > 0 && (
                   <div className="auth-pwrules">
                     {pwRules.map((r, i) => (
-                      <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.gold : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
+                      <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.goldText : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
                     ))}
                   </div>
                 )}
@@ -954,7 +968,7 @@ function ResetPasswordScreen({ onDone }) {
                   <button type="button" className="auth-eye" aria-label={showCf ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowCf(c => !c)}><EyeToggleIcon shown={showCf} /></button>
                 </div>
                 {confirm.length > 0 && (
-                  <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
+                  <div style={{ fontSize: 11, color: confirmOk ? AUTH.goldText : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
                     {confirmOk ? "✓ Las contraseñas coinciden" : "✗ No coinciden"}
                   </div>
                 )}
@@ -1097,7 +1111,7 @@ function LoginScreen({ onLogin }) {
               {isRegister && password.length > 0 && (
                 <div className="auth-pwrules">
                   {pwRules.map((r, i) => (
-                    <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.gold : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
+                    <span key={i} className="auth-pwrule" style={{ color: r.ok ? AUTH.goldText : AUTH.textMuted }}>{r.ok ? "✓" : "○"} {r.label}</span>
                   ))}
                 </div>
               )}
@@ -1113,7 +1127,7 @@ function LoginScreen({ onLogin }) {
                 <button type="button" className="auth-eye" aria-label={showCf ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowCf(c => !c)}><EyeToggleIcon shown={showCf} /></button>
               </div>
               {confirm.length > 0 && (
-                <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
+                <div style={{ fontSize: 11, color: confirmOk ? AUTH.goldText : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
                   {confirmOk ? "✓ Las contraseñas coinciden" : "✗ No coinciden"}
                 </div>
               )}
@@ -1438,15 +1452,41 @@ function FinanzasApp() {
     load();
   }, [user]);
 
-  const save = useCallback(async (newData) => {
-    setData(newData);
-    // El estado local ya se actualizó de forma optimista (arriba); si el guardado
-    // real en Supabase falla, avisamos para que no se pierda el cambio en
-    // silencio (antes el catch estaba vacío).
-    try { await saveData(user.id, newData); } catch {
+  // El estado local se actualiza SIEMPRE al instante (optimista). El guardado
+  // en Supabase se debouncea ~700ms: editar un límite de presupuesto o el
+  // nombre de una categoría disparaba un upsert del jsonb entero por cada
+  // tecla. Si la pestaña se oculta o se cierra, se hace flush inmediato para
+  // no perder el último cambio. Si el guardado falla, avisamos (antes el
+  // catch estaba vacío y el error se tragaba en silencio).
+  const pendingSave = useRef(null);   // { uid, data } todavía sin persistir
+  const saveDebounce = useRef(null);
+  const flushSave = useCallback(async () => {
+    if (!pendingSave.current) return;
+    const { uid, data: payload } = pendingSave.current;
+    pendingSave.current = null;
+    clearTimeout(saveDebounce.current);
+    try { await saveData(uid, payload); } catch {
       alert("No se pudo guardar el cambio. Revisá tu conexión e intentá de nuevo.");
     }
-  }, [user]);
+  }, []);
+  const save = useCallback((newData) => {
+    setData(newData);
+    if (!user) return;
+    pendingSave.current = { uid: user.id, data: newData };
+    clearTimeout(saveDebounce.current);
+    saveDebounce.current = setTimeout(flushSave, 700);
+  }, [user, flushSave]);
+
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === "hidden") flushSave(); };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", flushSave);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", flushSave);
+      flushSave();
+    };
+  }, [flushSave]);
 
   // Snackbar con "Deshacer" para acciones rápidas y frecuentes (borrar un
   // movimiento). Se auto-oculta a los 5s.
@@ -1512,6 +1552,11 @@ function FinanzasApp() {
 
   const displayName = user?.user_metadata?.full_name || [user?.user_metadata?.nombre, user?.user_metadata?.apellido].filter(Boolean).join(" ") || (user?.email || "").split("@")[0];
 
+  // (No se usa useMemo acá: estos derivados van DESPUÉS de varios early-return
+  // de FinanzasApp — authLoading / !user / loading / onboarding — así que un
+  // hook en este punto violaría el orden de hooks. Son filter/reduce sobre un
+  // array chico, cuesta ~0. El costo real que marcaba el critique era el
+  // upsert del jsonb por tecla, resuelto con el debounce de save().)
   const monthTxs = data.transactions.filter(t => {
     const p = parseDateParts(t.date);
     return p.month === data.selectedMonth && p.year === data.selectedYear;
@@ -1531,7 +1576,8 @@ function FinanzasApp() {
 
   return (
     <div className="app-shell" style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text }}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      {/* El <link> de fuentes ya está en <head> (línea 9); tenerlo también acá,
+          inyectado en el árbol de React, duplicaba la request bloqueante. */}
 
       <DesktopSidebar mainTab={mainTab} onSelectTab={setMainTab} panel={panel} onOpenPanel={setPanel} waPhone={waPhone} onConnectWa={openWa} />
 
@@ -1680,7 +1726,6 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const [txFilter, setTxFilter] = useState("mes");
   const [search, setSearch] = useState("");
   const [editingTxId, setEditingTxId] = useState(null);
-  const [editTxForm, setEditTxForm] = useState(null);
   const [txPage, setTxPage] = useState(0);
 
   const balance = totalIncome - totalExpense;
@@ -1734,16 +1779,12 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   };
 
   const catNames = Object.keys(data.categories);
-  const startEditTx = (t) => { setEditingTxId(t.id); setEditTxForm({ type: t.type, amount: formatAmountInput(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
-  const cancelEditTx = () => { setEditingTxId(null); setEditTxForm(null); };
-  const saveEditTx = () => {
-    if (!editTxForm.amount || !parseAmountInput(editTxForm.amount)) return;
-    const transactions = data.transactions.map(t => t.id === editingTxId
-      ? { ...t, type: editTxForm.type, amount: parseAmountInput(editTxForm.amount), description: editTxForm.description, category: editTxForm.category, date: editTxForm.date }
-      : t);
-    save({ ...data, transactions });
-    cancelEditTx();
-  };
+  // Editar ahora abre el MISMO bottom sheet que "Nueva transacción"
+  // (NuevaTransaccionSheet con prop `editing`), en vez de un formulario inline
+  // aparte con dropdowns planos.
+  const startEditTx = (t) => setEditingTxId(t.id);
+  const cancelEditTx = () => setEditingTxId(null);
+  const editingTx = editingTxId != null ? data.transactions.find(t => t.id === editingTxId) : null;
 
   return (
     <div className="inicio-layout">
@@ -1776,7 +1817,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 </>
               )}
             </div>
-            <div style={{ fontSize: 13, color: "#ffffff70", marginBottom: 12 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+            <div style={{ fontSize: 13, color: "#ffffffb3", marginBottom: 12 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", flexShrink: 0 }} />
@@ -1870,23 +1911,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           </div>
           {listTxs.length === 0 ? (
             <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
-          ) : listTxs.map(t => editingTxId === t.id ? (
-            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
-                <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
-                <Input label="Categoría" value={editTxForm.category} onChange={v => setEditTxForm({ ...editTxForm, category: v })} options={catNames} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                <Input label="Descripción" value={editTxForm.description} onChange={v => setEditTxForm({ ...editTxForm, description: v })} />
-                <Input label="Fecha" value={editTxForm.date} onChange={v => setEditTxForm({ ...editTxForm, date: v })} type="date" />
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button size="sm" onClick={saveEditTx}>Guardar</Button>
-                <Button size="sm" variant="ghost" onClick={cancelEditTx}>Cancelar</Button>
-              </div>
-            </div>
-          ) : (
+          ) : listTxs.map(t => (
             <Removable key={t.id} onRemove={() => delTx(t.id)}>
               {({ remove, rowClass }) => (
                 <div className={rowClass} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
@@ -1911,6 +1936,10 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           )}
         </Card>
       </div>
+
+      {editingTx && (
+        <NuevaTransaccionSheet data={data} save={save} editing={editingTx} onClose={cancelEditTx} />
+      )}
     </div>
   );
 }
@@ -2110,16 +2139,35 @@ function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
 // no es lo que hace la app real: en la app, "+" abre únicamente el formulario
 // de alta como bottom sheet. Editar/eliminar transacciones existentes se sigue
 // haciendo desde la lista de Inicio, sin pérdida de funcionalidad.
-function NuevaTransaccionSheet({ data, save, onClose }) {
+// `editing` opcional: si viene una transacción, el sheet funciona en modo
+// edición (mismo formulario que el alta -- antes editar usaba otra UI, con
+// dropdowns planos, dentro de la lista de Inicio).
+function NuevaTransaccionSheet({ data, save, onClose, editing = null }) {
   const catNames = Object.keys(data.categories);
-  const [form, setForm] = useState({ type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
+  const [form, setForm] = useState(editing
+    ? { type: editing.type, amount: formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
+    : { type: "gasto", amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
+  // gasto/ingreso siempre; si se está editando una tx de un tipo que la web no
+  // ofrece crear (ahorro_meta, sueldo...), se agrega como 3ª opción para no
+  // pisarlo sin querer.
+  const typeOptions = [{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }];
+  if (editing && !typeOptions.some(o => o.value === editing.type)) {
+    typeOptions.push({ value: editing.type, label: editing.type });
+  }
+
   const add = () => {
     if (!form.amount || !parseAmountInput(form.amount)) return;
-    const tx = { ...form, amount: parseAmountInput(form.amount), id: Date.now() };
-    save({ ...data, transactions: [...data.transactions, tx] });
+    const amount = parseAmountInput(form.amount);
+    if (editing) {
+      const transactions = data.transactions.map(t => t.id === editing.id ? { ...t, ...form, amount } : t);
+      save({ ...data, transactions });
+    } else {
+      const tx = { ...form, amount, id: Date.now() };
+      save({ ...data, transactions: [...data.transactions, tx] });
+    }
     onClose();
   };
 
@@ -2135,10 +2183,10 @@ function NuevaTransaccionSheet({ data, save, onClose }) {
   };
 
   return (
-    <BottomSheet title="Nuevo movimiento" onClose={onClose}>
+    <BottomSheet title={editing ? "Editar movimiento" : "Nuevo movimiento"} onClose={onClose}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <SegmentedControl
-          options={[{ value: "gasto", label: "Gasto" }, { value: "ingreso", label: "Ingreso" }]}
+          options={typeOptions}
           value={form.type}
           onChange={v => setForm({ ...form, type: v })}
         />
@@ -2167,7 +2215,7 @@ function NuevaTransaccionSheet({ data, save, onClose }) {
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
       </div>
-      <SheetActions onCancel={onClose} onSave={add} saveLabel="Guardar" />
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} />
     </BottomSheet>
   );
 }
