@@ -199,7 +199,7 @@
     .auth-field { display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; margin-bottom: 12px; padding-left: 16px; }
     .auth-input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; padding: 15px 16px 15px 0; font-size: 15px; color: #1A1A1A; font-family: inherit; }
     .auth-input::placeholder { color: #7A7A7A; opacity: 1; }
-    .auth-eye { background: none; border: none; cursor: pointer; font-size: 15px; padding: 0 14px 0 4px; line-height: 1; flex-shrink: 0; }
+    .auth-eye { background: none; border: none; cursor: pointer; padding: 0 14px 0 4px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; }
     .auth-pwrules { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: -4px; margin-bottom: 12px; padding: 0 4px; }
     .auth-pwrule { font-size: 11px; font-weight: 600; }
     .auth-error { background: #FFF3F3; border: 1px solid #F5C5C5; border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #E53935; }
@@ -731,6 +731,27 @@ const AUTH = {
   red: "#E53935",
 };
 
+// Ícono mostrar/ocultar contraseña — SVG sobrio en vez de emoji (👁/🙈).
+// Verde cuando la contraseña está visible, gris cuando está oculta.
+function EyeToggleIcon({ shown, color, size = 18 }) {
+  const props = {
+    width: size, height: size, viewBox: "0 0 24 24", fill: "none",
+    stroke: color || (shown ? AUTH.green : AUTH.textMuted), strokeWidth: 2,
+    strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true",
+  };
+  return shown ? (
+    <svg {...props}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ) : (
+    <svg {...props}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  );
+}
+
 // ---- RESET PASSWORD SCREEN ----
 // Se llega acá vía el link del email de recuperación (hash #type=recovery),
 // no desde los botones de LoginScreen -- pero es el mismo flujo de auth, así
@@ -794,7 +815,7 @@ function ResetPasswordScreen({ onDone }) {
                 <div className="auth-field">
                   <input className="auth-input" type={showPw ? "text" : "password"} value={password}
                     onChange={e => setPassword(e.target.value)} placeholder="Nueva contraseña" />
-                  <button type="button" className="auth-eye" onClick={() => setShowPw(p => !p)}>{showPw ? "🙈" : "👁"}</button>
+                  <button type="button" className="auth-eye" aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowPw(p => !p)}><EyeToggleIcon shown={showPw} /></button>
                 </div>
                 {password.length > 0 && (
                   <div className="auth-pwrules">
@@ -810,7 +831,7 @@ function ResetPasswordScreen({ onDone }) {
                   <input className="auth-input" type={showCf ? "text" : "password"} value={confirm}
                     onChange={e => setConfirm(e.target.value)} placeholder="Repetir contraseña"
                     onKeyDown={e => e.key === "Enter" && handleReset()} />
-                  <button type="button" className="auth-eye" onClick={() => setShowCf(c => !c)}>{showCf ? "🙈" : "👁"}</button>
+                  <button type="button" className="auth-eye" aria-label={showCf ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowCf(c => !c)}><EyeToggleIcon shown={showCf} /></button>
                 </div>
                 {confirm.length > 0 && (
                   <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
@@ -951,7 +972,7 @@ function LoginScreen({ onLogin }) {
                 <input className="auth-input" type={showPw ? "text" : "password"} value={password}
                   onChange={e => setPassword(e.target.value)} placeholder="Contraseña"
                   onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-                <button type="button" className="auth-eye" onClick={() => setShowPw(p => !p)}>{showPw ? "🙈" : "👁"}</button>
+                <button type="button" className="auth-eye" aria-label={showPw ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowPw(p => !p)}><EyeToggleIcon shown={showPw} /></button>
               </div>
               {isRegister && password.length > 0 && (
                 <div className="auth-pwrules">
@@ -969,7 +990,7 @@ function LoginScreen({ onLogin }) {
                 <input className="auth-input" type={showCf ? "text" : "password"} value={confirm}
                   onChange={e => setConfirm(e.target.value)} placeholder="Repetir contraseña"
                   onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-                <button type="button" className="auth-eye" onClick={() => setShowCf(c => !c)}>{showCf ? "🙈" : "👁"}</button>
+                <button type="button" className="auth-eye" aria-label={showCf ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowCf(c => !c)}><EyeToggleIcon shown={showCf} /></button>
               </div>
               {confirm.length > 0 && (
                 <div style={{ fontSize: 11, color: confirmOk ? AUTH.gold : AUTH.red, marginTop: -8, marginBottom: 10, marginLeft: 4 }}>
@@ -1469,7 +1490,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance disponible</div>
-              <button onClick={() => setHideBalance(!hideBalance)} style={{ background: "none", border: "none", color: "#ffffffaa", cursor: "pointer", fontSize: 15 }}>{hideBalance ? "🙈" : "👁️"}</button>
+              <button onClick={() => setHideBalance(!hideBalance)} aria-label={hideBalance ? "Mostrar balance" : "Ocultar balance"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}><EyeToggleIcon shown={!hideBalance} color="#ffffffcc" size={17} /></button>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
               {hideBalance ? (
