@@ -109,51 +109,15 @@
     .app-shell { display: flex; flex-direction: column; }
     .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .desktop-sidebar { display: none; }
-    .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 152px; box-sizing: border-box; }
-    /* ── Inicio = conversación con Orbe: lectura del mes + feed + un solo campo
-       de carga (mismo gesto que el bot). Mobile apilado; en escritorio una
-       columna de lectura angosta y centrada, no un tablero. ── */
+    .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 110px; box-sizing: border-box; }
     .inicio-layout { display: flex; flex-direction: column; gap: 16px; }
+    .inicio-primary { display: flex; flex-direction: column; gap: 16px; }
+    .inicio-rail { display: flex; flex-direction: column; gap: 16px; }
+    /* 3 columnas fijas en mobile (como antes); desde 1024px pasa a auto-fill
+       para aprovechar el ancho completo sin quedar en una columna angosta. */
+    .inicio-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .inicio-upcoming { display: grid; grid-template-columns: 1fr; gap: 16px; }
     .panel-card { width: 100%; }
-
-    /* Lo que Orbe lee del mes, en una frase con los números en negrita */
-    .inicio-read { background: #fff; border: 1px solid #DCEAE4; border-radius: 16px;
-      padding: 18px 20px; display: grid; grid-template-columns: 26px 1fr; gap: 12px; }
-    .inicio-read .orb { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid #C9A84C; border-top-color: transparent; transform: rotate(-45deg); margin-top: 4px; flex-shrink: 0; }
-    .inicio-read p { margin: 0; font-family: 'DM Sans', 'Nunito', sans-serif; font-size: 15.5px; line-height: 1.6; color: #15302A; }
-    .inicio-read .rd-fig { font-family: 'Nunito', sans-serif; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-    .inicio-read .rd-pos { color: #0E7A50; }
-    .inicio-read .rd-neg { color: #B23A33; }
-    .inicio-read .rd-warn { color: #8A7220; }
-    .inicio-read .rd-tail { display: block; margin-top: 9px; font-size: 12.5px; color: #7C948C; }
-
-    /* Los 9 módulos como fila de fichas (se deslizan), no una grilla de puertas */
-    .inicio-chips { display: flex; gap: 9px; overflow-x: auto; padding: 2px; margin: 0 -2px; scrollbar-width: none; }
-    .inicio-chips::-webkit-scrollbar { display: none; }
-    .chip { flex: 0 0 auto; min-width: 132px; background: #fff; border: 1px solid #DCEAE4; border-radius: 13px; padding: 10px 13px; cursor: pointer; font-family: inherit; text-align: left; }
-    .chip:hover { border-color: #005247; }
-    .chip .ck { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #7C948C; }
-    .chip .cv { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15.5px; margin-top: 3px; letter-spacing: -.01em; color: #15302A; font-variant-numeric: tabular-nums; }
-    .chip .cm { display: block; font-size: 10.5px; color: #4C6A61; margin-top: 1px; white-space: nowrap; }
-    .chip.alert .cv { color: #B23A33; }
-    .chip.muted .cv { color: #7C948C; }
-    .chip .cbar { display: block; height: 3px; border-radius: 2px; background: #E4EDE9; overflow: hidden; margin-top: 6px; }
-    .chip .cbar > i { display: block; height: 100%; background: #C9A84C; }
-    .chip .cbar > i.over { background: #B23A33; }
-
-    /* El feed, agrupado por día */
-    .feed-daysep { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #7C948C; }
-
-    /* Un solo campo de carga, fijo (mismo gesto que escribirle al bot) */
-    .inicio-cmd { display: flex; align-items: center; gap: 9px; background: #fff;
-      border: 1px solid #DCEAE4; border-radius: 14px; padding: 9px 10px 9px 13px;
-      box-shadow: 0 10px 30px -16px rgba(0,49,42,.5); }
-    .inicio-cmd .dot { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid #C9A84C; border-top-color: transparent; transform: rotate(-45deg); flex-shrink: 0; }
-    .inicio-cmd input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-family: inherit; font-size: 14px; color: #15302A; }
-    .inicio-cmd input::placeholder { color: #7C948C; }
-    .inicio-cmd .go { border: 0; background: #C9A84C; color: #2b2205; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; border-radius: 9px; padding: 8px 14px; cursor: pointer; flex-shrink: 0; }
-    /* En mobile va fijo arriba del bottom-nav */
-    .inicio-cmd-dock { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 55; padding: 8px 14px; background: linear-gradient(0deg, var(--_g, #E9F6F0) 62%, #E9F6F000); }
 
     /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
        "Nueva deuda"): 1 columna en mobile angosto (~360-412px Android), 2
@@ -192,12 +156,15 @@
       .mobile-fab { display: none !important; }
       .topbar-brand { display: none !important; }
       .topbar { justify-content: flex-end; }
-      .content-area { max-width: 1160px; padding: 28px 40px 48px; }
+      .content-area { max-width: 1160px; padding: 32px 40px 40px; }
       .narrow-col { max-width: 720px; margin: 0 auto; }
-      /* Inicio: una columna de lectura angosta y centrada, no un tablero.
-         El campo de carga es sticky al pie de esa columna. */
-      .inicio-layout { max-width: 640px; margin: 0 auto; }
-      .inicio-cmd-dock { position: sticky; bottom: 20px; padding: 0; background: none; margin-top: 2px; }
+      /* Inicio se queda apilado en una sola columna a todos los anchos: la card de
+         Balance quedaba más angosta que Transacciones de abajo cuando el rail de
+         accesos rápidos vivía al costado en un grid de 2 columnas — todo comparte
+         el mismo borde izq./der. así. Con más ancho disponible, los accesos
+         rápidos y las cards de turnos/vencimientos aprovechan el espacio extra. */
+      .inicio-shortcuts { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+      .inicio-upcoming { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
@@ -1663,109 +1630,122 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
     cancelEditTx();
   };
 
-  // ── Disponible por día para lo que resta del mes ──
-  const daysLeftInMonth = (() => {
-    if (!isCurrentMonth) return null;
-    const now = new Date();
-    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    return Math.max(1, last - now.getDate() + 1);
-  })();
-  const perDay = daysLeftInMonth && balance > 0 ? balance / daysLeftInMonth : null;
-  const budgetPct = totalBudget > 0 ? spentThisMonth / totalBudget : null;
-
-  // ── Totales por módulo (alimentan las fichas) ──
-  const savingsTarget = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.target || 0)), 0);
-  const savingsCurrent = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.current || 0)), 0);
-  const loansOwed = (data.loans || []).reduce((s, l) => s + (l.currency === "usd" ? 0 : (l.remaining || 0)), 0);
-  const fixedMonthly = (data.recurringExpenses || []).filter(g => g.active).reduce((s, g) => s + (g.amount || 0), 0);
-  const subs = data.suscripciones || [];
-  const subsMonthly = subs.reduce((s, x) => s + (x.currency === "usd" ? 0 : (x.amount || 0)), 0);
-  const debtCount = (data.debts || []).length;
-
-  // ── La lectura del mes que hace Orbe, en una frase con los números en negrita ──
-  const F = (n, cls) => <b className={"rd-fig" + (cls ? " " + cls : "")}>{formatFull(n)}</b>;
-  const mesTxt = MONTH_NAMES[data.selectedMonth].toLowerCase();
-  const overBudget = (data.budgets || []).filter(b => b.limit > 0).map(b => {
-    const spent = monthTxs.filter(t => t.type === "gasto" && t.category === b.cat).reduce((s, t) => s + t.amount, 0);
-    return { cat: b.cat, pct: spent / b.limit };
-  }).filter(x => x.pct > 1).sort((a, b) => b.pct - a.pct);
-  const readNodes = [];
-  if (data.transactions.length === 0) {
-    readNodes.push(<span key="z">Todavía no cargaste nada. Contame un gasto o un ingreso acá abajo y arrancamos.</span>);
-  } else {
-    if (balance >= 0) readNodes.push(<span key="a">Vas {F(balance, "rd-pos")} arriba en {mesTxt}. </span>);
-    else readNodes.push(<span key="a">Estás {F(Math.abs(balance), "rd-neg")} en rojo en {mesTxt}. </span>);
-    if (perDay != null) readNodes.push(<span key="b">Con eso te quedan unos {F(perDay)} por día hasta fin de mes. </span>);
-    if (overBudget.length > 0) readNodes.push(<span key="c" className="rd-warn">Ojo con {overBudget[0].cat}: ya vas {Math.round(overBudget[0].pct * 100)}% del presupuesto.</span>);
-    else if (budgetPct != null && budgetPct >= 0.8) readNodes.push(<span key="c" className="rd-warn">Vas {Math.round(budgetPct * 100)}% del presupuesto del mes.</span>);
-    else if (perDay == null && balance >= 0) readNodes.push(<span key="c">Vas bien.</span>);
-  }
-
-  // ── Los 9 módulos como fichas ──
-  const chips = [];
-  if (totalBudget > 0) chips.push({ key: "presupuesto", k: "Presupuesto", v: `${Math.round((budgetPct || 0) * 100)}%`, m: `${formatFull(spentThisMonth)} de ${formatFull(totalBudget)}`, bar: budgetPct, alert: budgetPct > 1 });
-  else chips.push({ key: "presupuesto", k: "Presupuesto", v: "Sin topes", m: "poné límites por rubro", muted: true });
-  chips.push({ key: "ahorros", k: "Ahorros", v: formatFull(savingsCurrent), m: savingsTarget > 0 ? `de ${formatFull(savingsTarget)}` : "sin meta fijada", bar: savingsTarget > 0 ? savingsCurrent / savingsTarget : null, muted: savingsCurrent === 0 });
-  chips.push(totalDebt > 0
-    ? { key: "deudas", k: "Deudas", v: formatFull(totalDebt), m: `${debtCount} activa${debtCount === 1 ? "" : "s"}`, alert: true }
-    : { key: "deudas", k: "Deudas", v: "Al día", m: "nada pendiente", muted: true });
-  if (loansOwed > 0) chips.push({ key: "prestamos", k: "Te deben", v: formatFull(loansOwed), m: "préstamos a cobrar" });
-  if (fixedMonthly > 0) chips.push({ key: "gastosfijos", k: "Gastos fijos", v: formatFull(fixedMonthly), m: "por mes" });
-  if (subs.length > 0) chips.push({ key: "suscripciones", k: "Suscripciones", v: formatFull(subsMonthly), m: `por mes · ${subs.length}` });
-  if (proximosTurnos.length > 0) chips.push({ key: "turnos", k: "Próximo turno", v: proximosTurnos[0].date.split("-").reverse().slice(0, 2).join("/"), m: proximosTurnos[0].description });
-  if (proximosVencimientos.length > 0) chips.push({ key: "calendario", k: "Vence pronto", v: `${proximosVencimientos.length} en 7 días`, m: proximosVencimientos[0].title, alert: true });
-  chips.push({ key: "proyeccion", k: "Proyección", v: "A fin de mes", m: "estimá tu saldo", muted: true });
-
-  // ── Etiqueta de día para agrupar el feed ──
-  const dayLabel = (d) => {
-    if (d === today) return "Hoy";
-    const yd = new Date(); yd.setDate(yd.getDate() - 1);
-    if (d === yd.toISOString().slice(0, 10)) return "Ayer";
-    const [Y, M, D] = d.split("-").map(Number);
-    const wd = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][new Date(Y, M - 1, D).getDay()];
-    return `${wd} ${D} ${MONTH_NAMES[M - 1].toLowerCase()}`;
-  };
-
-  const [cmdText, setCmdText] = useState("");
-  const submitCmd = () => { setCmdText(""); onOpenPanel("transacciones"); };
-
   return (
     <div className="inicio-layout">
-      <div style={{ fontSize: 13, color: COLORS.textMuted, paddingLeft: 2 }}>
-        {greeting}, <b style={{ color: COLORS.text }}>{displayName}</b>
+      <div className="inicio-primary">
+        <div>
+          <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 2 }}>{greeting},</div>
+          <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName}</div>
+        </div>
+
+        {/* Hero balance -- calcado de la app real: "BALANCE DISPONIBLE" (antes
+            "Balance del mes"), Ingresos/Gastos en una sola línea con puntos de
+            color en vez del grid de 4 stats con flechas de antes. Deuda total
+            y Ahorro total siguen viéndose en sus propios accesos rápidos
+            (Deudas/Ahorros) más abajo -- no se pierde el dato, solo se saca
+            del hero para calcar el diseño real, que no lo incluye acá. */}
+        <div style={{ background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, borderRadius: 28, padding: "22px 24px 20px", boxShadow: `0 12px 48px ${COLORS.accent}28`, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: "50%", background: "#ffffff0d", pointerEvents: "none" }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: "#ffffffaa", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5 }}>Balance disponible</div>
+              <button onClick={() => setHideBalance(!hideBalance)} aria-label={hideBalance ? "Mostrar balance" : "Ocultar balance"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}><EyeToggleIcon shown={!hideBalance} color="#ffffffcc" size={17} /></button>
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
+              {hideBalance ? (
+                <span style={{ fontSize: 40, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif" }}>••••••</span>
+              ) : (
+                <>
+                  <span style={{ fontSize: 26, fontWeight: 400, color: "#ffffffcc", fontFamily: "'Nunito', sans-serif" }}>{balance < 0 ? "-$" : "$"}</span>
+                  <span style={{ fontSize: 52, fontWeight: 300, color: "#fff", fontFamily: "'Nunito', sans-serif", letterSpacing: -2, lineHeight: 1 }}>{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
+                </>
+              )}
+            </div>
+            <div style={{ fontSize: 13, color: "#ffffff70", marginBottom: 12 }}>{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", flexShrink: 0 }} />
+                Ingresos {hideBalance ? "••••" : formatFull(totalIncome)}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "#ffffffdd", fontWeight: 500 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#F87171", flexShrink: 0 }} />
+                Gastos {hideBalance ? "••••" : formatFull(totalExpense)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {totalBudget > 0 && (
+          <Card style={{ padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: COLORS.textMuted, marginBottom: 8 }}>
+              <span>Presupuesto del mes</span>
+              <span>{formatFull(spentThisMonth)} / {formatFull(totalBudget)}</span>
+            </div>
+            <ProgressBar value={spentThisMonth} max={totalBudget} height={8} />
+          </Card>
+        )}
       </div>
 
-      {/* ── La lectura del mes que hace Orbe, en una frase ── */}
-      <div className="inicio-read">
-        <span className="orb" aria-hidden="true" />
-        <p>
-          {readNodes}
-          {data.transactions.length > 0 && (
-            <span className="rd-tail">
-              Cobraste {F(totalIncome)} · gastaste {F(totalExpense)}.{" "}
-              <button onClick={() => onOpenPanel("proyeccion")} style={{ background: "none", border: "none", padding: 0, font: "inherit", color: COLORS.accent, cursor: "pointer", borderBottom: "1px solid #00524733" }}>Ver la proyección →</button>
-            </span>
-          )}
-        </p>
+      {/* Accesos rápidos + próximos turnos/vencimientos: mismo ancho completo que
+          el resto de Inicio, ya no una columna lateral angosta al costado. */}
+      <div className="inicio-rail">
+        <div className="inicio-shortcuts">
+          {/* Mismo grid ya alineado (3 columnas fijas en mobile, auto-fill
+              desde 1024px) -- solo restyle visual de las cards, calcado de las
+              cards blancas redondeadas de la app real (ícono arriba, label
+              abajo, sin borde, sombra suave). */}
+          {PLAN_PANELS.map(p => (
+            <button key={p.key} onClick={() => onOpenPanel(p.key)} style={{ background: COLORS.surface, border: "none", borderRadius: 20, padding: "18px 8px 14px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, cursor: "pointer", boxShadow: "0 4px 16px #00000010" }}>
+              <span style={{ fontSize: 26 }}>{p.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.text, textAlign: "center" }}>{p.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {(proximosTurnos.length > 0 || proximosVencimientos.length > 0) && (
+          <div className="inicio-upcoming">
+            {proximosTurnos.length > 0 && (
+              <Card style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>📅 Próximos turnos</div>
+                  <button onClick={() => onOpenPanel("turnos")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {proximosTurnos.map(t => (
+                    <div key={t.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span>{TIPO_ICONS[t.turnoType] || "📌"} {t.description}</span>
+                      <span style={{ color: COLORS.textMuted }}>{t.date}{t.time ? ` · ${t.time}` : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {proximosVencimientos.length > 0 && (
+              <Card style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>⏰ Próximos vencimientos</div>
+                  <button onClick={() => onOpenPanel("calendario")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {proximosVencimientos.map(e => (
+                    <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+                      <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
+                      <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ── Los 9 módulos como fila de fichas (se deslizan) ── */}
-      <div className="inicio-chips" aria-label="Tu situación">
-        {chips.map(c => (
-          <button key={c.key} className={"chip" + (c.alert ? " alert" : "") + (c.muted ? " muted" : "")} onClick={() => onOpenPanel(c.key)}>
-            <span className="ck">{c.k}</span>
-            <span className="cv">{c.v}</span>
-            <span className="cm">{c.m}</span>
-            {c.bar != null && <span className="cbar"><i className={c.bar > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(3, c.bar * 100)) + "%" }} /></span>}
-          </button>
-        ))}
-      </div>
-
-      {/* ── El feed de movimientos, agrupado por día ── */}
-      <div className="inicio-feed">
+      {/* Transacciones embebidas, con filtros y buscador como en la app */}
+      <div className="inicio-tx">
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Movimientos</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Transacciones</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
               {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
                 <button key={k} onClick={() => { setTxFilter(k); setTxPage(0); }} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
@@ -1774,14 +1754,9 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             <input value={search} onChange={e => { setSearch(e.target.value); setTxPage(0); }} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
           </div>
           {listTxs.length === 0 ? (
-            <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>
-              {search.trim() ? "Nada coincide con la búsqueda." : "Todavía no hay movimientos. Cargá el primero acá abajo."}
-            </div>
-          ) : listTxs.map((t, i) => (
-            <React.Fragment key={t.id}>
-              {(i === 0 || listTxs[i - 1].date !== t.date) && <div className="feed-daysep">{dayLabel(t.date)}</div>}
-              {editingTxId === t.id ? (
-            <div className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+            <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
+          ) : listTxs.map(t => editingTxId === t.id ? (
+            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
                 <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
@@ -1803,7 +1778,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.category}{t.paymentMethod ? ` · ${t.paymentMethod}` : ""}</div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
                   <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
@@ -1811,8 +1786,6 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 </div>
               )}
             </Removable>
-              )}
-            </React.Fragment>
           ))}
           {txTotalPages > 1 && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 20px" }}>
@@ -1822,15 +1795,6 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             </div>
           )}
         </Card>
-      </div>
-
-      {/* ── Un solo campo de carga, fijo (mismo gesto que escribirle al bot) ── */}
-      <div className="inicio-cmd-dock">
-        <form className="inicio-cmd" onSubmit={e => { e.preventDefault(); submitCmd(); }}>
-          <span className="dot" aria-hidden="true" />
-          <input value={cmdText} onChange={e => setCmdText(e.target.value)} placeholder="Cargá algo… “Café 3500”" aria-label="Cargar un movimiento" />
-          <button type="submit" className="go">Cargar</button>
-        </form>
       </div>
     </div>
   );
