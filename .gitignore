@@ -1,0 +1,3 @@
+# Caches y estado de runtime de la skill Impeccable (no versionar)
+.claude/skills/impeccable/scripts/.impeccable/
+.impeccable/live/
