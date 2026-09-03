@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbe — Tu asistente financiero personal</title>
+  <meta name="description" content="Orbe es un asistente de finanzas personales: registrá gastos e ingresos, mirá tu balance del mes, seguí tus metas de ahorro y controlá tus deudas desde la web o por WhatsApp." />
+  <link rel="icon" type="image/png" href="assets/orbe-icon-64.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #E9F6F0; }
+    body {
+      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #223330;
+      line-height: 1.6;
+    }
+    .hero {
+      background: linear-gradient(135deg, #005247 0%, #002f28 100%);
+      color: #fff;
+      text-align: center;
+      padding: 64px 20px 56px;
+    }
+    .hero img { width: 168px; height: auto; }
+    .hero p.tag {
+      font-family: "Nunito", sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #E8C97A;
+      margin-top: 14px;
+    }
+    .hero p.lead {
+      max-width: 560px;
+      margin: 18px auto 0;
+      color: #dcebe6;
+      font-size: 1.02rem;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 28px;
+      background: #C9A84C;
+      color: #1a2a27;
+      font-family: "Nunito", sans-serif;
+      font-weight: 800;
+      text-decoration: none;
+      padding: 13px 30px;
+      border-radius: 999px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 20px 24px; }
+    h2 {
+      font-family: "Nunito", sans-serif;
+      font-weight: 800;
+      color: #005247;
+      font-size: 1.4rem;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 20px;
+      box-shadow: 0 2px 14px rgba(0, 82, 71, .08);
+    }
+    .card h3 {
+      font-family: "Nunito", sans-serif;
+      font-weight: 700;
+      color: #005247;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+    .card p { font-size: .95rem; color: #3c4d49; }
+    .how {
+      margin-top: 40px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 26px 24px;
+      box-shadow: 0 2px 14px rgba(0, 82, 71, .08);
+    }
+    .how p { margin: 8px 0; }
+    .how strong { color: #1a2a27; }
+    footer {
+      text-align: center;
+      padding: 32px 20px 48px;
+      font-size: .85rem;
+      color: #5b716c;
+    }
+    footer a { color: #005247; margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <img src="assets/orbe-logo-wordmark.png" alt="Orbe" />
+    <p class="tag">Tu asistente financiero personal</p>
+    <p class="lead">
+      Orbe te ayuda a entender a dónde va tu plata: registrás lo que gastás y cobrás, y en
+      cualquier momento sabés cómo venís el mes. Sin planillas, sin vueltas.
+    </p>
+    <a class="cta" href="https://orbefinanzas.online/">Ingresar / Crear cuenta</a>
+  </header>
+
+  <main>
+    <h2>Qué podés hacer con Orbe</h2>
+    <div class="features">
+      <div class="card">
+        <h3>Registrar gastos e ingresos</h3>
+        <p>Anotá cada movimiento en segundos y clasificalo por categoría.</p>
+      </div>
+      <div class="card">
+        <h3>Ver tu balance del mes</h3>
+        <p>Cuánto entró, cuánto salió y cuánto te queda disponible, siempre a mano.</p>
+      </div>
+      <div class="card">
+        <h3>Metas de ahorro</h3>
+        <p>Definí un objetivo y seguí cuánto te falta para llegar.</p>
+      </div>
+      <div class="card">
+        <h3>Control de deudas</h3>
+        <p>Cargá tus deudas y cuotas y mirá cuándo terminás de pagarlas.</p>
+      </div>
+      <div class="card">
+        <h3>Presupuestos por categoría</h3>
+        <p>Poné un límite mensual y Orbe te avisa cuando te estás pasando.</p>
+      </div>
+      <div class="card">
+        <h3>Asistente por WhatsApp</h3>
+        <p>Registrá gastos y consultá tu situación escribiéndole a Orbe por chat.</p>
+      </div>
+    </div>
+
+    <div class="how">
+      <h2 style="text-align:left;font-size:1.15rem;margin-bottom:10px;">Cómo funciona</h2>
+      <p><strong>1.</strong> Creás tu cuenta con tu email o con Google.</p>
+      <p><strong>2.</strong> Cargás tus ingresos y vas anotando los gastos del día a día.</p>
+      <p><strong>3.</strong> Orbe te muestra el panorama: balance, categorías, ahorro y deudas, todo en un lugar.</p>
+      <p style="margin-top:14px;">
+        Tus datos son privados y solo vos podés verlos. Podés pedir la eliminación de tu
+        cuenta cuando quieras escribiendo a
+        <a href="mailto:darappdeploying@gmail.com" style="color:#005247;">darappdeploying@gmail.com</a>.
+      </p>
+    </div>
+  </main>
+
+  <footer>
+    <a href="https://orbefinanzas.online/">Ingresar</a>
+    <a href="privacy.html">Política de Privacidad</a>
+    <a href="terms.html">Términos del Servicio</a>
+  </footer>
+</body>
+</html>
