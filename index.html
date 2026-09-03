@@ -179,6 +179,34 @@
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
       .form-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+      /* ── Vista "boceto" de escritorio ── */
+      .app-shell.boceto-on .desktop-sidebar { display: none; }
+      .app-shell.boceto-on .topbar { justify-content: space-between; }
+      .app-shell.boceto-on .topbar-brand { display: flex !important; }
+      .app-shell.boceto-on .content-area { max-width: 1080px; padding: 26px 32px 40px; }
+
+      .boceto { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; align-items: start; }
+      .boceto-col { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 82px; }
+      .boceto-hi { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .boceto-hi .boceto-nueva {
+        margin-left: auto; display: flex; align-items: center; gap: 7px;
+        background: var(--gold, #C9A84C); color: #2b2205; border: none; border-radius: 999px;
+        padding: 8px 14px; font-family: inherit; font-weight: 800; font-size: 12px; cursor: pointer;
+      }
+      .boceto-balance {
+        background: linear-gradient(155deg, #005247 0%, #00332c 100%); color: #fff;
+        border-radius: 20px; padding: 16px 18px; box-shadow: 0 16px 34px -18px rgba(13,31,28,0.4);
+      }
+      .boceto-balance .k { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #ffffffbf; }
+      .boceto-balance .v { font-family: 'Nunito', sans-serif; font-weight: 800; letter-spacing: -0.03em; font-size: 30px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .boceto-balance .split { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; font-size: 11.5px; }
+      .boceto-balance .split span { display: flex; align-items: center; gap: 6px; color: #ffffffdd; }
+      .boceto-balance .split .d { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+      .boceto-nav { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: calc(100vh - 300px); padding-right: 4px; }
+      .boceto-nav::-webkit-scrollbar { width: 6px; }
+      .boceto-nav::-webkit-scrollbar-thumb { background: #bcd8cd; border-radius: 999px; }
+      .boceto-panel { min-width: 0; }
     }
 
     /* ── Pantalla de login/registro/reset: identidad visual pinneada calcada de
@@ -886,6 +914,50 @@ function EyeToggleIcon({ shown, color, size = 18 }) {
   );
 }
 
+// ---- SET DE ÍCONOS (line icons) para la vista de escritorio "boceto" ----
+const ICON_PATHS = {
+  coins:  "M5 7c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3ZM5 7v10c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3",
+  card:   "M3 6h18v12H3zM3 10h18",
+  hand:   "M4 13l3-3 4 3 3-2 6 5M9 10l3-3 3 2M4 13v5h13",
+  tag:    "M6 21V4h10l-2 4 2 4H6",
+  repeat: "M4 9V7a2 2 0 0 1 2-2h11l-2-2M20 15v2a2 2 0 0 1-2 2H7l2 2",
+  tv:     "M3 7h18v12H3zM8 4l4 3 4-3",
+  clock:  "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2",
+  cal:    "M4 5h16v16H4zM4 10h16M9 3v4M15 3v4",
+  trend:  "M4 17l5-5 3 3 8-8M17 4h4v4",
+  chart:  "M4 19V5M4 19h16M8 15l3-4 3 2 4-6",
+  list:   "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+  user:   "M12 8a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM5 21c1.3-3.6 4-5.5 7-5.5s5.7 1.9 7 5.5",
+  plus:   "M12 6v12M6 12h12",
+  arrowIn:  "M12 19V5M12 5l-6 6M12 5l6 6",
+  arrowOut: "M12 5v14M12 19l-6-6M12 19l6-6",
+};
+function Icon({ name, size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      style={{ display: "block", flexShrink: 0 }}>
+      <path d={ICON_PATHS[name] || ICON_PATHS.list} />
+    </svg>
+  );
+}
+
+// Media query como estado de React: la vista de escritorio "boceto" (columna
+// balance + lista de secciones + panel) se usa solo desde 1024px; abajo de eso
+// la home sigue siendo InicioTab (mobile, sin cambios).
+function useMinWidth(px) {
+  const query = `(min-width: ${px}px)`;
+  const [match, setMatch] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = (e) => setMatch(e.matches);
+    setMatch(mq.matches);
+    mq.addEventListener ? mq.addEventListener("change", onChange) : mq.addListener(onChange);
+    return () => (mq.removeEventListener ? mq.removeEventListener("change", onChange) : mq.removeListener(onChange));
+  }, [query]);
+  return match;
+}
+
 // ---- RESET PASSWORD SCREEN ----
 // Se llega acá vía el link del email de recuperación (hash #type=recovery),
 // no desde los botones de LoginScreen -- pero es el mismo flujo de auth, así
@@ -1339,6 +1411,7 @@ function FinanzasApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [resetMode, setResetMode] = useState(false);
   const [mainTab, setMainTab] = useState("inicio"); // inicio | analisis | perfil
+  const isDesktop = useMinWidth(1024); // ≥1024px la home usa la vista "boceto"
   const [panel, setPanel] = useState(null); // key de PLAN_PANELS, "transacciones", o null
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1574,8 +1647,12 @@ function FinanzasApp() {
 
   const openWa = () => { setWaError(""); setWaCode(""); setWaModal(true); };
 
+  // Vista "boceto" de escritorio: reemplaza la home (mainTab "inicio") desde
+  // 1024px. Oculta el sidebar (su nav vive dentro del boceto). Mobile intacto.
+  const bocetoOn = isDesktop && mainTab === "inicio";
+
   return (
-    <div className="app-shell" style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text }}>
+    <div className={"app-shell" + (bocetoOn ? " boceto-on" : "")} style={{ minHeight: "100vh", background: COLORS.bg, fontFamily: "'Nunito', 'DM Sans', 'Helvetica Neue', sans-serif", color: COLORS.text }}>
       {/* El <link> de fuentes ya está en <head> (línea 9); tenerlo también acá,
           inyectado en el árbol de React, duplicaba la request bloqueante. */}
 
@@ -1595,8 +1672,10 @@ function FinanzasApp() {
           {/* key={mainTab} fuerza a React a remontar este wrapper al cambiar de
               tab, lo que retrigger la animación .tab-fade en cada cambio en vez
               de reciclar el nodo (que no dispararía la animación de nuevo). */}
-          <div key={mainTab} className="tab-fade">
-            {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} showSnack={showSnack} />}
+          <div key={mainTab + (bocetoOn ? "-b" : "")} className="tab-fade">
+            {mainTab === "inicio" && (isDesktop
+              ? <BocetoLayout data={data} save={save} dolarRate={dolarRate} expByCat={expByCat} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} showSnack={showSnack} user={user} displayName={displayName} waPhone={waPhone} openWa={openWa} logout={logout} onNuevaCarga={() => setPanel("transacciones")} />
+              : <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} showSnack={showSnack} />)}
             {mainTab === "analisis" && <div className="narrow-col"><AnalisisTab data={data} /></div>}
             {mainTab === "perfil" && <div className="narrow-col"><PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} /></div>}
           </div>
@@ -1720,6 +1799,181 @@ function FinanzasApp() {
 // todavía puede crear transacciones con ese tipo — isIncomeType las sigue
 // reconociendo igual aunque acá no se puedan elegir ni crear nuevas.
 const TX_TYPES = ["gasto", "ingreso", "ahorro_meta"];
+
+// ---- MOVIMIENTOS (lista completa) — usada en el panel derecho del boceto ----
+function MovimientosList({ data, save, monthTxs, showSnack }) {
+  const [txFilter, setTxFilter] = useState("mes");
+  const [search, setSearch] = useState("");
+  const [editingTxId, setEditingTxId] = useState(null);
+  const [txPage, setTxPage] = useState(0);
+
+  let filteredTxs;
+  if (txFilter === "semana") {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    filteredTxs = data.transactions.filter(t => new Date(t.date) >= weekAgo);
+  } else if (txFilter === "anterior") {
+    filteredTxs = data.transactions.filter(t => {
+      const p = parseDateParts(t.date);
+      return p.year < data.selectedYear || (p.year === data.selectedYear && p.month < data.selectedMonth);
+    });
+  } else {
+    filteredTxs = monthTxs;
+  }
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    filteredTxs = filteredTxs.filter(t => (t.description || "").toLowerCase().includes(q) || (t.category || "").toLowerCase().includes(q));
+  }
+  const sortedTxs = [...filteredTxs].reverse().sort((a, b) => b.date.localeCompare(a.date));
+  const TX_PAGE_SIZE = 20;
+  const txTotalPages = Math.max(1, Math.ceil(sortedTxs.length / TX_PAGE_SIZE));
+  const txPageClamped = Math.min(txPage, txTotalPages - 1);
+  const listTxs = sortedTxs.slice(txPageClamped * TX_PAGE_SIZE, txPageClamped * TX_PAGE_SIZE + TX_PAGE_SIZE);
+  const delTx = (id) => {
+    const prevData = data;
+    save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+    showSnack && showSnack("Movimiento eliminado", () => save(prevData));
+  };
+  const editingTx = editingTxId != null ? data.transactions.find(t => t.id === editingTxId) : null;
+
+  return (
+    <div>
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
+          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>Movimientos</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+            {[["semana", "Semana"], ["mes", "Mes"], ["anterior", "Anterior"]].map(([k, label]) => (
+              <button key={k} onClick={() => { setTxFilter(k); setTxPage(0); }} style={{ background: txFilter === k ? COLORS.accent : COLORS.bg, color: txFilter === k ? "#fff" : COLORS.textMuted, border: "none", borderRadius: 99, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{label}</button>
+            ))}
+          </div>
+          <input value={search} onChange={e => { setSearch(e.target.value); setTxPage(0); }} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        {listTxs.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin movimientos.</div>
+        ) : listTxs.map(t => (
+          <Removable key={t.id} onRemove={() => delTx(t.id)}>
+            {({ remove, rowClass }) => (
+              <div className={rowClass} style={{ display: "flex", alignItems: "center", padding: "12px 20px", borderBottom: `1px solid ${COLORS.border}`, gap: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, color: isIncomeType(t) ? COLORS.green : COLORS.red, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={isIncomeType(t) ? "arrowIn" : "arrowOut"} size={16} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{t.description || t.category}</div>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                </div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red, fontVariantNumeric: "tabular-nums" }}>{isIncomeType(t) ? "+" : "−"}{formatFull(t.amount).replace(/^-/, "")}</div>
+                <button onClick={() => setEditingTxId(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
+                <button onClick={remove} aria-label={`Eliminar ${t.description || t.category}`} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 15, padding: 8, lineHeight: 1, display: "flex", alignItems: "center" }}>✕</button>
+              </div>
+            )}
+          </Removable>
+        ))}
+        {txTotalPages > 1 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 20px" }}>
+            <button onClick={() => setTxPage(p => Math.max(0, p - 1))} disabled={txPageClamped === 0} style={{ background: "none", border: "none", cursor: txPageClamped === 0 ? "default" : "pointer", color: txPageClamped === 0 ? COLORS.textDim : COLORS.accent, fontSize: 13, fontWeight: 600, opacity: txPageClamped === 0 ? 0.5 : 1 }}>← Anterior</button>
+            <span style={{ fontSize: 12, color: COLORS.textMuted }}>Página {txPageClamped + 1} de {txTotalPages}</span>
+            <button onClick={() => setTxPage(p => Math.min(txTotalPages - 1, p + 1))} disabled={txPageClamped === txTotalPages - 1} style={{ background: "none", border: "none", cursor: txPageClamped === txTotalPages - 1 ? "default" : "pointer", color: txPageClamped === txTotalPages - 1 ? COLORS.textDim : COLORS.accent, fontSize: 13, fontWeight: 600, opacity: txPageClamped === txTotalPages - 1 ? 0.5 : 1 }}>Siguiente →</button>
+          </div>
+        )}
+      </Card>
+      {editingTx && <NuevaTransaccionSheet data={data} save={save} editing={editingTx} onClose={() => setEditingTxId(null)} />}
+    </div>
+  );
+}
+
+// ---- BOCETO (solo escritorio, ≥1024px) ----
+// Recreación del boceto en papel de Dario: columna izquierda con el balance
+// arriba (fijo) y la lista de TODAS las secciones que scrollea sola (sin "ver
+// todos"); a la derecha, el detalle de la sección elegida. En mobile la home
+// sigue siendo InicioTab, sin tocar.
+const BOCETO_SECTIONS = [
+  { key: "movimientos", label: "Movimientos", icon: "list" },
+  { key: "ahorros", label: "Ahorros", icon: "coins" },
+  { key: "deudas", label: "Deudas", icon: "card" },
+  { key: "prestamos", label: "Préstamos", icon: "hand" },
+  { key: "presupuesto", label: "Presupuesto", icon: "tag" },
+  { key: "gastosfijos", label: "Gastos fijos", icon: "repeat" },
+  { key: "suscripciones", label: "Suscripciones", icon: "tv" },
+  { key: "turnos", label: "Turnos", icon: "clock" },
+  { key: "calendario", label: "Calendario", icon: "cal" },
+  { key: "proyeccion", label: "Proyección", icon: "trend" },
+  { key: "analisis", label: "Análisis", icon: "chart" },
+];
+
+function BocetoLayout({ data, save, dolarRate, expByCat, monthTxs, totalIncome, totalExpense, showSnack, user, displayName, waPhone, openWa, logout, onNuevaCarga }) {
+  const [sec, setSec] = useState("movimientos");
+  const balance = totalIncome - totalExpense;
+  const cur = BOCETO_SECTIONS.find(s => s.key === sec);
+
+  const panel = (() => {
+    switch (sec) {
+      case "movimientos": return <MovimientosList data={data} save={save} monthTxs={monthTxs} showSnack={showSnack} />;
+      case "ahorros": return <Ahorros data={data} save={save} dolarRate={dolarRate} />;
+      case "deudas": return <Deudas data={data} save={save} dolarRate={dolarRate} />;
+      case "prestamos": return <Prestamos data={data} save={save} dolarRate={dolarRate} />;
+      case "presupuesto": return <Presupuesto data={data} save={save} expByCat={expByCat} />;
+      case "gastosfijos": return <GastosFijos data={data} save={save} />;
+      case "suscripciones": return <Suscripciones data={data} save={save} />;
+      case "turnos": return <Turnos data={data} save={save} />;
+      case "calendario": return <Calendario data={data} save={save} />;
+      case "proyeccion": return <Proyeccion data={data} save={save} />;
+      case "analisis": return <AnalisisTab data={data} />;
+      case "perfil": return <PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} />;
+      default: return null;
+    }
+  })();
+
+  const navBtn = (active) => ({
+    display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left",
+    background: active ? COLORS.accent : COLORS.surface, border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+    borderRadius: 14, padding: "12px 15px", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+    color: active ? "#fff" : COLORS.text, cursor: "pointer",
+  });
+
+  return (
+    <div className="boceto">
+      <div className="boceto-col">
+        <div className="boceto-hi">
+          <span style={{ fontSize: 13, color: COLORS.textMuted }}>Hola,</span>{" "}
+          <b style={{ fontSize: 15 }}>{displayName}</b>
+          <button onClick={onNuevaCarga} className="boceto-nueva"><Icon name="plus" size={15} /> Nueva carga</button>
+        </div>
+
+        <div className="boceto-balance">
+          <div className="k">Balance · {MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
+          <div className="v">{balance < 0 ? "−" : ""}{formatFull(balance).replace(/^-/, "")}</div>
+          <div className="split">
+            <span><span className="d" style={{ background: "#4ADE80" }} /> Ingresos {formatFull(totalIncome)}</span>
+            <span><span className="d" style={{ background: "#F87171" }} /> Gastos {formatFull(totalExpense)}</span>
+          </div>
+        </div>
+
+        <div className="boceto-nav">
+          {BOCETO_SECTIONS.map(s => (
+            <button key={s.key} onClick={() => setSec(s.key)} style={navBtn(sec === s.key)}>
+              <span style={{ color: sec === s.key ? COLORS.gold : COLORS.accent, display: "flex" }}><Icon name={s.icon} /></span> {s.label}
+            </button>
+          ))}
+          <button onClick={openWa} style={{ ...navBtn(false), color: waPhone ? COLORS.green : COLORS.text }}>
+            <span style={{ display: "flex", color: waPhone ? COLORS.green : COLORS.accent }}><WhatsAppIcon size={17} color="currentColor" /></span>
+            {waPhone ? "WhatsApp conectado" : "Conectar WhatsApp"}
+          </button>
+          <button onClick={() => setSec("perfil")} style={navBtn(sec === "perfil")}>
+            <span style={{ color: sec === "perfil" ? COLORS.gold : COLORS.accent, display: "flex" }}><Icon name="user" /></span> Perfil
+          </button>
+        </div>
+      </div>
+
+      <div className="boceto-panel">
+        <ErrorBoundary key={sec} fallback={() => (
+          <div style={{ padding: "28px 8px", textAlign: "center" }}>
+            <div style={{ fontWeight: 700, fontSize: 16, color: COLORS.accent }}>No se pudo abrir esta sección</div>
+            <div style={{ color: COLORS.textMuted, fontSize: 13, margin: "8px 0 0", maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>Puede haber un dato con un formato que la web todavía no reconoce. Probá con otra sección.</div>
+          </div>
+        )}>
+          {panel}
+        </ErrorBoundary>
+      </div>
+    </div>
+  );
+}
 
 function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel, showSnack }) {
   const [hideBalance, setHideBalance] = useState(false);
