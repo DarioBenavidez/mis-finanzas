@@ -109,61 +109,51 @@
     .app-shell { display: flex; flex-direction: column; }
     .app-main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .desktop-sidebar { display: none; }
-    .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 110px; box-sizing: border-box; }
-    /* Inicio: mobile apilado (banda de estado → índice de módulos → movimientos);
-       desde 1024px pasa a un grid de dos columnas con la banda a lo ancho. */
-    .inicio-layout { display: flex; flex-direction: column; gap: 18px; }
-    .inicio-main { min-width: 0; }
-    .inicio-index { display: flex; flex-direction: column; gap: 20px; }
+    .content-area { flex: 1; width: 100%; overflow-y: auto; max-width: 720px; margin: 0 auto; padding: 20px 16px 152px; box-sizing: border-box; }
+    /* ── Inicio = conversación con Orbe: lectura del mes + feed + un solo campo
+       de carga (mismo gesto que el bot). Mobile apilado; en escritorio una
+       columna de lectura angosta y centrada, no un tablero. ── */
+    .inicio-layout { display: flex; flex-direction: column; gap: 16px; }
     .panel-card { width: 100%; }
 
-    /* ── Banda de estado del mes: lectura horizontal (balance · disponible/día ·
-       presupuesto), no un card-hero apilado. Wrappea a columna en mobile. ── */
-    .state-band { display: flex; flex-direction: column; align-items: stretch; gap: 4px 0;
-      background: linear-gradient(120deg, #005247 0%, #00382f 62%, #002b25 100%);
-      border-radius: 20px; padding: 18px 6px; position: relative; overflow: hidden;
-      box-shadow: 0 14px 44px #00291f33; }
-    .state-band.is-negative { background: linear-gradient(120deg, #0a3d34 0%, #2a1613 100%); box-shadow: 0 14px 44px #3a0f0a2e; }
-    .state-cell { flex: 1 1 190px; min-width: 0; padding: 4px 18px; position: relative; z-index: 1; }
-    .state-cell + .state-cell { border-top: 1px solid #ffffff2b; margin-top: 8px; padding-top: 16px; }
-    .state-k { font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: #ffffffb0; margin-bottom: 8px; }
-    .state-big { font-family: 'Nunito', sans-serif; font-weight: 300; color: #fff; line-height: .95; letter-spacing: -1.5px; display: flex; align-items: baseline; gap: 3px; }
-    .state-big .cur { font-size: 22px; font-weight: 400; color: #ffffffbf; letter-spacing: 0; }
-    .state-big .num { font-size: 44px; }
-    .state-sub { font-size: 12px; color: #ffffffa3; margin-top: 7px; }
-    .state-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
-    .state-legend span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #ffffffd8; font-weight: 500; }
-    .state-legend i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; font-style: normal; }
-    .state-daynum { font-family: 'Nunito', sans-serif; font-weight: 400; color: #fff; font-size: 26px; letter-spacing: -.5px; }
-    .state-bar { height: 6px; border-radius: 3px; background: #ffffff26; overflow: hidden; margin-top: 10px; }
-    .state-bar > i { display: block; height: 100%; border-radius: 3px; background: #E8C97A; font-style: normal; transition: width var(--dur-layout) var(--ease-standard); }
-    .state-bar > i.over { background: #F6A672; }
+    /* Lo que Orbe lee del mes, en una frase con los números en negrita */
+    .inicio-read { background: #fff; border: 1px solid #DCEAE4; border-radius: 16px;
+      padding: 18px 20px; display: grid; grid-template-columns: 26px 1fr; gap: 12px; }
+    .inicio-read .orb { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid #C9A84C; border-top-color: transparent; transform: rotate(-45deg); margin-top: 4px; flex-shrink: 0; }
+    .inicio-read p { margin: 0; font-family: 'DM Sans', 'Nunito', sans-serif; font-size: 15.5px; line-height: 1.6; color: #15302A; }
+    .inicio-read .rd-fig { font-family: 'Nunito', sans-serif; font-weight: 800; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+    .inicio-read .rd-pos { color: #0E7A50; }
+    .inicio-read .rd-neg { color: #B23A33; }
+    .inicio-read .rd-warn { color: #8A7220; }
+    .inicio-read .rd-tail { display: block; margin-top: 9px; font-size: 12.5px; color: #7C948C; }
 
-    /* ── Índice de módulos: label + su número, no una grilla de emojis. ── */
-    .idx-group { display: flex; flex-direction: column; }
-    .idx-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #4A6B62; padding: 0 4px 8px; }
-    .idx-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px;
-      width: 100%; background: none; border: none; text-align: left; cursor: pointer;
-      padding: 11px 4px; border-bottom: 1px solid #E4EDE9; font-family: inherit; }
-    .idx-row:last-child { border-bottom: none; }
-    .idx-row:hover .idx-label { color: #005247; }
-    .idx-label { font-size: 13.5px; font-weight: 700; color: #16302B; transition: color var(--dur-fast) var(--ease-standard); }
-    .idx-val { font-size: 13px; font-weight: 700; color: #16302B; font-variant-numeric: tabular-nums; }
-    .idx-val.muted { color: #6B7F79; font-weight: 600; }
-    .idx-meta { grid-column: 1 / -1; font-size: 11px; color: #6B7F79; margin-top: 1px; }
-    .idx-mini { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: #E4EDE9; overflow: hidden; margin-top: 7px; }
-    .idx-mini > i { display: block; height: 100%; background: #C9A84C; font-style: normal; }
-    .idx-mini > i.over { background: #E0655A; }
+    /* Los 9 módulos como fila de fichas (se deslizan), no una grilla de puertas */
+    .inicio-chips { display: flex; gap: 9px; overflow-x: auto; padding: 2px; margin: 0 -2px; scrollbar-width: none; }
+    .inicio-chips::-webkit-scrollbar { display: none; }
+    .chip { flex: 0 0 auto; min-width: 132px; background: #fff; border: 1px solid #DCEAE4; border-radius: 13px; padding: 10px 13px; cursor: pointer; font-family: inherit; text-align: left; }
+    .chip:hover { border-color: #005247; }
+    .chip .ck { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: #7C948C; }
+    .chip .cv { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15.5px; margin-top: 3px; letter-spacing: -.01em; color: #15302A; font-variant-numeric: tabular-nums; }
+    .chip .cm { display: block; font-size: 10.5px; color: #4C6A61; margin-top: 1px; white-space: nowrap; }
+    .chip.alert .cv { color: #B23A33; }
+    .chip.muted .cv { color: #7C948C; }
+    .chip .cbar { display: block; height: 3px; border-radius: 2px; background: #E4EDE9; overflow: hidden; margin-top: 6px; }
+    .chip .cbar > i { display: block; height: 100%; background: #C9A84C; }
+    .chip .cbar > i.over { background: #B23A33; }
 
-    /* ── Carga rápida siempre visible arriba de los movimientos ── */
-    .quick-add { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-      background: #fff; border: 1.5px dashed #C6D8D1; border-radius: 12px;
-      padding: 13px 16px; cursor: pointer; font-family: inherit; color: #4A6B62; font-size: 13.5px; font-weight: 600;
-      transition: border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard); }
-    .quick-add:hover { border-color: #005247; background: #F6FBF9; color: #005247; }
-    .quick-add .plus { width: 22px; height: 22px; border-radius: 7px; background: #C9A84C; color: #2b2205;
-      display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; flex-shrink: 0; }
-    .topbar-quickadd { display: none; }
+    /* El feed, agrupado por día */
+    .feed-daysep { padding: 12px 20px 4px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #7C948C; }
+
+    /* Un solo campo de carga, fijo (mismo gesto que escribirle al bot) */
+    .inicio-cmd { display: flex; align-items: center; gap: 9px; background: #fff;
+      border: 1px solid #DCEAE4; border-radius: 14px; padding: 9px 10px 9px 13px;
+      box-shadow: 0 10px 30px -16px rgba(0,49,42,.5); }
+    .inicio-cmd .dot { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid #C9A84C; border-top-color: transparent; transform: rotate(-45deg); flex-shrink: 0; }
+    .inicio-cmd input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-family: inherit; font-size: 14px; color: #15302A; }
+    .inicio-cmd input::placeholder { color: #7C948C; }
+    .inicio-cmd .go { border: 0; background: #C9A84C; color: #2b2205; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; border-radius: 9px; padding: 8px 14px; cursor: pointer; flex-shrink: 0; }
+    /* En mobile va fijo arriba del bottom-nav */
+    .inicio-cmd-dock { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 55; padding: 8px 14px; background: linear-gradient(0deg, var(--_g, #E9F6F0) 62%, #E9F6F000); }
 
     /* Grid de formularios de alta con varios campos ("Nueva meta de ahorro",
        "Nueva deuda"): 1 columna en mobile angosto (~360-412px Android), 2
@@ -202,19 +192,12 @@
       .mobile-fab { display: none !important; }
       .topbar-brand { display: none !important; }
       .topbar { justify-content: flex-end; }
-      .content-area { max-width: 1280px; padding: 28px 40px 48px; }
+      .content-area { max-width: 1160px; padding: 28px 40px 48px; }
       .narrow-col { max-width: 720px; margin: 0 auto; }
-      .topbar { justify-content: space-between; }
-      .topbar-quickadd { display: flex; }
-      .state-band { flex-direction: row; padding: 20px 8px; }
-      .state-cell { padding: 4px 24px; }
-      .state-cell + .state-cell { border-top: none; border-left: 1px solid #ffffff2b; margin-top: 0; padding-top: 4px; }
-      /* Inicio en escritorio: banda de estado a lo ancho, luego movimientos
-         (columna vertebral) + índice de módulos sticky al costado. */
-      .inicio-layout { display: grid; grid-template-columns: minmax(0, 1fr) 336px; gap: 26px 30px; align-items: start; }
-      .inicio-band { grid-column: 1 / -1; }
-      .inicio-main { grid-column: 1; }
-      .inicio-index { grid-column: 2; position: sticky; top: 24px; }
+      /* Inicio: una columna de lectura angosta y centrada, no un tablero.
+         El campo de carga es sticky al pie de esa columna. */
+      .inicio-layout { max-width: 640px; margin: 0 auto; }
+      .inicio-cmd-dock { position: sticky; bottom: 20px; padding: 0; background: none; margin-top: 2px; }
       .panel-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; background: #0D1F1CCC !important; }
       .panel-card { max-width: 640px; max-height: 85vh; border-radius: 20px; overflow-y: auto; background: #F2F7F5; box-shadow: 0 24px 64px #00000030; }
       .panel-card-header { border-radius: 20px 20px 0 0; }
@@ -1499,10 +1482,6 @@ function FinanzasApp() {
             <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 84, height: "auto", display: "block" }} />
           </div>
           <DatePillPicker selectedMonth={data.selectedMonth} selectedYear={data.selectedYear} onChangeMonth={m => save({ ...data, selectedMonth: m })} onChangeYear={y => save({ ...data, selectedYear: y })} />
-          <button className="topbar-quickadd" onClick={() => setPanel("transacciones")} style={{ alignItems: "center", gap: 8, background: "#ffffff1a", border: "1px solid #ffffff33", borderRadius: 999, padding: "7px 16px 7px 12px", color: "#fff", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-            <span style={{ width: 20, height: 20, borderRadius: 6, background: COLORS.gold, color: "#2b2205", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800 }}>+</span>
-            Cargá un movimiento
-          </button>
         </div>
 
         {/* ── CONTENIDO: una sola columna centrada en mobile, dashboard ancho desde 1024px ── */}
@@ -1684,7 +1663,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
     cancelEditTx();
   };
 
-  // ── Banda de estado: disponible por día para lo que resta del mes ──
+  // ── Disponible por día para lo que resta del mes ──
   const daysLeftInMonth = (() => {
     if (!isCurrentMonth) return null;
     const now = new Date();
@@ -1694,7 +1673,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const perDay = daysLeftInMonth && balance > 0 ? balance / daysLeftInMonth : null;
   const budgetPct = totalBudget > 0 ? spentThisMonth / totalBudget : null;
 
-  // ── Índice de módulos: cada fila muestra su propio número ──
+  // ── Totales por módulo (alimentan las fichas) ──
   const savingsTarget = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.target || 0)), 0);
   const savingsCurrent = (data.savings || []).reduce((s, g) => s + (g.currency === "usd" ? 0 : (g.current || 0)), 0);
   const loansOwed = (data.loans || []).reduce((s, l) => s + (l.currency === "usd" ? 0 : (l.remaining || 0)), 0);
@@ -1703,102 +1682,87 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const subsMonthly = subs.reduce((s, x) => s + (x.currency === "usd" ? 0 : (x.amount || 0)), 0);
   const debtCount = (data.debts || []).length;
 
-  const money = (n) => n.toLocaleString("es-AR", { maximumFractionDigits: 0 });
-  const idxPlata = [
-    { key: "presupuesto", label: "Presupuesto",
-      val: totalBudget > 0 ? `${formatFull(spentThisMonth)} / ${formatFull(totalBudget)}` : "Sin límites",
-      muted: totalBudget === 0, bar: budgetPct },
-    { key: "ahorros", label: "Ahorros",
-      val: formatFull(savingsCurrent), meta: savingsTarget > 0 ? `de ${formatFull(savingsTarget)}` : null,
-      bar: savingsTarget > 0 ? savingsCurrent / savingsTarget : null },
-    { key: "deudas", label: "Deudas",
-      val: totalDebt > 0 ? formatFull(totalDebt) : "Al día", muted: totalDebt === 0,
-      meta: debtCount > 0 ? `${debtCount} activa${debtCount === 1 ? "" : "s"}` : null },
-    { key: "prestamos", label: "Préstamos",
-      val: loansOwed > 0 ? `+${formatFull(loansOwed)}` : "—", muted: loansOwed === 0,
-      meta: loansOwed > 0 ? "te deben" : null },
-    { key: "gastosfijos", label: "Gastos fijos",
-      val: fixedMonthly > 0 ? `${formatFull(fixedMonthly)}/mes` : "—", muted: fixedMonthly === 0 },
-    { key: "suscripciones", label: "Suscripciones",
-      val: subs.length > 0 ? `${formatFull(subsMonthly)}/mes` : "—", muted: subs.length === 0,
-      meta: subs.length > 0 ? `${subs.length} activa${subs.length === 1 ? "" : "s"}` : null },
-    { key: "proyeccion", label: "Proyección", val: "Ver a fin de mes", muted: true },
-  ];
-  const idxAgenda = [
-    { key: "turnos", label: "Turnos",
-      val: proximosTurnos.length > 0 ? "Próximo" : ((data.turnos || []).length > 0 ? "—" : "Sin turnos"),
-      muted: proximosTurnos.length === 0,
-      meta: proximosTurnos.length > 0 ? `${proximosTurnos[0].description} · ${proximosTurnos[0].date.split("-").reverse().join("/")}` : null },
-    { key: "calendario", label: "Vencimientos",
-      val: proximosVencimientos.length > 0 ? `${proximosVencimientos.length} en 7 días` : "Nada cerca",
-      muted: proximosVencimientos.length === 0,
-      meta: proximosVencimientos.length > 0 ? `${EVENT_TYPES[proximosVencimientos[0].type]?.label || ""} ${proximosVencimientos[0].title}`.trim() : null },
-  ];
+  // ── La lectura del mes que hace Orbe, en una frase con los números en negrita ──
+  const F = (n, cls) => <b className={"rd-fig" + (cls ? " " + cls : "")}>{formatFull(n)}</b>;
+  const mesTxt = MONTH_NAMES[data.selectedMonth].toLowerCase();
+  const overBudget = (data.budgets || []).filter(b => b.limit > 0).map(b => {
+    const spent = monthTxs.filter(t => t.type === "gasto" && t.category === b.cat).reduce((s, t) => s + t.amount, 0);
+    return { cat: b.cat, pct: spent / b.limit };
+  }).filter(x => x.pct > 1).sort((a, b) => b.pct - a.pct);
+  const readNodes = [];
+  if (data.transactions.length === 0) {
+    readNodes.push(<span key="z">Todavía no cargaste nada. Contame un gasto o un ingreso acá abajo y arrancamos.</span>);
+  } else {
+    if (balance >= 0) readNodes.push(<span key="a">Vas {F(balance, "rd-pos")} arriba en {mesTxt}. </span>);
+    else readNodes.push(<span key="a">Estás {F(Math.abs(balance), "rd-neg")} en rojo en {mesTxt}. </span>);
+    if (perDay != null) readNodes.push(<span key="b">Con eso te quedan unos {F(perDay)} por día hasta fin de mes. </span>);
+    if (overBudget.length > 0) readNodes.push(<span key="c" className="rd-warn">Ojo con {overBudget[0].cat}: ya vas {Math.round(overBudget[0].pct * 100)}% del presupuesto.</span>);
+    else if (budgetPct != null && budgetPct >= 0.8) readNodes.push(<span key="c" className="rd-warn">Vas {Math.round(budgetPct * 100)}% del presupuesto del mes.</span>);
+    else if (perDay == null && balance >= 0) readNodes.push(<span key="c">Vas bien.</span>);
+  }
 
-  const IdxRow = ({ row }) => (
-    <button className="idx-row" onClick={() => onOpenPanel(row.key)}>
-      <span className="idx-label">{row.label}</span>
-      <span className={"idx-val" + (row.muted ? " muted" : "")}>{row.val}</span>
-      {row.meta && <span className="idx-meta">{row.meta}</span>}
-      {row.bar != null && (
-        <span className="idx-mini"><i className={row.bar > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(3, row.bar * 100)) + "%" }} /></span>
-      )}
-    </button>
-  );
+  // ── Los 9 módulos como fichas ──
+  const chips = [];
+  if (totalBudget > 0) chips.push({ key: "presupuesto", k: "Presupuesto", v: `${Math.round((budgetPct || 0) * 100)}%`, m: `${formatFull(spentThisMonth)} de ${formatFull(totalBudget)}`, bar: budgetPct, alert: budgetPct > 1 });
+  else chips.push({ key: "presupuesto", k: "Presupuesto", v: "Sin topes", m: "poné límites por rubro", muted: true });
+  chips.push({ key: "ahorros", k: "Ahorros", v: formatFull(savingsCurrent), m: savingsTarget > 0 ? `de ${formatFull(savingsTarget)}` : "sin meta fijada", bar: savingsTarget > 0 ? savingsCurrent / savingsTarget : null, muted: savingsCurrent === 0 });
+  chips.push(totalDebt > 0
+    ? { key: "deudas", k: "Deudas", v: formatFull(totalDebt), m: `${debtCount} activa${debtCount === 1 ? "" : "s"}`, alert: true }
+    : { key: "deudas", k: "Deudas", v: "Al día", m: "nada pendiente", muted: true });
+  if (loansOwed > 0) chips.push({ key: "prestamos", k: "Te deben", v: formatFull(loansOwed), m: "préstamos a cobrar" });
+  if (fixedMonthly > 0) chips.push({ key: "gastosfijos", k: "Gastos fijos", v: formatFull(fixedMonthly), m: "por mes" });
+  if (subs.length > 0) chips.push({ key: "suscripciones", k: "Suscripciones", v: formatFull(subsMonthly), m: `por mes · ${subs.length}` });
+  if (proximosTurnos.length > 0) chips.push({ key: "turnos", k: "Próximo turno", v: proximosTurnos[0].date.split("-").reverse().slice(0, 2).join("/"), m: proximosTurnos[0].description });
+  if (proximosVencimientos.length > 0) chips.push({ key: "calendario", k: "Vence pronto", v: `${proximosVencimientos.length} en 7 días`, m: proximosVencimientos[0].title, alert: true });
+  chips.push({ key: "proyeccion", k: "Proyección", v: "A fin de mes", m: "estimá tu saldo", muted: true });
+
+  // ── Etiqueta de día para agrupar el feed ──
+  const dayLabel = (d) => {
+    if (d === today) return "Hoy";
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    if (d === yd.toISOString().slice(0, 10)) return "Ayer";
+    const [Y, M, D] = d.split("-").map(Number);
+    const wd = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][new Date(Y, M - 1, D).getDay()];
+    return `${wd} ${D} ${MONTH_NAMES[M - 1].toLowerCase()}`;
+  };
+
+  const [cmdText, setCmdText] = useState("");
+  const submitCmd = () => { setCmdText(""); onOpenPanel("transacciones"); };
 
   return (
     <div className="inicio-layout">
-      {/* ── Banda de estado del mes: balance · disponible por día · presupuesto,
-          leídos como una sola frase de situación (no un card-hero apilado). ── */}
-      <div className="inicio-band">
-        <div style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 12, paddingLeft: 2 }}>
-          {greeting}, <b style={{ color: COLORS.text }}>{displayName}</b>
-        </div>
-        <div className={"state-band" + (balance < 0 ? " is-negative" : "")}>
-          <div style={{ position: "absolute", top: -60, right: -40, width: 220, height: 220, borderRadius: "50%", background: "#ffffff08", pointerEvents: "none" }} />
-
-          <div className="state-cell">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div className="state-k">{balance < 0 ? "En rojo este mes" : "Balance disponible"}</div>
-              <button onClick={() => setHideBalance(!hideBalance)} aria-label={hideBalance ? "Mostrar balance" : "Ocultar balance"} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", marginTop: -2 }}><EyeToggleIcon shown={!hideBalance} color="#ffffffcc" size={16} /></button>
-            </div>
-            <div className="state-big">
-              {hideBalance ? <span className="num">••••••</span> : <>
-                <span className="cur">{balance < 0 ? "-$" : "$"}</span>
-                <span className="num">{Math.abs(balance).toLocaleString("es-AR", { maximumFractionDigits: 0 })}</span>
-              </>}
-            </div>
-            <div className="state-sub">{MONTH_NAMES[data.selectedMonth]} {data.selectedYear}</div>
-            <div className="state-legend">
-              <span><i style={{ background: "#4ADE80" }} />Ingresos {hideBalance ? "••••" : formatFull(totalIncome)}</span>
-              <span><i style={{ background: "#F87171" }} />Gastos {hideBalance ? "••••" : formatFull(totalExpense)}</span>
-            </div>
-          </div>
-
-          {perDay != null && (
-            <div className="state-cell">
-              <div className="state-k">Te queda por día</div>
-              <div className="state-daynum">{hideBalance ? "••••" : formatFull(perDay)}</div>
-              <div className="state-sub">para los {daysLeftInMonth} días que restan del mes</div>
-            </div>
-          )}
-
-          {totalBudget > 0 && (
-            <div className="state-cell">
-              <div className="state-k">Presupuesto</div>
-              <div style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>{hideBalance ? "••••" : `${formatFull(spentThisMonth)} de ${formatFull(totalBudget)}`}</div>
-              <div className="state-sub">{Math.round((budgetPct || 0) * 100)}% usado{budgetPct > 1 ? " · pasado" : ""}</div>
-              <div className="state-bar"><i className={budgetPct > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(2, (budgetPct || 0) * 100)) + "%" }} /></div>
-            </div>
-          )}
-        </div>
+      <div style={{ fontSize: 13, color: COLORS.textMuted, paddingLeft: 2 }}>
+        {greeting}, <b style={{ color: COLORS.text }}>{displayName}</b>
       </div>
 
-      {/* ── Columna vertebral: carga rápida siempre visible + los movimientos ── */}
-      <div className="inicio-main">
-        <button className="quick-add" onClick={() => onOpenPanel("transacciones")} style={{ marginBottom: 14 }}>
-          <span className="plus">+</span> Cargá un gasto o ingreso…
-        </button>
+      {/* ── La lectura del mes que hace Orbe, en una frase ── */}
+      <div className="inicio-read">
+        <span className="orb" aria-hidden="true" />
+        <p>
+          {readNodes}
+          {data.transactions.length > 0 && (
+            <span className="rd-tail">
+              Cobraste {F(totalIncome)} · gastaste {F(totalExpense)}.{" "}
+              <button onClick={() => onOpenPanel("proyeccion")} style={{ background: "none", border: "none", padding: 0, font: "inherit", color: COLORS.accent, cursor: "pointer", borderBottom: "1px solid #00524733" }}>Ver la proyección →</button>
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* ── Los 9 módulos como fila de fichas (se deslizan) ── */}
+      <div className="inicio-chips" aria-label="Tu situación">
+        {chips.map(c => (
+          <button key={c.key} className={"chip" + (c.alert ? " alert" : "") + (c.muted ? " muted" : "")} onClick={() => onOpenPanel(c.key)}>
+            <span className="ck">{c.k}</span>
+            <span className="cv">{c.v}</span>
+            <span className="cm">{c.m}</span>
+            {c.bar != null && <span className="cbar"><i className={c.bar > 1 ? "over" : ""} style={{ width: Math.min(100, Math.max(3, c.bar * 100)) + "%" }} /></span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ── El feed de movimientos, agrupado por día ── */}
+      <div className="inicio-feed">
         <Card style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ padding: "16px 20px 12px", borderBottom: `1px solid ${COLORS.border}` }}>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>Movimientos</div>
@@ -1810,9 +1774,14 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
             <input value={search} onChange={e => { setSearch(e.target.value); setTxPage(0); }} placeholder="Buscar por descripción o categoría..." style={{ width: "100%", background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "8px 12px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
           </div>
           {listTxs.length === 0 ? (
-            <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>Sin transacciones.</div>
-          ) : listTxs.map(t => editingTxId === t.id ? (
-            <div key={t.id} className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
+            <div style={{ padding: 32, textAlign: "center", color: COLORS.textMuted }}>
+              {search.trim() ? "Nada coincide con la búsqueda." : "Todavía no hay movimientos. Cargá el primero acá abajo."}
+            </div>
+          ) : listTxs.map((t, i) => (
+            <React.Fragment key={t.id}>
+              {(i === 0 || listTxs[i - 1].date !== t.date) && <div className="feed-daysep">{dayLabel(t.date)}</div>}
+              {editingTxId === t.id ? (
+            <div className="form-pop" style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, background: COLORS.bg }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
                 <Input label="Tipo" value={editTxForm.type} onChange={v => setEditTxForm({ ...editTxForm, type: v })} options={TX_TYPES} />
                 <Input label="Monto" value={editTxForm.amount} onChange={v => setEditTxForm({ ...editTxForm, amount: v })} type="amount" prefix="$" />
@@ -1834,7 +1803,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.category}{t.paymentMethod ? ` · ${t.paymentMethod}` : ""}</div>
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
                   <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
@@ -1842,6 +1811,8 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 </div>
               )}
             </Removable>
+              )}
+            </React.Fragment>
           ))}
           {txTotalPages > 1 && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: "12px 20px" }}>
@@ -1853,16 +1824,13 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
         </Card>
       </div>
 
-      {/* ── Índice de módulos: cada fila lleva su propio número, no una puerta con emoji ── */}
-      <div className="inicio-index">
-        <div className="idx-group">
-          <div className="idx-title">Tu situación</div>
-          {idxPlata.map(row => <IdxRow key={row.key} row={row} />)}
-        </div>
-        <div className="idx-group">
-          <div className="idx-title">Agenda</div>
-          {idxAgenda.map(row => <IdxRow key={row.key} row={row} />)}
-        </div>
+      {/* ── Un solo campo de carga, fijo (mismo gesto que escribirle al bot) ── */}
+      <div className="inicio-cmd-dock">
+        <form className="inicio-cmd" onSubmit={e => { e.preventDefault(); submitCmd(); }}>
+          <span className="dot" aria-hidden="true" />
+          <input value={cmdText} onChange={e => setCmdText(e.target.value)} placeholder="Cargá algo… “Café 3500”" aria-label="Cargar un movimiento" />
+          <button type="submit" className="go">Cargar</button>
+        </form>
       </div>
     </div>
   );
