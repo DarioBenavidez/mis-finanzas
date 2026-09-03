@@ -184,9 +184,9 @@
       .app-shell.boceto-on .desktop-sidebar { display: none; }
       .app-shell.boceto-on .topbar { justify-content: space-between; }
       .app-shell.boceto-on .topbar-brand { display: flex !important; }
-      .app-shell.boceto-on .content-area { max-width: 1080px; padding: 26px 32px 40px; }
+      .app-shell.boceto-on .content-area { max-width: 1680px; padding: 26px clamp(28px, 4vw, 72px) 48px; }
 
-      .boceto { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; align-items: start; }
+      .boceto { display: grid; grid-template-columns: 316px minmax(0, 1fr); gap: 32px; align-items: start; }
       .boceto-col { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 82px; }
       .boceto-hi { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
       .boceto-hi .boceto-nueva {
