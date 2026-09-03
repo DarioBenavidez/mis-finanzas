@@ -240,6 +240,57 @@
       .auth-cardbody { flex: 1; height: 100%; overflow-y: auto; border-radius: 48px 0 0 48px; display: flex; flex-direction: column; justify-content: center; }
       .auth-cardbody > * { width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; }
     }
+
+    /* ── Onboarding financiero post-login: calcado de FinancialOnboardingScreen.jsx
+       de la app Expo (fondo verde sólido, blobs, progress bar de 3 pasos, tarjetas
+       translúcidas). 3 pasos explicativos — no pide datos. Se muestra una sola vez
+       por cuenta (data.onboardingDone en Supabase). ── */
+    .fob-page { min-height: 100vh; background: #005247; display: flex; flex-direction: column; overflow: hidden; position: relative; font-family: 'Nunito', 'DM Sans', system-ui, sans-serif; color: #fff; }
+    .fob-blob { position: absolute; border-radius: 50%; pointer-events: none; }
+    .fob-blob-1 { top: -90px; right: -90px; width: 280px; height: 280px; background: #FFFFFF07; }
+    .fob-blob-2 { bottom: 80px; left: -110px; width: 320px; height: 320px; background: #C9A84C0A; }
+    .fob-inner { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 520px; margin: 0 auto; padding: 0 24px; }
+    .fob-header { padding: 44px 0 6px; display: flex; align-items: flex-start; gap: 12px; }
+    .fob-progress { display: flex; align-items: flex-start; justify-content: center; flex: 1; gap: 64px; }
+    .fob-pitem { display: flex; flex-direction: column; align-items: center; position: relative; }
+    .fob-plabel, .fob-pline { white-space: nowrap; }
+    .fob-pdot { width: 32px; height: 32px; border-radius: 16px; background: #FFFFFF12; border: 1.5px solid #FFFFFF20; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #FFFFFF40; margin-bottom: 6px; }
+    .fob-pdot.active { border-color: #C9A84C; background: #C9A84C30; color: #fff; }
+    .fob-pdot.current { background: #C9A84C; border-color: #E8C97A; color: #005247; }
+    .fob-plabel { font-size: 10px; color: #FFFFFF40; font-weight: 700; letter-spacing: 0.3px; }
+    .fob-plabel.active { color: #C9A84C; }
+    .fob-pline { position: absolute; top: 16px; left: 32px; width: 64px; height: 1.5px; background: #FFFFFF20; }
+    .fob-pline.active { background: #C9A84C; }
+    .fob-skip { background: none; border: none; color: #FFFFFF80; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; flex-shrink: 0; }
+    .fob-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0 16px; }
+    .fob-icon { width: 90px; height: 90px; border-radius: 45px; background: #FFFFFF12; border: 1px solid #FFFFFF20; display: flex; align-items: center; justify-content: center; font-size: 44px; margin-bottom: 20px; flex-shrink: 0; }
+    .fob-icon.wa { width: 100px; height: 100px; border-radius: 50px; background: #25D36615; border: 1.5px solid #25D36640; }
+    .fob-title { font-size: 28px; font-weight: 800; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 12px; }
+    .fob-sub { font-size: 14px; color: #FFFFFFB0; line-height: 1.55; margin-bottom: 26px; max-width: 400px; }
+    .fob-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; margin-bottom: 8px; }
+    .fob-cat { aspect-ratio: 1; background: #FFFFFF12; border: 1px solid #FFFFFF20; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .fob-cat .e { font-size: 22px; }
+    .fob-cat .n { font-size: 9px; color: #FFFFFFB0; font-weight: 700; padding: 0 2px; }
+    .fob-info { display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF08; border: 1px solid #FFFFFF20; border-radius: 16px; padding: 16px; width: 100%; text-align: left; font-size: 13px; color: #FFFFFFB0; line-height: 1.5; margin-top: 12px; }
+    .fob-info > span:first-child { font-size: 16px; line-height: 1.3; flex-shrink: 0; }
+    .fob-info b { color: #C9A84C; font-weight: 800; }
+    .fob-wasteps { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-bottom: 8px; }
+    .fob-wastep { display: flex; align-items: center; gap: 12px; background: #FFFFFF12; border: 1px solid #FFFFFF20; border-radius: 16px; padding: 14px; text-align: left; }
+    .fob-wanum { width: 26px; height: 26px; border-radius: 13px; background: #C9A84C; color: #005247; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .fob-wastep .e { font-size: 22px; flex-shrink: 0; }
+    .fob-wastep .t { font-size: 13px; color: #fff; line-height: 1.45; }
+    .fob-btns { display: flex; gap: 12px; padding: 12px 0 40px; }
+    .fob-btn-back { flex: 1; padding: 16px; border-radius: 18px; border: 1px solid #FFFFFF20; background: transparent; color: #FFFFFFB0; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .fob-btn-next { flex: 2; padding: 16px; border-radius: 18px; border: 1px solid #E8C97A; background: #C9A84C; color: #005247; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 16px #C9A84C55; }
+
+    /* Desktop: en vez de un campo verde vacío a pantalla completa con el botón
+       clavado abajo de todo, contener el flujo en un panel centrado. */
+    @media (min-width: 640px) {
+      .fob-page { justify-content: center; padding: 40px 20px; }
+      .fob-inner { flex: none; max-width: 480px; min-height: 600px; max-height: calc(100vh - 80px); background: #FFFFFF0A; border: 1px solid #FFFFFF1A; border-radius: 28px; padding: 4px 32px 20px; box-shadow: 0 24px 64px #00000033; }
+      .fob-header { padding: 28px 0 6px; }
+      .fob-body { padding-top: 20px; }
+    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -1119,6 +1170,87 @@ function DesktopSidebar({ mainTab, onSelectTab, panel, onOpenPanel, waPhone, onC
   );
 }
 
+// Onboarding financiero post-login — 3 pasos explicativos, calcado de
+// FinancialOnboardingScreen.jsx de la app Expo. No pide datos: solo muestra cómo
+// usar Orbe. onDone marca data.onboardingDone=true en Supabase (una vez por cuenta;
+// si el usuario ya hizo el onboarding del bot de WhatsApp, no lo vuelve a ver).
+function FinancialOnboardingScreen({ onDone }) {
+  const [step, setStep] = useState(0);
+  const STEPS = ["Ingresos", "Categorías", "WhatsApp"];
+  const cats = Object.entries(DEFAULT_CATEGORIES).slice(0, 8);
+  return (
+    <div className="fob-page">
+      <div className="fob-blob fob-blob-1" />
+      <div className="fob-blob fob-blob-2" />
+      <div className="fob-inner">
+        <div className="fob-header">
+          <div className="fob-progress">
+            {STEPS.map((label, i) => (
+              <div key={i} className="fob-pitem">
+                <div className={"fob-pdot" + (i <= step ? " active" : "") + (i === step ? " current" : "")}>
+                  {i < step ? "✓" : i + 1}
+                </div>
+                <div className={"fob-plabel" + (i === step ? " active" : "")}>{label}</div>
+                {i < STEPS.length - 1 && <div className={"fob-pline" + (i < step ? " active" : "")} />}
+              </div>
+            ))}
+          </div>
+          <button className="fob-skip" onClick={onDone}>Saltar</button>
+        </div>
+
+        <div className="fob-body" key={step}>
+          {step === 0 && (
+            <>
+              <div className="fob-icon">💼</div>
+              <div className="fob-title">Registrá<br />tus ingresos</div>
+              <div className="fob-sub">Con tu sueldo cargado, Orbe sabe cuánto te queda disponible cada mes.</div>
+              <div className="fob-info"><span>💰</span><span>Usá el botón <b>+</b> para agregar tu sueldo o cualquier ingreso.</span></div>
+              <div className="fob-info"><span>💬</span><span>O escribile a Orbe por WhatsApp: <b>“Cobré $500.000”</b></span></div>
+            </>
+          )}
+          {step === 1 && (
+            <>
+              <div className="fob-icon">🗂️</div>
+              <div className="fob-title">Organizá<br />tus gastos</div>
+              <div className="fob-sub">Cada movimiento va a una categoría. Así Orbe te muestra en qué gastás más y dónde podés mejorar.</div>
+              <div className="fob-cats">
+                {cats.map(([name, emoji]) => (
+                  <div key={name} className="fob-cat"><span className="e">{emoji}</span><span className="n">{name}</span></div>
+                ))}
+              </div>
+              <div className="fob-info"><span>💡</span><span>Estas categorías ya vienen listas. Podés crear nuevas desde la sección de Análisis.</span></div>
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <div className="fob-icon wa"><WhatsAppIcon size={48} /></div>
+              <div className="fob-title">Tu asistente<br />donde ya estás</div>
+              <div className="fob-sub">Usá Orbe sin abrir la web. Solo mandá un mensaje por WhatsApp.</div>
+              <div className="fob-wasteps">
+                {[
+                  ["1", "📱", "Abrí Conectar WhatsApp (barra inferior o menú lateral)."],
+                  ["2", "🔗", "Ingresá tu número y tocá Vincular."],
+                  ["3", "💬", "Tocá “Hablar con Orbe” y empezá a escribir."],
+                ].map(([n, e, t]) => (
+                  <div key={n} className="fob-wastep"><div className="fob-wanum">{n}</div><span className="e">{e}</span><span className="t">{t}</span></div>
+                ))}
+              </div>
+              <div className="fob-info"><span>✨</span><span>Registrá gastos, consultá tu saldo, o pedí el precio del dólar — con un solo mensaje.</span></div>
+            </>
+          )}
+        </div>
+
+        <div className="fob-btns">
+          {step > 0 && <button className="fob-btn-back" onClick={() => setStep(s => s - 1)}>← Atrás</button>}
+          <button className="fob-btn-next" onClick={() => (step === 2 ? onDone() : setStep(s => s + 1))}>
+            {step === 2 ? "¡Arranquemos! 🚀" : "Siguiente →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FinanzasApp() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -1268,6 +1400,15 @@ function FinanzasApp() {
     <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: COLORS.textMuted, fontFamily: "'Nunito', sans-serif", fontSize: 18 }}>Cargando tus finanzas...</div>
     </div>
+  );
+
+  // Primera vez en esta cuenta: mostrar el onboarding. Se saltea si ya lo hizo
+  // (data.onboardingDone, que también marca el bot de WhatsApp) o si la cuenta ya
+  // tiene actividad — así un usuario existente no se topa con el onboarding de golpe.
+  const yaActiva = data.transactions.length > 0 || (data.recurringIncomes || []).length > 0
+    || data.savings.length > 0 || data.debts.length > 0;
+  if (!data.onboardingDone && !yaActiva) return (
+    <FinancialOnboardingScreen onDone={() => save({ ...data, onboardingDone: true })} />
   );
 
   const displayName = user?.user_metadata?.full_name || [user?.user_metadata?.nombre, user?.user_metadata?.apellido].filter(Boolean).join(" ") || (user?.email || "").split("@")[0];
