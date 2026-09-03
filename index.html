@@ -26,6 +26,14 @@
        teclado (:focus-visible), así no se pierde accesibilidad. */
     button { outline: none; -webkit-appearance: none; appearance: none; }
     button:focus-visible { outline: 2px solid #005247; outline-offset: 2px; }
+    /* Foco de teclado visible en TODOS los campos: varios inputs traen
+       outline:none inline, así que el :focus-visible va con !important para
+       pisarlo solo cuando el foco viene del teclado. */
+    input:focus-visible, select:focus-visible, textarea:focus-visible,
+    [tabindex]:not([tabindex="-1"]):focus-visible {
+      outline: 2px solid #005247 !important; outline-offset: 1px; border-radius: 6px;
+    }
+    [role="dialog"]:focus-visible { outline: none !important; }
 
     /* ── Sistema de movimiento: una sola curva/escala de duración para toda la
        app, en vez de valores sueltos (.15s / .2s / .4s) repartidos por el código.
@@ -364,7 +372,7 @@
       await supabaseClient.from("finanzas").upsert({ id: uid, data: payload, updated_at: new Date().toISOString() });
     }
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 const COLORS = {
   // Menta pálido más saturado que el gris-verdoso original: el "piso" de
@@ -632,9 +640,11 @@ function SegmentedControl({ label, options, value, onChange, style = {} }) {
 // entrada/salida vía useClosable igual que PanelModal.
 function BottomSheet({ title, onClose, children }) {
   const { closing, requestClose } = useClosable(onClose);
+  const cardRef = useRef(null);
+  useModalA11y(requestClose, cardRef);
   return (
     <div className={`sheet-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose}>
-      <div className={`sheet-card ${closing ? "sheet-closing" : ""}`} onClick={e => e.stopPropagation()}>
+      <div ref={cardRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : "Diálogo"} className={`sheet-card ${closing ? "sheet-closing" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div className="sheet-header">{title}</div>
         <div className="sheet-body">{children}</div>
@@ -696,6 +706,57 @@ function useClosable(onFullyClosed, duration = 140) {
     setTimeout(() => { setClosing(false); onFullyClosed(); }, duration);
   };
   return { closing, requestClose };
+}
+
+// Atrapa cualquier error de render de sus hijos y muestra una salida en vez de
+// una pantalla en blanco. Se usa a nivel app (red de seguridad) y por panel
+// (para que un dato roto en una sección no tire abajo toda la web).
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { err: null }; }
+  static getDerivedStateFromError(err) { return { err }; }
+  componentDidCatch(err, info) { console.error("Orbe — error de render:", err, info); }
+  render() {
+    if (!this.state.err) return this.props.children;
+    if (this.props.fallback) return this.props.fallback(() => this.setState({ err: null }));
+    return (
+      <div style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, textAlign: "center", fontFamily: "'Nunito', sans-serif" }}>
+        <div style={{ width: 26, height: 26, borderRadius: "50%", border: "3px solid #C9A84C", borderTopColor: "transparent", transform: "rotate(-45deg)", marginBottom: 16 }} />
+        <div style={{ fontWeight: 800, fontSize: 18, color: "#005247" }}>Algo salió mal</div>
+        <div style={{ color: "#4A6B62", fontSize: 14, margin: "8px 0 20px", maxWidth: 320 }}>Recargá la página para volver al inicio. Tus datos están a salvo.</div>
+        <button onClick={() => window.location.reload()} style={{ background: "#005247", color: "#E8C97A", border: "1px solid #C9A84C", borderRadius: 12, padding: "12px 24px", fontWeight: 800, fontFamily: "inherit", fontSize: 14, cursor: "pointer" }}>Recargar</button>
+      </div>
+    );
+  }
+}
+
+// Accesibilidad de modales/sheets: bloquea el scroll de fondo, mueve el foco
+// adentro al abrir, lo atrapa con Tab, cierra con Escape y devuelve el foco al
+// elemento que lo abrió al cerrar. cardRef apunta al contenedor del diálogo.
+function useModalA11y(onEscape, cardRef) {
+  useEffect(() => {
+    const prevFocus = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const SEL = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    const focusables = () => cardRef.current ? Array.from(cardRef.current.querySelectorAll(SEL)).filter(el => el.offsetParent !== null) : [];
+    const t = setTimeout(() => { (focusables()[0] || cardRef.current)?.focus?.(); }, 20);
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); onEscape(); return; }
+      if (e.key !== "Tab" || !cardRef.current) return;
+      const f = focusables();
+      if (!f.length) { e.preventDefault(); cardRef.current.focus(); return; }
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !cardRef.current.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("keydown", onKey, true);
+      document.body.style.overflow = prevOverflow;
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
+    };
+  }, []);
 }
 
 // Filas/cards de una lista (transacciones, categorías, ahorros, deudas): al
@@ -1109,11 +1170,13 @@ function PanelModal({ title, onClose, children }) {
   // hook, cerrar se ve tan brusco como abrir de golpe. requestClose retiene
   // el desmontaje real lo justo para que se vea la animación de salida.
   const { closing, requestClose } = useClosable(onClose);
+  const cardRef = useRef(null);
+  useModalA11y(requestClose, cardRef);
   return (
     <div className={`panel-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose} style={{ position: "fixed", inset: 0, background: COLORS.bg, zIndex: 150, overflowY: "auto" }}>
-      <div className={`panel-card modal-anim ${closing ? "is-closing" : ""}`} onClick={e => e.stopPropagation()}>
+      <div ref={cardRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : "Sección"} className={`panel-card modal-anim ${closing ? "is-closing" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="panel-card-header" style={{ position: "sticky", top: 0, background: `linear-gradient(135deg, ${COLORS.accent} 0%, #002f28 100%)`, padding: "18px 20px", display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-          <button onClick={requestClose} style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
+          <button onClick={requestClose} aria-label="Volver" style={{ background: "#ffffff22", border: "none", borderRadius: 10, color: "#fff", fontSize: 18, width: 36, height: 36, cursor: "pointer", flexShrink: 0 }}>←</button>
           <div style={{ color: "#fff", fontWeight: 700, fontSize: 17 }}>{title}</div>
         </div>
         <div style={{ padding: 20, maxWidth: 720, margin: "0 auto" }}>{children}</div>
@@ -1385,6 +1448,36 @@ function FinanzasApp() {
     }
   }, [user]);
 
+  // Snackbar con "Deshacer" para acciones rápidas y frecuentes (borrar un
+  // movimiento). Se auto-oculta a los 5s.
+  const [snack, setSnack] = useState(null); // { msg, onUndo }
+  const snackTimer = useRef(null);
+  const showSnack = useCallback((msg, onUndo) => {
+    clearTimeout(snackTimer.current);
+    setSnack({ msg, onUndo });
+    snackTimer.current = setTimeout(() => setSnack(null), 5000);
+  }, []);
+
+  // A11y del modal de Conectar WhatsApp (es JSX inline, no un componente, así
+  // que no puede usar useModalA11y): Escape para cerrar, bloqueo de scroll de
+  // fondo, foco adentro al abrir y de vuelta al opener al cerrar.
+  const waCardRef = useRef(null);
+  useEffect(() => {
+    if (!waModal) return;
+    const prevFocus = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); closeWa(); } };
+    document.addEventListener("keydown", onKey, true);
+    const t = setTimeout(() => waCardRef.current && waCardRef.current.focus(), 20);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("keydown", onKey, true);
+      document.body.style.overflow = prevOverflow;
+      if (prevFocus && prevFocus.focus) prevFocus.focus();
+    };
+  }, [waModal]);
+
   const logout = async () => {
     await supabaseClient.auth.signOut();
     setUser(null);
@@ -1457,7 +1550,7 @@ function FinanzasApp() {
               tab, lo que retrigger la animación .tab-fade en cada cambio en vez
               de reciclar el nodo (que no dispararía la animación de nuevo). */}
           <div key={mainTab} className="tab-fade">
-            {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} />}
+            {mainTab === "inicio" && <InicioTab data={data} save={save} displayName={displayName} monthTxs={monthTxs} totalIncome={totalIncome} totalExpense={totalExpense} totalDebt={totalDebt} totalSavings={totalSavings} onOpenPanel={setPanel} showSnack={showSnack} />}
             {mainTab === "analisis" && <div className="narrow-col"><AnalisisTab data={data} /></div>}
             {mainTab === "perfil" && <div className="narrow-col"><PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} /></div>}
           </div>
@@ -1489,15 +1582,23 @@ function FinanzasApp() {
       {/* ── PANELES: pantalla completa en mobile, card centrado en escritorio (Ahorros, Deudas, Presupuesto, etc.) ── */}
       {panel && panel !== "transacciones" && (
         <PanelModal title={PANEL_LABELS[panel]} onClose={() => setPanel(null)}>
-          {panel === "ahorros" && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
-          {panel === "deudas" && <Deudas data={data} save={save} dolarRate={dolarRate} />}
-          {panel === "prestamos" && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
-          {panel === "turnos" && <Turnos data={data} save={save} />}
-          {panel === "calendario" && <Calendario data={data} save={save} />}
-          {panel === "proyeccion" && <Proyeccion data={data} save={save} />}
-          {panel === "suscripciones" && <Suscripciones data={data} save={save} />}
-          {panel === "gastosfijos" && <GastosFijos data={data} save={save} />}
-          {panel === "presupuesto" && <Presupuesto data={data} save={save} expByCat={expByCat} />}
+          <ErrorBoundary key={panel} fallback={() => (
+            <div style={{ padding: "28px 8px", textAlign: "center" }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: COLORS.accent }}>No se pudo abrir esta sección</div>
+              <div style={{ color: COLORS.textMuted, fontSize: 13, margin: "8px 0 18px", maxWidth: 300, marginLeft: "auto", marginRight: "auto" }}>Puede haber un dato con un formato que la web todavía no reconoce. El resto de la app sigue funcionando.</div>
+              <button onClick={() => setPanel(null)} style={{ background: COLORS.accent, color: "#E8C97A", border: "1px solid #C9A84C", borderRadius: 12, padding: "10px 20px", fontWeight: 800, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}>Volver al inicio</button>
+            </div>
+          )}>
+            {panel === "ahorros" && <Ahorros data={data} save={save} dolarRate={dolarRate} />}
+            {panel === "deudas" && <Deudas data={data} save={save} dolarRate={dolarRate} />}
+            {panel === "prestamos" && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
+            {panel === "turnos" && <Turnos data={data} save={save} />}
+            {panel === "calendario" && <Calendario data={data} save={save} />}
+            {panel === "proyeccion" && <Proyeccion data={data} save={save} />}
+            {panel === "suscripciones" && <Suscripciones data={data} save={save} />}
+            {panel === "gastosfijos" && <GastosFijos data={data} save={save} />}
+            {panel === "presupuesto" && <Presupuesto data={data} save={save} expByCat={expByCat} />}
+          </ErrorBoundary>
         </PanelModal>
       )}
 
@@ -1512,7 +1613,7 @@ function FinanzasApp() {
       {/* ── MODAL: Conectar WhatsApp ── */}
       {waModal && (
         <div onClick={closeWa} className={`overlay-anim ${waClosing ? "is-closing" : ""}`} style={{ position: "fixed", inset: 0, background: "#00000070", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} className={`modal-anim ${waClosing ? "is-closing" : ""}`} style={{ background: "#fff", borderRadius: 22, padding: 28, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px #00000030" }}>
+          <div ref={waCardRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Conectar WhatsApp" onClick={e => e.stopPropagation()} className={`modal-anim ${waClosing ? "is-closing" : ""}`} style={{ background: "#fff", borderRadius: 22, padding: 28, maxWidth: 420, width: "100%", boxShadow: "0 20px 60px #00000030" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}><WhatsAppIcon size={32} /></div>
             <div style={{ fontWeight: 700, fontSize: 18, textAlign: "center", marginBottom: 6 }}>Conectar WhatsApp</div>
             {waPhone ? (
@@ -1553,6 +1654,16 @@ function FinanzasApp() {
           </div>
         </div>
       )}
+
+      {/* ── Snackbar con "Deshacer" ── */}
+      {snack && (
+        <div role="status" aria-live="polite" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "calc(78px + env(safe-area-inset-bottom))", zIndex: 300, display: "flex", alignItems: "center", gap: 14, background: "#0D1F1C", color: "#fff", padding: "12px 16px", borderRadius: 12, boxShadow: "0 12px 34px #00000047", fontSize: 13.5, maxWidth: "calc(100vw - 32px)" }}>
+          <span>{snack.msg}</span>
+          {snack.onUndo && (
+            <button onClick={() => { snack.onUndo(); clearTimeout(snackTimer.current); setSnack(null); }} style={{ background: "none", border: "none", color: "#E8C97A", fontWeight: 800, fontFamily: "inherit", fontSize: 13.5, cursor: "pointer", padding: "2px 4px", flexShrink: 0 }}>Deshacer</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1564,7 +1675,7 @@ function FinanzasApp() {
 // reconociendo igual aunque acá no se puedan elegir ni crear nuevas.
 const TX_TYPES = ["gasto", "ingreso", "ahorro_meta"];
 
-function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel }) {
+function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpense, totalDebt, totalSavings, onOpenPanel, showSnack }) {
   const [hideBalance, setHideBalance] = useState(false);
   const [txFilter, setTxFilter] = useState("mes");
   const [search, setSearch] = useState("");
@@ -1616,7 +1727,11 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const txTotalPages = Math.max(1, Math.ceil(sortedTxs.length / TX_PAGE_SIZE));
   const txPageClamped = Math.min(txPage, txTotalPages - 1);
   const listTxs = sortedTxs.slice(txPageClamped * TX_PAGE_SIZE, txPageClamped * TX_PAGE_SIZE + TX_PAGE_SIZE);
-  const delTx = (id) => save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+  const delTx = (id) => {
+    const prevData = data;
+    save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+    showSnack && showSnack("Movimiento eliminado", () => save(prevData));
+  };
 
   const catNames = Object.keys(data.categories);
   const startEditTx = (t) => { setEditingTxId(t.id); setEditTxForm({ type: t.type, amount: formatAmountInput(t.amount), description: t.description || "", category: t.category || catNames[0] || "Otros", date: t.date }); };
@@ -1730,7 +1845,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {proximosVencimientos.map(e => (
                     <div key={e.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                      <span style={{ color: EVENT_TYPES[e.type].color }}>{EVENT_TYPES[e.type].label} {e.title}</span>
+                      <span style={{ color: eventType(e.type).color }}>{eventType(e.type).label} {e.title}</span>
                       <span style={{ color: COLORS.textMuted }}>{e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay}d`}</span>
                     </div>
                   ))}
@@ -1782,7 +1897,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
                   <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
-                  <button onClick={remove} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textDim, fontSize: 15, padding: 4 }}>✕</button>
+                  <button onClick={remove} aria-label={`Eliminar ${t.description || t.category}`} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 15, padding: 8, lineHeight: 1, display: "flex", alignItems: "center" }}>✕</button>
                 </div>
               )}
             </Removable>
@@ -3294,6 +3409,11 @@ const EVENT_TYPES = {
   pago: { label: "Pago 💳", color: "#4aba82" },
   recordatorio: { label: "Recordatorio 🔔", color: "#005247" },
 };
+// El tipo de evento puede venir de la app móvil o del bot con un valor que la
+// web todavía no conoce: sin este fallback, indexar EVENT_TYPES[type] devuelve
+// undefined y .color/.label revientan toda la app (no hay dato de ejemplo, es
+// data real compartida). Nunca acceder EVENT_TYPES[x] directo con x de datos.
+const eventType = (t) => EVENT_TYPES[t] || { label: "Evento", color: "#5E7D74" };
 
 function Calendario({ data, save }) {
   const emptyForm = { title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" };
@@ -3378,13 +3498,13 @@ function Calendario({ data, save }) {
             return (
               <div key={day} style={{
                 aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: isToday ? COLORS.accent : dayEvents.length > 0 ? (EVENT_TYPES[dayEvents[0].type].color + "22") : COLORS.bg,
+                background: isToday ? COLORS.accent : dayEvents.length > 0 ? (eventType(dayEvents[0].type).color + "22") : COLORS.bg,
                 border: isToday ? "none" : `1px solid ${COLORS.border}`, fontSize: 12, gap: 2,
               }}>
                 <span style={{ color: isToday ? "#fff" : COLORS.text, fontWeight: isToday ? 700 : 400 }}>{day}</span>
                 {dayEvents.length > 0 && (
                   <div style={{ display: "flex", gap: 2 }}>
-                    {dayEvents.slice(0, 3).map(e => <div key={e.id} style={{ width: 5, height: 5, borderRadius: "50%", background: isToday ? "#fff" : EVENT_TYPES[e.type].color }} />)}
+                    {dayEvents.slice(0, 3).map(e => <div key={e.id} style={{ width: 5, height: 5, borderRadius: "50%", background: isToday ? "#fff" : eventType(e.type).color }} />)}
                   </div>
                 )}
               </div>
@@ -3406,7 +3526,7 @@ function Calendario({ data, save }) {
       {/* Listas agrupadas */}
       {grouped.map(g => g.items.length > 0 && (
         <Card key={g.type} style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, color: EVENT_TYPES[g.type].color }}>{EVENT_TYPES[g.type].label}</div>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, color: eventType(g.type).color }}>{eventType(g.type).label}</div>
           {g.items.map(ev => (
             <div key={ev.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -3777,7 +3897,7 @@ function Proyeccion({ data, save }) {
 
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<FinanzasApp />);
+root.render(<ErrorBoundary><FinanzasApp /></ErrorBoundary>);
 
   </script>
 </body>
