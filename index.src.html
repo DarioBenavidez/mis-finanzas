@@ -1342,110 +1342,83 @@ function PanelModal({ title, onClose, children }) {
   );
 }
 
-// Onboarding financiero post-login — 3 pasos, calcado de FinancialOnboardingScreen.jsx
-// de la app Expo pero con los pasos 1 y 2 ahora prácticos: en vez de solo explicar,
-// abren el NuevaTransaccionSheet real (el mismo que usa toda la app) para que el
-// usuario cargue un ingreso y un gasto categorizado de verdad, no de mentira.
-// onDone marca data.onboardingDone=true en Supabase (una vez por cuenta; si el
-// usuario ya hizo el onboarding del bot de WhatsApp, no lo vuelve a ver).
-function FinancialOnboardingScreen({ data, save, onDone }) {
-  const [step, setStep] = useState(0);
-  const [showSheet, setShowSheet] = useState(false);
-  const [incomeSaved, setIncomeSaved] = useState(false);
-  const [expenseSaved, setExpenseSaved] = useState(false);
-  const STEPS = ["Ingresos", "Gasto", "WhatsApp"];
+// Pantalla de bienvenida post-login, primer paso del tour práctico: solo un
+// saludo y un botón para arrancar. El tour en sí (cargar un ingreso y un
+// gasto categorizado) pasa DESPUÉS, ya adentro de la app real -- ver
+// TourSpotlight y el tourPhase de FinanzasApp más abajo.
+function WelcomeScreen({ displayName, onContinue, onSkip }) {
   return (
-    <div className="auth-page">
-      <div className="auth-visual">
-        {/* Panel verde con el wordmark — mismo shell que LoginScreen */}
-        <div className="auth-header">
-          <div className="auth-blob auth-blob-1" />
-          <div className="auth-blob auth-blob-2" />
-          <div style={{ position: "relative" }}>
-            <img src="assets/orbe-logo-wordmark.png" alt="Orbe" className="auth-logo" />
-            <div className="auth-tagline">Tu asistente financiero personal</div>
-          </div>
-        </div>
-
-        <div className="auth-cardbody fob-cardbody">
-          <div className="fob-topbar">
-            <div className="fob-progress">
-              {STEPS.map((label, i) => (
-                <div key={i} className="fob-pitem">
-                  <div className={"fob-pdot" + (i <= step ? " active" : "") + (i === step ? " current" : "")}>
-                    {i < step ? "✓" : i + 1}
-                  </div>
-                  <div className={"fob-plabel" + (i === step ? " active" : "")}>{label}</div>
-                  {i < STEPS.length - 1 && <div className={"fob-pline" + (i < step ? " active" : "")} />}
-                </div>
-              ))}
-            </div>
-            <button className="fob-skip" onClick={onDone}>Saltar</button>
-          </div>
-
-          <div className="fob-body" key={step}>
-          {step === 0 && (
-            <>
-              <div className="fob-icon"><Icon name="briefcase" size={40} /></div>
-              <div className="fob-title">Registrá<br />tus ingresos</div>
-              <div className="fob-sub">Con tu sueldo cargado, Orbe sabe cuánto te queda disponible cada mes. Probalo ahora con un ingreso real.</div>
-              {incomeSaved ? (
-                <div className="fob-info" style={{ color: COLORS.green }}><span style={{ display: "flex" }}><Icon name="check" size={16} /></span><span>¡Listo! Ya tenés tu primer ingreso cargado.</span></div>
-              ) : (
-                <button className="fob-btn-next" style={{ marginTop: 4 }} onClick={() => setShowSheet(true)}>+ Cargar mi sueldo</button>
-              )}
-              <div className="fob-info"><span style={{ display: "flex" }}><WhatsAppIcon size={15} /></span><span>O escribile a Orbe por WhatsApp: <b>“Cobré $500.000”</b></span></div>
-            </>
-          )}
-          {step === 1 && (
-            <>
-              <div className="fob-icon"><Icon name="list" size={40} /></div>
-              <div className="fob-title">Registrá<br />un gasto</div>
-              <div className="fob-sub">Cada movimiento va a una categoría. Elegí una al cargar el gasto y así Orbe te muestra en qué gastás más.</div>
-              {expenseSaved ? (
-                <div className="fob-info" style={{ color: COLORS.green }}><span style={{ display: "flex" }}><Icon name="check" size={16} /></span><span>¡Listo! Ya categorizaste tu primer gasto.</span></div>
-              ) : (
-                <button className="fob-btn-next" style={{ marginTop: 4 }} onClick={() => setShowSheet(true)}>+ Cargar un gasto</button>
-              )}
-              <div className="fob-info"><span style={{ display: "flex" }}><Icon name="info" size={16} /></span><span>¿No existe la categoría que necesitás? Creala ahí mismo con "+ Nueva".</span></div>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <div className="fob-icon wa"><WhatsAppIcon size={48} /></div>
-              <div className="fob-title">Tu asistente<br />donde ya estás</div>
-              <div className="fob-sub">Usá Orbe sin abrir la web. Solo mandá un mensaje por WhatsApp.</div>
-              <div className="fob-wasteps">
-                {[
-                  ["1", "phone", "Abrí Conectar WhatsApp (barra inferior o menú lateral)."],
-                  ["2", "link", "Ingresá tu número y tocá Vincular."],
-                  ["3", "chat", "Tocá “Hablar con Orbe” y empezá a escribir."],
-                ].map(([n, ic, t]) => (
-                  <div key={n} className="fob-wastep"><div className="fob-wanum">{n}</div><span className="e" style={{ display: "flex", color: COLORS.accent }}><Icon name={ic} size={18} /></span><span className="t">{t}</span></div>
-                ))}
-              </div>
-              <div className="fob-info"><span style={{ display: "flex" }}><Icon name="info" size={16} /></span><span>Registrá gastos, consultá tu saldo, o pedí el precio del dólar — con un solo mensaje.</span></div>
-            </>
-          )}
-          </div>
-
-          <div className="fob-btns">
-            {step > 0 && <button className="fob-btn-back" onClick={() => setStep(s => s - 1)}>← Atrás</button>}
-            <button className="fob-btn-next" onClick={() => (step === 2 ? onDone() : setStep(s => s + 1))}>
-              {step === 2 ? "¡Arranquemos!" : "Siguiente →"}
-            </button>
-          </div>
-        </div>
+    <div style={{ minHeight: "100vh", background: COLORS.accent, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center" }}>
+      <img src="assets/orbe-logo-wordmark.png" alt="Orbe" style={{ width: 180, marginBottom: 24 }} />
+      <div style={{ color: "#fff", fontSize: 24, fontWeight: 800, fontFamily: "'Nunito', sans-serif" }}>
+        ¡Bienvenido{displayName ? `, ${displayName}` : ""}!
       </div>
+      <div style={{ color: "#ffffffb0", fontSize: 14, marginTop: 10, maxWidth: 300, lineHeight: 1.5 }}>
+        Te mostramos rápido cómo cargar tu primer ingreso y un gasto categorizado — dos toques y ya sabés usar Orbe.
+      </div>
+      <button
+        onClick={onContinue}
+        style={{ marginTop: 32, background: COLORS.gold, color: COLORS.accent, border: "none", borderRadius: 999, padding: "14px 32px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}
+      >
+        Empezar →
+      </button>
+      <button
+        onClick={onSkip}
+        style={{ marginTop: 16, background: "none", border: "none", color: "#ffffff90", fontSize: 12, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "inherit" }}
+      >
+        Saltar
+      </button>
+    </div>
+  );
+}
 
-      {showSheet && (
-        <NuevaTransaccionSheet
-          data={data}
-          save={d => { save(d); if (step === 0) setIncomeSaved(true); else setExpenseSaved(true); }}
-          initialType={step === 0 ? "ingreso" : "gasto"}
-          onClose={() => setShowSheet(false)}
-        />
-      )}
+// Spotlight de un solo target sobre la app real (no una pantalla aparte): oscurece
+// todo menos el elemento marcado con data-tour=targetSelector, vía box-shadow con
+// spread gigante -- más simple y robusto que un clip-path con hueco recortado.
+// Sondea la posición en un intervalo corto porque el target puede moverse por un
+// cambio de layout (ej. isDesktop) que no dispara los listeners de resize/scroll.
+function TourSpotlight({ targetSelector, text, onSkip }) {
+  const [rect, setRect] = useState(null);
+  useEffect(() => {
+    function update() {
+      const els = Array.from(document.querySelectorAll(targetSelector));
+      const visible = els.find(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+      if (visible) setRect(visible.getBoundingClientRect());
+    }
+    update();
+    const id = setInterval(update, 250);
+    window.addEventListener("resize", update);
+    return () => { clearInterval(id); window.removeEventListener("resize", update); };
+  }, [targetSelector]);
+
+  if (!rect) return null;
+  const pad = 8;
+  const boxTop = rect.top - pad, boxLeft = rect.left - pad;
+  const boxW = rect.width + pad * 2, boxH = rect.height + pad * 2;
+  const placeBelow = boxTop < window.innerHeight - 200;
+  const tooltipWidth = 250;
+  const tooltipLeft = Math.min(Math.max(boxLeft + boxW / 2 - tooltipWidth / 2, 12), window.innerWidth - tooltipWidth - 12);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300 }}>
+      <div style={{
+        position: "fixed", top: boxTop, left: boxLeft, width: boxW, height: boxH,
+        borderRadius: 16, boxShadow: `0 0 0 9999px rgba(13,31,28,0.6), 0 0 0 3px ${COLORS.gold}`,
+        pointerEvents: "none", transition: "all 200ms ease",
+      }} />
+      <div style={{
+        position: "fixed",
+        top: placeBelow ? boxTop + boxH + 12 : undefined,
+        bottom: placeBelow ? undefined : window.innerHeight - boxTop + 12,
+        left: tooltipLeft, width: tooltipWidth,
+        background: COLORS.accent, color: "#fff", borderRadius: 14, padding: "12px 14px",
+        fontSize: 13, fontWeight: 600, lineHeight: 1.4, boxShadow: "0 8px 24px #00000040",
+      }}>
+        {text}
+        <button onClick={onSkip} style={{ display: "block", marginTop: 10, background: "none", border: "none", color: "#ffffffa0", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}>
+          Saltar guía
+        </button>
+      </div>
     </div>
   );
 }
@@ -1466,17 +1439,19 @@ function FinanzasApp() {
   const [waLoading, setWaLoading] = useState(false);
   const [waError, setWaError] = useState("");
   const { closing: waClosing, requestClose: closeWa } = useClosable(() => setWaModal(false));
-  // Decisión de mostrar el onboarding: se toma UNA sola vez, apenas carga `data`.
-  // Si no se "congelara" acá, el paso 1 del onboarding (cargar un ingreso real)
-  // haría que `yaActiva` pase a true a mitad de camino y el usuario se saltearía
-  // el paso 2 sin querer, apenas guarda el primer movimiento.
+  // Tour práctico post-login: null=todavía sin decidir/no aplica, "welcome"=
+  // pantalla de saludo, "income"/"expense"=guiando sobre la app real (spotlight
+  // al botón + real, luego el NuevaTransaccionSheet real con hint). Se decide
+  // UNA sola vez al cargar `data` y no se recalcula mientras el usuario está
+  // adentro: si se recalculara, cargar el ingreso real del paso "income" haría
+  // que la cuenta deje de estar "vacía" y el usuario se saltearía "expense".
   const [onboardingDecided, setOnboardingDecided] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [tourPhase, setTourPhase] = useState(null);
   useEffect(() => {
     if (data && !onboardingDecided) {
       const yaActivaAlInicio = data.transactions.length > 0 || (data.recurringIncomes || []).length > 0
         || data.savings.length > 0 || data.debts.length > 0;
-      setShowOnboarding(!data.onboardingDone && !yaActivaAlInicio);
+      if (!data.onboardingDone && !yaActivaAlInicio) setTourPhase("welcome");
       setOnboardingDecided(true);
     }
   }, [data, onboardingDecided]);
@@ -1705,24 +1680,24 @@ function FinanzasApp() {
 
   if (!user) return <LoginScreen onLogin={setUser} />;
 
+  const displayName = user?.user_metadata?.full_name || [user?.user_metadata?.nombre, user?.user_metadata?.apellido].filter(Boolean).join(" ") || (user?.email || "").split("@")[0];
+
   if (loading || !data || !onboardingDecided) return (
     <div style={{ minHeight: "100vh", background: COLORS.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: COLORS.textMuted, fontFamily: "'Nunito', sans-serif", fontSize: 18 }}>Cargando tus finanzas...</div>
     </div>
   );
 
-  // Primera vez en esta cuenta: mostrar el onboarding práctico. showOnboarding
-  // ya viene decidido (ver useEffect arriba) y no se recalcula mientras el
-  // usuario está adentro, aunque el paso 1 le agregue una transacción real.
-  if (showOnboarding) return (
-    <FinancialOnboardingScreen
-      data={data}
-      save={save}
-      onDone={() => { setShowOnboarding(false); save({ ...data, onboardingDone: true }); }}
+  // Primera vez en esta cuenta: pantalla de bienvenida antes de arrancar el tour
+  // práctico sobre la app real (ver tourPhase "income"/"expense" más abajo, y el
+  // spotlight + NuevaTransaccionSheet cerca del final del render).
+  if (tourPhase === "welcome") return (
+    <WelcomeScreen
+      displayName={displayName}
+      onContinue={() => setTourPhase("income")}
+      onSkip={() => { setTourPhase(null); save({ ...data, onboardingDone: true }); }}
     />
   );
-
-  const displayName = user?.user_metadata?.full_name || [user?.user_metadata?.nombre, user?.user_metadata?.apellido].filter(Boolean).join(" ") || (user?.email || "").split("@")[0];
 
   // (No se usa useMemo acá: estos derivados van DESPUÉS de varios early-return
   // de FinanzasApp — authLoading / !user / loading / onboarding — así que un
@@ -1745,6 +1720,20 @@ function FinanzasApp() {
   const totalSavings = data.savings.reduce((s, g) => s + (g.currency === "usd" ? (g.current || 0) * (dolarRate || g.arsRate || 0) : (g.current || 0)), 0);
 
   const openWa = () => { setWaError(""); setWaCode(""); setWaModal(true); };
+
+  // save() envuelto para el tour: al guardar el ingreso pasa al paso "expense";
+  // al guardar el gasto categorizado, cierra el tour y lo marca hecho.
+  const tourSave = (newData) => {
+    if (tourPhase === "income") { save(newData); setTourPhase("expense"); }
+    else if (tourPhase === "expense") {
+      save({ ...newData, onboardingDone: true });
+      setTourPhase(null);
+      showSnack("¡Listo! Así se carga y categoriza cada movimiento.");
+    } else {
+      save(newData);
+    }
+  };
+  const skipTour = () => { setTourPhase(null); save({ ...data, onboardingDone: true }); };
 
   // El "boceto" (columna balance + nav agrupada + panel a la derecha) es TODA la
   // vista de escritorio, en las 3 tabs. Mobile intacto (bottom nav + paneles a
@@ -1778,7 +1767,7 @@ function FinanzasApp() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {bocetoOn && (
-              <button className="topbar-nueva" onClick={() => setPanel("transacciones")}>
+              <button className="topbar-nueva" data-tour="add-btn" onClick={() => setPanel("transacciones")}>
                 <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Nueva carga
               </button>
             )}
@@ -1839,7 +1828,7 @@ function FinanzasApp() {
             <div style={{ fontSize: 9, fontWeight: mainTab === "perfil" ? 700 : 400 }}>Perfil</div>
           </button>
         </div>
-        <button className="mobile-fab" onClick={() => setPanel("transacciones")} style={{ position: "fixed", right: 20, bottom: "calc(28px + env(safe-area-inset-bottom))", width: 56, height: 56, borderRadius: "50%", background: COLORS.accent, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 16px ${COLORS.accent}60`, zIndex: 70 }}>
+        <button className="mobile-fab" data-tour="add-btn" onClick={() => setPanel("transacciones")} style={{ position: "fixed", right: 20, bottom: "calc(28px + env(safe-area-inset-bottom))", width: 56, height: 56, borderRadius: "50%", background: COLORS.accent, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 16px ${COLORS.accent}60`, zIndex: 70 }}>
           <span style={{ color: "#fff", fontSize: 26, fontWeight: 700, lineHeight: 1 }}>+</span>
         </button>
       </div>
@@ -1874,7 +1863,24 @@ function FinanzasApp() {
           lista completa del mes ya vive embebida en Inicio (con buscador y
           filtros), así que este atajo va directo al alta. ── */}
       {panel === "transacciones" && (
-        <NuevaTransaccionSheet data={data} save={save} onClose={() => setPanel(null)} />
+        <NuevaTransaccionSheet
+          data={data}
+          save={tourPhase === "income" || tourPhase === "expense" ? tourSave : save}
+          onClose={() => setPanel(null)}
+          initialType={tourPhase === "income" ? "ingreso" : tourPhase === "expense" ? "gasto" : "gasto"}
+          tourHint={tourPhase === "income" ? "amount" : tourPhase === "expense" ? "category" : null}
+          requireCategoryChoice={tourPhase === "expense"}
+        />
+      )}
+
+      {/* Spotlight del tour: solo antes de abrir el sheet -- una vez abierto, la
+          guía sigue adentro con tourHint/requireCategoryChoice (ver arriba). */}
+      {(tourPhase === "income" || tourPhase === "expense") && panel !== "transacciones" && (
+        <TourSpotlight
+          targetSelector='[data-tour="add-btn"]'
+          text={tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá."}
+          onSkip={skipTour}
+        />
       )}
 
       {/* ── MODAL: Conectar WhatsApp ── */}
@@ -2587,11 +2593,11 @@ function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
 // `editing` opcional: si viene una transacción, el sheet funciona en modo
 // edición (mismo formulario que el alta -- antes editar usaba otra UI, con
 // dropdowns planos, dentro de la lista de Inicio).
-function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialType = "gasto" }) {
+function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialType = "gasto", tourHint = null, requireCategoryChoice = false }) {
   const catNames = Object.keys(data.categories);
   const [form, setForm] = useState(editing
     ? { type: editing.type, amount: formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
-    : { type: initialType, amount: "", category: catNames[0] || "Otros", description: "", date: todayStr() });
+    : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
 
@@ -2605,6 +2611,7 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
 
   const add = () => {
     if (!form.amount || !parseAmountInput(form.amount)) return;
+    if (requireCategoryChoice && !form.category) return;
     const amount = parseAmountInput(form.amount);
     if (editing) {
       const transactions = data.transactions.map(t => t.id === editing.id ? { ...t, ...form, amount } : t);
@@ -2635,11 +2642,16 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
           value={form.type}
           onChange={v => setForm({ ...form, type: v })}
         />
-        <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder="0" />
+        <div data-tour="amount-field">
+          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourHint === "amount" ? "Ej: 500000" : "0"} />
+          {tourHint === "amount" && (
+            <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: -6 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000</div>
+          )}
+        </div>
         <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
         {/* Igual que la app real: las categorías se muestran siempre, sin
             filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
-        <div>
+        <div data-tour="category-picker">
           <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
@@ -2651,6 +2663,9 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
               }}>{catIcon(data, c)} {c}</button>
             ))}
           </div>
+          {requireCategoryChoice && !form.category && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Elegí una categoría para este gasto, por ejemplo "Alimentación"</div>
+          )}
           {showCatForm && (
             <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre de categoría" style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
@@ -2660,7 +2675,7 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
       </div>
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} />
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} saveDisabled={requireCategoryChoice && !form.category} />
     </BottomSheet>
   );
 }
