@@ -1874,15 +1874,23 @@ function FinanzasApp() {
         />
       )}
 
-      {/* Spotlight del tour: solo antes de abrir el sheet -- una vez abierto, la
-          guía sigue adentro con tourHint/requireCategoryChoice (ver arriba). */}
-      {(tourPhase === "income" || tourPhase === "expense") && panel !== "transacciones" && (
-        <TourSpotlight
-          targetSelector='[data-tour="add-btn"]'
-          text={tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá."}
-          onSkip={skipTour}
-        />
-      )}
+      {/* Spotlight del tour: antes de abrir el sheet apunta al botón +; una vez
+          abierto, SIGUE apuntando adentro (al campo de monto o al selector de
+          categoría) en vez de perderse -- si no, el usuario queda solo con el
+          panel apenas hace el primer click. */}
+      {(() => {
+        if (tourPhase !== "income" && tourPhase !== "expense") return null;
+        const sheetOpen = panel === "transacciones";
+        const targetSelector = sheetOpen
+          ? (tourPhase === "income" ? '[data-tour="amount-field"]' : '[data-tour="category-picker"]')
+          : '[data-tour="add-btn"]';
+        const text = sheetOpen
+          ? (tourPhase === "income"
+              ? "Ingresá el monto acá -- por ejemplo, tu sueldo mensual: $500.000. Después tocá Guardar."
+              : 'Elegí una categoría para este gasto -- por ejemplo "Alimentación". Después tocá Guardar.')
+          : (tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá.");
+        return <TourSpotlight targetSelector={targetSelector} text={text} onSkip={skipTour} />;
+      })()}
 
       {/* ── MODAL: Conectar WhatsApp ── */}
       {waModal && (
