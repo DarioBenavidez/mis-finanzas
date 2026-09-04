@@ -1874,23 +1874,19 @@ function FinanzasApp() {
         />
       )}
 
-      {/* Spotlight del tour: antes de abrir el sheet apunta al botón +; una vez
-          abierto, SIGUE apuntando adentro (al campo de monto o al selector de
-          categoría) en vez de perderse -- si no, el usuario queda solo con el
-          panel apenas hace el primer click. */}
-      {(() => {
-        if (tourPhase !== "income" && tourPhase !== "expense") return null;
-        const sheetOpen = panel === "transacciones";
-        const targetSelector = sheetOpen
-          ? (tourPhase === "income" ? '[data-tour="amount-field"]' : '[data-tour="category-picker"]')
-          : '[data-tour="add-btn"]';
-        const text = sheetOpen
-          ? (tourPhase === "income"
-              ? "Ingresá el monto acá -- por ejemplo, tu sueldo mensual: $500.000. Después tocá Guardar."
-              : 'Elegí una categoría para este gasto -- por ejemplo "Alimentación". Después tocá Guardar.')
-          : (tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá.");
-        return <TourSpotlight targetSelector={targetSelector} text={text} onSkip={skipTour} />;
-      })()}
+      {/* Spotlight del tour: SOLO antes de abrir el sheet, apuntando al botón +.
+          Una vez abierto el panel, la guía sigue con el borde dorado + hint de
+          texto sobre el campo mismo (ver data-tour="amount-field"/"category-picker"
+          en NuevaTransaccionSheet) -- NO con este overlay: un tooltip flotante con
+          pointer-events encima del formulario real terminaba tapando el botón
+          Guardar (o cualquier campo debajo) y bloqueaba el click sin avisar. */}
+      {(tourPhase === "income" || tourPhase === "expense") && panel !== "transacciones" && (
+        <TourSpotlight
+          targetSelector='[data-tour="add-btn"]'
+          text={tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá."}
+          onSkip={skipTour}
+        />
+      )}
 
       {/* ── MODAL: Conectar WhatsApp ── */}
       {waModal && (
@@ -2651,16 +2647,16 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
           value={form.type}
           onChange={v => setForm({ ...form, type: v })}
         />
-        <div data-tour="amount-field">
+        <div data-tour="amount-field" style={tourHint === "amount" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
           <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourHint === "amount" ? "Ej: 500000" : "0"} />
           {tourHint === "amount" && (
-            <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: -6 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000</div>
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000. Después tocá Guardar.</div>
           )}
         </div>
         <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
         {/* Igual que la app real: las categorías se muestran siempre, sin
             filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
-        <div data-tour="category-picker">
+        <div data-tour="category-picker" style={tourHint === "category" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
           <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
@@ -2673,7 +2669,7 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
             ))}
           </div>
           {requireCategoryChoice && !form.category && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Elegí una categoría para este gasto, por ejemplo "Alimentación"</div>
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Elegí una categoría para este gasto, por ejemplo "Alimentación". Después tocá Guardar.</div>
           )}
           {showCatForm && (
             <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
