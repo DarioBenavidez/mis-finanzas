@@ -1400,7 +1400,7 @@ function TourSpotlight({ targetSelector, text, onSkip }) {
   const tooltipLeft = Math.min(Math.max(boxLeft + boxW / 2 - tooltipWidth / 2, 12), window.innerWidth - tooltipWidth - 12);
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 300 }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, pointerEvents: "none" }}>
       <div style={{
         position: "fixed", top: boxTop, left: boxLeft, width: boxW, height: boxH,
         borderRadius: 16, boxShadow: `0 0 0 9999px rgba(13,31,28,0.6), 0 0 0 3px ${COLORS.gold}`,
@@ -1413,6 +1413,7 @@ function TourSpotlight({ targetSelector, text, onSkip }) {
         left: tooltipLeft, width: tooltipWidth,
         background: COLORS.accent, color: "#fff", borderRadius: 14, padding: "12px 14px",
         fontSize: 13, fontWeight: 600, lineHeight: 1.4, boxShadow: "0 8px 24px #00000040",
+        pointerEvents: "auto",
       }}>
         {text}
         <button onClick={onSkip} style={{ display: "block", marginTop: 10, background: "none", border: "none", color: "#ffffffa0", fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0, textDecoration: "underline", fontFamily: "inherit" }}>
