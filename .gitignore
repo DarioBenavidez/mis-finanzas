@@ -1,3 +1,11 @@
 # Caches y estado de runtime de la skill Impeccable (no versionar)
 .claude/skills/impeccable/scripts/.impeccable/
 .impeccable/live/
+
+# Preview local con Supabase mockeado (skill de review)
+.preview.html
+.preview-mobile.html
+
+# Build
+node_modules/
+.preview-built.html

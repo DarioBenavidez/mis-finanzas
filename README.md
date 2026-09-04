@@ -1,10 +1,19 @@
 # Orbe — versión web
 
-Página single-file (React vía CDN + Babel + Supabase, sin build step) que sirve como
-versión web/PWA de [Orbe](https://github.com/DarioBenavidez/orbe). Apunta al **mismo**
-proyecto de Supabase que usan la app móvil (Expo) y el bot de WhatsApp — tabla `finanzas`,
-columna jsonb `data` — así que todo lo que se guarda acá es visible al instante en la app
-y para el bot, y viceversa.
+Página HTML servida como un solo archivo (React vía CDN + Supabase), versión web/PWA de
+[Orbe](https://github.com/DarioBenavidez/orbe). Apunta al **mismo** proyecto de Supabase
+que usan la app móvil (Expo) y el bot de WhatsApp — tabla `finanzas`, columna jsonb
+`data` — así que todo lo que se guarda acá es visible al instante en la app y para el
+bot, y viceversa.
+
+## Desarrollo
+
+- **`index.src.html`** es la fuente que se edita (JSX en un `<script type="text/babel">`).
+- **`npm run build`** (esbuild) transpila el JSX y escribe **`index.html`** — sin
+  `@babel/standalone` en runtime. `npm run dev` buildea y levanta un server local.
+- En cada push que toque `index.src.html`, `.github/workflows/build.yml` regenera
+  `index.html` y lo commitea; GitHub Pages sirve la raíz del repo como antes.
+- No editar `index.html` a mano — se sobrescribe en cada build.
 
 ## Hecho (2026-07-30)
 

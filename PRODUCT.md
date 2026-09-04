@@ -47,7 +47,13 @@ diferenciador no es una superficie particular sino que ninguna de las tres es la
 
 ## Capabilities and Constraints
 
-- Sin build step: single-file `index.html` con React vía CDN + Babel + Supabase.
+- Build step mínimo: `index.src.html` es la fuente editable (React vía CDN +
+  `<script type="text/babel">` + Supabase). `npm run build` (esbuild) transpila el
+  JSX y escribe `index.html` sin `@babel/standalone` — que antes eran 2.9 MB
+  parseados en cada carga (~2-4 s de transpilado en Android medio). En CI lo hace
+  `.github/workflows/build.yml` en cada push que toque la fuente y commitea el
+  `index.html` de vuelta; GitHub Pages sigue sirviendo la raíz. Sigue siendo un
+  solo HTML servido, sin framework ni bundler ni `node_modules` en el deploy.
 - Navegación actual: bottom nav fijo (Inicio / Análisis / + / WhatsApp / Perfil) +
   paneles a pantalla completa con botón atrás para el resto (Ahorros, Deudas,
   Presupuesto, etc.) — patrón calcado de la app móvil, pensado explícitamente

@@ -1,13 +1,15 @@
 // Bump este número en cada deploy que cambie la lógica del SW o cuando haya que
 // invalidar caches viejos. `activate` borra todo lo que no sea este CACHE.
-const CACHE = "mis-finanzas-v4";
+// v5: index.html ya viene con el JSX transpilado (build.mjs). Se fue
+// @babel/standalone (2.9 MB) del precache. URLs pinneadas a la misma versión
+// que pide index.html para que el precache acierte.
+const CACHE = "mis-finanzas-v5";
 const ASSETS = [
   "/",
   "/index.html",
-  "https://unpkg.com/react@18/umd/react.production.min.js",
-  "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
-  "https://unpkg.com/@babel/standalone/babel.min.js",
-  "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js",
+  "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+  "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+  "https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js",
   "https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap"
 ];
 
