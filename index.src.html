@@ -284,52 +284,6 @@
       .auth-cardbody > * { width: 100%; max-width: 400px; margin-left: auto; margin-right: auto; }
     }
 
-    /* ── Onboarding financiero post-login. Usa el MISMO shell que LoginScreen
-       (.auth-page/.auth-visual/.auth-header/.auth-cardbody): en mobile es header
-       verde con el logo + card crema abajo; en desktop se parte izquierda
-       (verde + wordmark) / derecha (los pasos). El contenido de los pasos vive
-       sobre la card crema → tonos oscuros. 3 pasos explicativos, no pide datos.
-       Se muestra una sola vez por cuenta (data.onboardingDone en Supabase). ── */
-    .fob-cardbody { display: flex; flex-direction: column; }
-    .fob-topbar { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 6px; flex-shrink: 0; }
-    .fob-progress { display: flex; align-items: flex-start; justify-content: center; flex: 1; gap: 60px; }
-    .fob-pitem { display: flex; flex-direction: column; align-items: center; position: relative; }
-    .fob-plabel, .fob-pline { white-space: nowrap; }
-    .fob-pdot { width: 30px; height: 30px; border-radius: 15px; background: #F2EFE8; border: 1.5px solid #E8E4DC; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #6E665A; margin-bottom: 6px; }
-    .fob-pdot.active { border-color: #C9A84C; background: #C9A84C22; color: #005247; }
-    .fob-pdot.current { background: #C9A84C; border-color: #E8C97A; color: #005247; }
-    .fob-plabel { font-size: 10px; color: #6E665A; font-weight: 700; letter-spacing: 0.3px; }
-    .fob-plabel.active { color: #005247; }
-    .fob-pline { position: absolute; top: 15px; left: 30px; width: 60px; height: 1.5px; background: #E8E4DC; }
-    .fob-pline.active { background: #C9A84C; }
-    .fob-skip { background: none; border: none; color: #5F5E58; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px; flex-shrink: 0; }
-    .fob-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 18px 0 10px; }
-    .fob-icon { width: 84px; height: 84px; border-radius: 42px; background: #F2F9F6; border: 1px solid #E8E4DC; display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 18px; flex-shrink: 0; }
-    .fob-icon.wa { background: #25D3660F; border-color: #25D36633; }
-    .fob-title { font-size: 25px; font-weight: 800; color: #1A1A1A; letter-spacing: -0.6px; line-height: 1.2; margin-bottom: 10px; }
-    .fob-sub { font-size: 14px; color: #5F5E58; line-height: 1.55; margin-bottom: 20px; max-width: 380px; }
-    .fob-cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; margin-bottom: 4px; }
-    .fob-cat { aspect-ratio: 1; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .fob-cat .e { font-size: 20px; }
-    .fob-cat .n { font-size: 9px; color: #5F5E58; font-weight: 700; padding: 0 2px; }
-    .fob-info { display: flex; align-items: flex-start; gap: 10px; background: #F2EFE8; border: 1px solid #E8E4DC; border-radius: 14px; padding: 14px; width: 100%; text-align: left; font-size: 13px; color: #5A5A5A; line-height: 1.5; margin-top: 10px; }
-    .fob-info > span:first-child { font-size: 16px; line-height: 1.3; flex-shrink: 0; }
-    .fob-info b { color: #005247; font-weight: 800; }
-    .fob-wasteps { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-bottom: 4px; }
-    .fob-wastep { display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E8E4DC; border-radius: 14px; padding: 12px 14px; text-align: left; }
-    .fob-wanum { width: 24px; height: 24px; border-radius: 12px; background: #005247; color: #E8C97A; font-weight: 800; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .fob-wastep .e { font-size: 20px; flex-shrink: 0; }
-    .fob-wastep .t { font-size: 13px; color: #1A1A1A; line-height: 1.45; }
-    .fob-btns { display: flex; gap: 12px; padding-top: 12px; flex-shrink: 0; }
-    .fob-btn-back { flex: 1; padding: 16px; border-radius: 18px; border: 1.5px solid #005247; background: transparent; color: #005247; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
-    .fob-btn-next { flex: 2; padding: 16px; border-radius: 18px; border: 1px solid #C9A84C; background: #005247; color: #E8C97A; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 18px #00291F26; }
-    /* Desktop: en el panel derecho de alto completo, centrar el grupo (progress +
-       paso + botones) verticalmente como hace el form del login, en vez de clavar
-       el botón abajo de todo con un hueco enorme en el medio. */
-    @media (min-width: 1024px) {
-      .fob-body { flex: 0 1 auto; overflow-y: visible; padding-top: 8px; }
-      .fob-topbar { margin-bottom: 14px; }
-    }
   </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -1404,7 +1358,7 @@ function TourSpotlight({ targetSelector, text, onSkip }) {
       <div style={{
         position: "fixed", top: boxTop, left: boxLeft, width: boxW, height: boxH,
         borderRadius: 16, boxShadow: `0 0 0 9999px rgba(13,31,28,0.6), 0 0 0 3px ${COLORS.gold}`,
-        pointerEvents: "none", transition: "all 200ms ease",
+        pointerEvents: "none", transition: "top 200ms ease, left 200ms ease, width 200ms ease, height 200ms ease",
       }} />
       <div style={{
         position: "fixed",
@@ -1867,10 +1821,10 @@ function FinanzasApp() {
         <NuevaTransaccionSheet
           data={data}
           save={tourPhase === "income" || tourPhase === "expense" ? tourSave : save}
+          savePlain={save}
           onClose={() => setPanel(null)}
           initialType={tourPhase === "income" ? "ingreso" : tourPhase === "expense" ? "gasto" : "gasto"}
-          tourHint={tourPhase === "income" ? "amount" : tourPhase === "expense" ? "category" : null}
-          requireCategoryChoice={tourPhase === "expense"}
+          tourPhase={tourPhase}
         />
       )}
 
@@ -1883,7 +1837,7 @@ function FinanzasApp() {
       {(tourPhase === "income" || tourPhase === "expense") && panel !== "transacciones" && (
         <TourSpotlight
           targetSelector='[data-tour="add-btn"]'
-          text={tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso." : "Ahora cargá un gasto tocando acá."}
+          text={tourPhase === "income" ? "Tocá acá para cargar tu primer ingreso y categorizarlo." : "Ahora cargá un gasto tocando acá."}
           onSkip={skipTour}
         />
       )}
@@ -2598,12 +2552,27 @@ function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
 // `editing` opcional: si viene una transacción, el sheet funciona en modo
 // edición (mismo formulario que el alta -- antes editar usaba otra UI, con
 // dropdowns planos, dentro de la lista de Inicio).
-function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialType = "gasto", tourHint = null, requireCategoryChoice = false }) {
+// savePlain: en el tour, `save` es tourSave -- avanza de fase ("income" ->
+// "expense", o cierra el tour) cada vez que se lo llama. addCategoryQuick lo
+// usaba sin querer para persistir la categoría nueva, así que crear "Sueldo
+// mensual" en el paso de ingreso saltaba directo a "expense" antes de que el
+// usuario cargara el monto o tocara Guardar. savePlain es SIEMPRE el save real
+// (no el que avanza el tour); por defecto es `save`, así los otros dos usos de
+// este componente (editar una transacción, fuera del tour) no cambian.
+function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing = null, initialType = "gasto", tourPhase = null }) {
   const catNames = Object.keys(data.categories);
+  // Durante el tour (ingreso o gasto) la categoría es obligatoria -- no solo
+  // el gasto: para un ingreso ninguna categoría por defecto tiene sentido
+  // (Vivienda, Alimentación...son todas de gasto), así que dejar que caiga
+  // en catNames[0] en silencio enseñaría mal. Se le pide crear una propia.
+  const requireCategoryChoice = tourPhase === "income" || tourPhase === "expense";
   const [form, setForm] = useState(editing
     ? { type: editing.type, amount: formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
     : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
-  const [showCatForm, setShowCatForm] = useState(false);
+  // Para el paso de ingreso arranca con el form de "+ Nueva" ya abierto: como
+  // ninguna categoría existente sirve para un sueldo, ahorra el paso extra de
+  // tocar "+ Nueva" antes de ver el campo con el ejemplo.
+  const [showCatForm, setShowCatForm] = useState(tourPhase === "income");
   const [newCatName, setNewCatName] = useState("");
 
   // gasto/ingreso siempre; si se está editando una tx de un tipo que la web no
@@ -2633,7 +2602,7 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
     if (!name || data.categories[name]) return;
     const categories = { ...data.categories, [name]: "📦" };
     const budgets = [...data.budgets, { cat: name, limit: 0 }];
-    save({ ...data, categories, budgets });
+    savePlain({ ...data, categories, budgets });
     setForm(f => ({ ...f, category: name }));
     setNewCatName("");
     setShowCatForm(false);
@@ -2647,16 +2616,23 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
           value={form.type}
           onChange={v => setForm({ ...form, type: v })}
         />
-        <div data-tour="amount-field" style={tourHint === "amount" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
-          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourHint === "amount" ? "Ej: 500000" : "0"} />
-          {tourHint === "amount" && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000. Después tocá Guardar.</div>
+        <div data-tour="amount-field" style={tourPhase === "income" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
+          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourPhase === "income" ? "Ej: 500000" : "0"} />
+          {tourPhase === "income" && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000.</div>
+          )}
+          {/* Monto ya cargado pero falta la categoría (gasto): sin este aviso
+              el usuario no tiene ninguna pista de que falta algo más una vez
+              que ya escribió el monto -- toda la guía estaba solo abajo, en
+              la categoría, y podía pasarla de largo. */}
+          {tourPhase === "expense" && parseAmountInput(form.amount) > 0 && !form.category && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>👇 Ahora elegí una categoría abajo.</div>
           )}
         </div>
         <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
         {/* Igual que la app real: las categorías se muestran siempre, sin
             filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
-        <div data-tour="category-picker" style={tourHint === "category" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
+        <div data-tour="category-picker" style={requireCategoryChoice ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
           <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
@@ -2668,19 +2644,34 @@ function NuevaTransaccionSheet({ data, save, onClose, editing = null, initialTyp
               }}>{catIcon(data, c)} {c}</button>
             ))}
           </div>
-          {requireCategoryChoice && !form.category && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Elegí una categoría para este gasto, por ejemplo "Alimentación". Después tocá Guardar.</div>
+          {/* Ingreso: ninguna categoría default sirve para un sueldo -- se
+              sugiere crear una en vez de dejar que el usuario adivine. */}
+          {tourPhase === "income" && !form.category && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Ninguna de estas categorías es para un ingreso. Creá una nueva acá abajo, por ejemplo "Sueldo mensual" o "Sueldo Trabajo".</div>
+          )}
+          {tourPhase === "expense" && !form.category && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Podés elegir alguna de estas categorías, por ejemplo "Alimentación", o crear una nueva tocando "+ Nueva".</div>
+          )}
+          {requireCategoryChoice && form.category && !parseAmountInput(form.amount) && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Ahora escribí el monto arriba, en "Monto".</div>
+          )}
+          {requireCategoryChoice && form.category && parseAmountInput(form.amount) > 0 && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👍 Listo, tocá Guardar.</div>
           )}
           {showCatForm && (
             <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="Nombre de categoría" style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
+              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder={tourPhase === "income" ? 'Ej: "Sueldo mensual"' : "Nombre de categoría"} style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
               <Button onClick={addCategoryQuick} variant="gold" style={{ flexShrink: 0 }}>Agregar</Button>
             </div>
           )}
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
       </div>
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} saveDisabled={requireCategoryChoice && !form.category} />
+      {/* Antes solo miraba la categoría: sin monto cargado, Guardar quedaba
+          habilitado y tocarlo no hacía nada (add() corta en silencio si
+          !form.amount). Ahora el botón refleja de verdad si hay algo para
+          guardar -- vale para el tour y para el alta normal. */}
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} saveDisabled={!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category)} />
     </BottomSheet>
   );
 }
