@@ -1065,7 +1065,11 @@ function GoogleIcon({ size = 18 }) {
 }
 
 function LoginScreen({ onLogin }) {
-  const [mode, setMode] = useState("login"); // "login" | "register" | "reset" | "reset-confirm"
+  // La landing (landing.html) enlaza "Crear cuenta" a /?registro para abrir
+  // directo el formulario de alta; "Ingresar" va a / y cae en "login".
+  const [mode, setMode] = useState(() =>
+    /[?&]registro\b/.test(window.location.search) ? "register" : "login"
+  ); // "login" | "register" | "reset" | "reset-confirm"
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");

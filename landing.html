@@ -4,155 +4,214 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orbe — Tu asistente financiero personal</title>
-  <meta name="description" content="Orbe es un asistente de finanzas personales: registrá gastos e ingresos, mirá tu balance del mes, seguí tus metas de ahorro y controlá tus deudas desde la web o por WhatsApp." />
+  <meta name="description" content="Orbe es un asistente de finanzas personales: registrá gastos e ingresos, mirá tu balance del mes, seguí tus metas de ahorro y controlá tus deudas desde la app, la web o por WhatsApp." />
   <link rel="icon" type="image/png" href="assets/orbe-icon-64.png" />
   <meta name="theme-color" content="#005247" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: #E9F6F0; }
-    body {
-      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      color: #223330;
-      line-height: 1.6;
+    :root{
+      --bg:#E9F6F0; --pill:#DCEEE3; --surface:#FFFFFF; --border:#C8DDD6;
+      --accent:#005247; --accent2:#00332c; --gold:#C9A84C; --goldL:#E8C97A; --goldText:#8A6A16;
+      --green:#8CE6B4; --red:#F8A9A9; --text:#0D1F1C; --muted:#4A6B62; --dim:#4F7061;
     }
-    .hero {
-      background: linear-gradient(135deg, #005247 0%, #002f28 100%);
-      color: #fff;
-      text-align: center;
-      padding: 64px 20px 56px;
+    *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+    html,body{ background:var(--bg); }
+    body{ font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:var(--text); line-height:1.55; }
+    a{ color:inherit; }
+    img{ max-width:100%; }
+
+    /* NAV */
+    .nav{ max-width:1180px; margin:0 auto; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .nav .brand{ font-family:"Nunito"; font-weight:800; color:var(--accent); font-size:22px; letter-spacing:-.02em; text-decoration:none; }
+    .nav .links{ display:flex; gap:22px; font-size:14px; font-weight:600; color:var(--muted); }
+    .nav .links a{ text-decoration:none; }
+    .nav .links a:hover{ color:var(--accent); }
+    .nav .cta{ background:var(--accent); color:var(--goldL); border:1px solid var(--gold); border-radius:999px; padding:9px 20px; font-family:"Nunito"; font-weight:800; font-size:13px; text-decoration:none; white-space:nowrap; }
+
+    /* HERO */
+    .hero{ max-width:1180px; margin:0 auto; padding:36px 24px 64px; display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center; }
+    .hero h1{ font-family:"Nunito"; font-weight:800; font-size:clamp(30px,5vw,44px); line-height:1.1; letter-spacing:-.03em; }
+    .hero h1 .u{ color:var(--goldText); }
+    .hero p.lead{ font-size:16px; color:var(--muted); margin-top:16px; max-width:460px; }
+    .hero .row{ display:flex; gap:12px; margin-top:26px; flex-wrap:wrap; }
+    .btn-main{ background:var(--accent); color:var(--goldL); border:1px solid var(--gold); border-radius:999px; padding:14px 28px; font-family:"Nunito"; font-weight:800; font-size:15px; text-decoration:none; box-shadow:0 8px 22px -8px rgba(0,41,31,.35); }
+    .btn-ghost{ background:transparent; color:var(--accent); border:1.5px solid var(--accent); border-radius:999px; padding:14px 24px; font-family:"Nunito"; font-weight:800; font-size:15px; text-decoration:none; }
+    .hero .trust{ margin-top:22px; font-size:12.5px; color:var(--dim); }
+
+    /* device / sample card */
+    .device{ background:linear-gradient(155deg,var(--accent) 0%,var(--accent2) 100%); border-radius:28px; padding:26px; box-shadow:0 30px 70px -24px rgba(13,31,28,.5); }
+    .device .k{ font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#ffffffbf; }
+    .device .v{ font-family:"Nunito"; font-weight:800; font-size:40px; color:#fff; letter-spacing:-.03em; margin-top:4px; font-variant-numeric:tabular-nums; }
+    .device .split{ display:flex; gap:16px; margin-top:12px; font-size:12px; color:#ffffffdd; flex-wrap:wrap; }
+    .device .split span{ display:flex; gap:6px; align-items:center; }
+    .device .split .d{ width:7px; height:7px; border-radius:50%; }
+    .device .mini{ margin-top:18px; background:#ffffff14; border-radius:16px; padding:6px 14px; }
+    .device .mini .mr{ display:flex; justify-content:space-between; font-size:12.5px; color:#fff; padding:9px 0; border-bottom:1px solid #ffffff1f; }
+    .device .mini .mr:last-child{ border:none; }
+    .device .mini .mr .g{ color:var(--green); }
+    .device .mini .mr .r{ color:var(--red); }
+    .device .cap{ margin-top:12px; font-size:10.5px; color:#ffffff8c; text-align:right; }
+
+    /* SURFACES */
+    .surfaces{ background:#fff; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .surfaces .inner{ max-width:1180px; margin:0 auto; padding:44px 24px; text-align:center; }
+    .surfaces h2{ font-family:"Nunito"; font-weight:800; font-size:24px; letter-spacing:-.02em; }
+    .surfaces p.sub{ color:var(--muted); font-size:14px; margin-top:8px; }
+    .surfaces .three{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:28px; }
+    .surfaces .s{ border:1px solid var(--border); border-radius:16px; padding:22px; text-align:left; }
+    .surfaces .s .ic{ width:34px; height:34px; border-radius:10px; background:var(--pill); margin-bottom:12px; display:flex; align-items:center; justify-content:center; }
+    .surfaces .s .ic svg{ width:19px; height:19px; stroke:var(--accent); }
+    .surfaces .s b{ font-family:"Nunito"; font-size:15px; }
+    .surfaces .s p{ font-size:13px; margin-top:6px; color:var(--muted); }
+
+    /* HOW */
+    .how{ max-width:1180px; margin:0 auto; padding:52px 24px 8px; }
+    .how h2{ font-family:"Nunito"; font-weight:800; font-size:24px; text-align:center; letter-spacing:-.02em; }
+    .how .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+    .how .step{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px 20px; }
+    .how .step .n{ font-family:"Nunito"; font-weight:800; font-size:14px; color:#fff; background:var(--accent); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:12px; }
+    .how .step h3{ font-family:"Nunito"; font-weight:700; color:var(--accent); font-size:15px; margin-bottom:6px; }
+    .how .step p{ font-size:13.5px; color:var(--muted); }
+
+    /* FEATURES */
+    .feat{ max-width:1180px; margin:0 auto; padding:44px 24px 52px; }
+    .feat h2{ font-family:"Nunito"; font-weight:800; font-size:24px; text-align:center; letter-spacing:-.02em; }
+    .feat .g{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:28px; }
+    .feat .c{ background:#fff; border:1px solid var(--border); border-radius:16px; padding:22px 20px; }
+    .feat .c h3{ font-family:"Nunito"; font-weight:700; color:var(--accent); font-size:16px; margin-bottom:6px; }
+    .feat .c p{ font-size:13.5px; color:var(--muted); }
+
+    /* CTA strip */
+    .strip{ background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%); color:#fff; text-align:center; padding:48px 24px; }
+    .strip h2{ font-family:"Nunito"; font-weight:800; font-size:26px; letter-spacing:-.02em; }
+    .strip p{ color:#dcebe6; margin-top:8px; font-size:14px; }
+    .strip a{ display:inline-block; margin-top:22px; background:var(--gold); color:#1a2a27; border-radius:999px; padding:14px 32px; font-family:"Nunito"; font-weight:800; text-decoration:none; }
+
+    footer{ text-align:center; padding:28px 24px 44px; font-size:12.5px; color:var(--dim); }
+    footer .flinks a{ color:var(--accent); margin:0 8px; text-decoration:none; }
+    footer .note{ max-width:620px; margin:14px auto 0; line-height:1.5; }
+    footer .note a{ color:var(--accent); }
+
+    @media (max-width:900px){
+      .hero{ grid-template-columns:1fr; gap:32px; padding-bottom:48px; }
+      .surfaces .three,.how .steps,.feat .g{ grid-template-columns:1fr; }
+      .nav .links{ display:none; }
     }
-    .hero img { width: 168px; height: auto; }
-    .hero .tag {
-      font-family: "Nunito", sans-serif;
-      font-weight: 700;
-      font-size: 1.15rem;
-      color: #E8C97A;
-      margin-top: 14px;
-    }
-    .hero p.lead {
-      max-width: 560px;
-      margin: 18px auto 0;
-      color: #dcebe6;
-      font-size: 1.02rem;
-    }
-    .cta {
-      display: inline-block;
-      margin-top: 28px;
-      background: #C9A84C;
-      color: #1a2a27;
-      font-family: "Nunito", sans-serif;
-      font-weight: 800;
-      text-decoration: none;
-      padding: 13px 30px;
-      border-radius: 999px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.25);
-    }
-    main { max-width: 760px; margin: 0 auto; padding: 48px 20px 24px; }
-    h2 {
-      font-family: "Nunito", sans-serif;
-      font-weight: 800;
-      color: #005247;
-      font-size: 1.4rem;
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 22px 20px;
-      box-shadow: 0 2px 14px rgba(0, 82, 71, .08);
-    }
-    .card h3 {
-      font-family: "Nunito", sans-serif;
-      font-weight: 700;
-      color: #005247;
-      font-size: 1.05rem;
-      margin-bottom: 6px;
-    }
-    .card p { font-size: .95rem; color: #3c4d49; }
-    .how {
-      margin-top: 40px;
-      background: #fff;
-      border-radius: 16px;
-      padding: 26px 24px;
-      box-shadow: 0 2px 14px rgba(0, 82, 71, .08);
-    }
-    .how p { margin: 8px 0; }
-    .how strong { color: #1a2a27; }
-    footer {
-      text-align: center;
-      padding: 32px 20px 48px;
-      font-size: .85rem;
-      color: #5b716c;
-    }
-    footer a { color: #005247; margin: 0 8px; }
   </style>
 </head>
 <body>
+  <nav class="nav">
+    <a class="brand" href="/">orbe</a>
+    <div class="links">
+      <a href="#que-es">Qué es</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#whatsapp">WhatsApp</a>
+    </div>
+    <a class="cta" href="/">Ingresar</a>
+  </nav>
+
   <header class="hero">
-    <img src="assets/orbe-logo-wordmark.png" alt="Orbe" width="958" height="372" />
-    <h1 class="tag">Tu asistente financiero personal</h1>
-    <p class="lead">
-      Orbe te ayuda a entender a dónde va tu plata: registrás lo que gastás y cobrás, y en
-      cualquier momento sabés cómo venís el mes. Sin planillas, sin vueltas.
-    </p>
-    <a class="cta" href="https://orbefinanzas.online/">Ingresar / Crear cuenta</a>
+    <div>
+      <h1>Sabé a dónde va tu plata,<br><span class="u">sin planillas.</span></h1>
+      <p class="lead">Registrás lo que gastás y cobrás en segundos, y en cualquier momento sabés cómo venís el mes: balance, presupuesto, ahorros y deudas en un solo lugar.</p>
+      <div class="row">
+        <a class="btn-main" href="/?registro">Crear cuenta gratis</a>
+        <a class="btn-ghost" href="#como-funciona">Ver cómo funciona</a>
+      </div>
+      <div class="trust">Mismo dato en la app, la web y por WhatsApp — se sincroniza solo.</div>
+    </div>
+    <div class="device" aria-hidden="true">
+      <div class="k">Balance · ejemplo</div>
+      <div class="v">$632.000</div>
+      <div class="split">
+        <span><span class="d" style="background:#4ADE80"></span> Ingresos $650.000</span>
+        <span><span class="d" style="background:#F87171"></span> Gastos $18.000</span>
+      </div>
+      <div class="mini">
+        <div class="mr"><span>Sueldo del mes</span><span class="g">+$650.000</span></div>
+        <div class="mr"><span>Supermercado</span><span class="r">−$78.500</span></div>
+        <div class="mr"><span>Nafta</span><span class="r">−$63.000</span></div>
+      </div>
+      <div class="cap">Pantalla de ejemplo</div>
+    </div>
   </header>
 
-  <main>
-    <h2>Qué podés hacer con Orbe</h2>
-    <div class="features">
-      <div class="card">
-        <h3>Registrar gastos e ingresos</h3>
-        <p>Anotá cada movimiento en segundos y clasificalo por categoría.</p>
-      </div>
-      <div class="card">
-        <h3>Ver tu balance del mes</h3>
-        <p>Cuánto entró, cuánto salió y cuánto te queda disponible, siempre a mano.</p>
-      </div>
-      <div class="card">
-        <h3>Metas de ahorro</h3>
-        <p>Definí un objetivo y seguí cuánto te falta para llegar.</p>
-      </div>
-      <div class="card">
-        <h3>Control de deudas</h3>
-        <p>Cargá tus deudas y cuotas y mirá cuándo terminás de pagarlas.</p>
-      </div>
-      <div class="card">
-        <h3>Presupuestos por categoría</h3>
-        <p>Poné un límite mensual y Orbe te avisa cuando te estás pasando.</p>
-      </div>
-      <div class="card">
-        <h3>Asistente por WhatsApp</h3>
-        <p>Registrá gastos y consultá tu situación escribiéndole a Orbe por chat.</p>
+  <section class="surfaces" id="que-es">
+    <div class="inner">
+      <h2>Una sola cuenta, tres formas de usarla</h2>
+      <p class="sub">Lo que cargás en cualquiera aparece al instante en las otras dos.</p>
+      <div class="three">
+        <div class="s">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg></div>
+          <b>App móvil</b>
+          <p>El día a día en el teléfono, con tu balance siempre a mano.</p>
+        </div>
+        <div class="s">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+          <b>Web</b>
+          <p>La vista completa en la compu: presupuesto, proyección, calendario.</p>
+        </div>
+        <div class="s" id="whatsapp">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.5-4A8 8 0 1 1 9 18.5L4 20Z"/></svg></div>
+          <b>WhatsApp</b>
+          <p>“Gasté $12.000 en el super” y listo. Sin abrir nada.</p>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="how">
-      <h2 style="text-align:left;font-size:1.15rem;margin-bottom:10px;">Cómo funciona</h2>
-      <p><strong>1.</strong> Creás tu cuenta con tu email o con Google.</p>
-      <p><strong>2.</strong> Cargás tus ingresos y vas anotando los gastos del día a día.</p>
-      <p><strong>3.</strong> Orbe te muestra el panorama: balance, categorías, ahorro y deudas, todo en un lugar.</p>
-      <p style="margin-top:14px;">
-        Tus datos son privados y solo vos podés verlos. Podés pedir la eliminación de tu
-        cuenta cuando quieras escribiendo a
-        <a href="mailto:darappdeploying@gmail.com" style="color:#005247;">darappdeploying@gmail.com</a>.
-      </p>
+  <section class="how" id="como-funciona">
+    <h2>Cómo funciona</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="n">1</div>
+        <h3>Creás tu cuenta</h3>
+        <p>Con tu email o con Google. Nada de tarjeta.</p>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <h3>Cargás lo que entra y sale</h3>
+        <p>Anotás ingresos y gastos del día a día, por la app, la web o WhatsApp.</p>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <h3>Ves el panorama</h3>
+        <p>Balance, categorías, ahorro y deudas — todo en un lugar y actualizado.</p>
+      </div>
     </div>
-  </main>
+  </section>
+
+  <section class="feat">
+    <h2>Todo lo que necesitás para ordenarte</h2>
+    <div class="g">
+      <div class="c"><h3>Gastos e ingresos</h3><p>Anotá cada movimiento en segundos y clasificalo por categoría.</p></div>
+      <div class="c"><h3>Presupuesto por categoría</h3><p>Poné un límite mensual y Orbe te avisa cuando te estás pasando.</p></div>
+      <div class="c"><h3>Metas de ahorro</h3><p>Definí un objetivo y seguí cuánto te falta para llegar.</p></div>
+      <div class="c"><h3>Deudas y cuotas</h3><p>Cargá tus deudas y mirá cuándo terminás de pagarlas.</p></div>
+      <div class="c"><h3>Proyección de saldo</h3><p>Mirá cómo queda tu mes con los gastos fijos ya descontados.</p></div>
+      <div class="c"><h3>Calendario y turnos</h3><p>Vencimientos y recordatorios, con aviso por WhatsApp.</p></div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <h2>Empezá hoy, es gratis</h2>
+    <p>Creás la cuenta con tu email o con Google. Nada de tarjeta.</p>
+    <a href="/?registro">Crear cuenta</a>
+  </section>
 
   <footer>
-    <a href="https://orbefinanzas.online/">Ingresar</a>
-    <a href="privacy.html">Política de Privacidad</a>
-    <a href="terms.html">Términos del Servicio</a>
+    <div class="flinks">
+      <a href="/">Ingresar</a>
+      <a href="privacy.html">Política de Privacidad</a>
+      <a href="terms.html">Términos del Servicio</a>
+    </div>
+    <p class="note">
+      Tus datos son privados y solo vos podés verlos. Podés pedir la eliminación de tu
+      cuenta cuando quieras escribiendo a
+      <a href="mailto:darappdeploying@gmail.com">darappdeploying@gmail.com</a>.
+    </p>
   </footer>
 </body>
 </html>
