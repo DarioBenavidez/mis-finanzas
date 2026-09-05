@@ -409,6 +409,7 @@ const DEFAULT_CATEGORIES = {
 const ICON_OPTIONS = ["🏠","🛒","🚗","💊","🎬","👗","📚","💡","💳","📦","💰","🎁","🐾","✈️","🎉","🍿","☕","🔧","🏋️","📱"];
 
 const MONTH_NAMES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MONTH_FULL = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const currentMonth = new Date().getMonth();
 const currentYear = new Date().getFullYear();
 const todayStr = () => new Date().toISOString().split("T")[0];
@@ -831,12 +832,16 @@ const PLAN_PANELS = [
   { key: "gastosfijos", label: "Gastos Fijos", icon: "repeat" },
   { key: "presupuesto", label: "Presupuesto", icon: "tag" },
 ];
-const PANEL_LABELS = { ...Object.fromEntries(PLAN_PANELS.map(p => [p.key, p.label])), transacciones: "Nueva transacción" };
+const PANEL_LABELS = { ...Object.fromEntries(PLAN_PANELS.map(p => [p.key, p.label])), movimientos: "Movimientos", transacciones: "Nueva transacción" };
 
 // Tokens de navegación reflejados en el hash de la URL (#/inicio, #/deudas…).
 // Los consumen los dos useEffect de sincronización hash<->estado en FinanzasApp.
 const NAV_TABS = ["inicio", "analisis", "perfil"];
-const NAV_PANELS = [...PLAN_PANELS.map(p => p.key), "transacciones"];
+// "movimientos" no es un PLAN_PANEL (no aparece en la grilla de accesos de la
+// home mobile: ahí la lista de transacciones va embebida en InicioTab), pero sí
+// es una sección navegable del boceto de escritorio con su propio hash
+// (#/movimientos), separada ahora del panorama de "Inicio".
+const NAV_PANELS = [...PLAN_PANELS.map(p => p.key), "movimientos", "transacciones"];
 
 // ---- IDENTIDAD VISUAL DE AUTH (login/registro/reset) ----
 // Paleta y radios calcados 1:1 de la app real (LoginScreen.jsx, Expo/React
@@ -1702,9 +1707,9 @@ function FinanzasApp() {
   // sección (es el sheet de alta rápida, se muestra encima).
   const deskSection = (panel && panel !== "transacciones")
     ? panel
-    : (mainTab === "inicio" ? "movimientos" : mainTab);
+    : (mainTab === "inicio" ? "inicio" : mainTab);
   const goToSection = (key) => {
-    if (key === "movimientos") { setMainTab("inicio"); setPanel(null); }
+    if (key === "inicio") { setMainTab("inicio"); setPanel(null); }
     else if (key === "analisis" || key === "perfil") { setMainTab(key); setPanel(null); }
     else { setPanel(key); }
   };
@@ -1998,6 +2003,7 @@ const BOCETO_GROUPS = [
   {
     label: "Dinero",
     items: [
+      { key: "inicio", label: "Inicio", icon: "home" },
       { key: "movimientos", label: "Movimientos", icon: "list" },
       { key: "ahorros", label: "Ahorros", icon: "coins" },
       { key: "deudas", label: "Deudas", icon: "card" },
@@ -2039,6 +2045,7 @@ function BocetoLayout({ section, onNavigate, data, save, dolarRate, expByCat, mo
 
   const panel = (() => {
     switch (section) {
+      case "inicio": return <InicioPanorama data={data} dolarRate={dolarRate} expByCat={expByCat} onNavigate={onNavigate} />;
       case "movimientos": return <MovimientosList data={data} save={save} monthTxs={monthTxs} showSnack={showSnack} />;
       case "ahorros": return <Ahorros data={data} save={save} dolarRate={dolarRate} />;
       case "deudas": return <Deudas data={data} save={save} dolarRate={dolarRate} />;
@@ -2127,6 +2134,145 @@ function BocetoLayout({ section, onNavigate, data, save, dolarRate, expByCat, mo
           {panel}
         </ErrorBoundary>
       </div>
+    </div>
+  );
+}
+
+// ---- INICIO (panorama de escritorio) ----
+// Panel derecho del boceto cuando la sección es "inicio": un resumen de solo
+// lectura del mes seleccionado. Todo sale de `data` real, con los mismos
+// criterios de filtrado por mes que AnalisisTab/InicioTab; cada bloque enlaza a
+// su sección para editar. El alta rápida no se duplica acá (vive en "Nueva
+// carga" del topbar). En mobile la home sigue siendo InicioTab: este componente
+// no se monta abajo de 1024px.
+function InicioPanorama({ data, dolarRate, expByCat, onNavigate }) {
+  const isCurrentMonth = data.selectedMonth === currentMonth && data.selectedYear === currentYear;
+  const todayDay = new Date().getDate();
+  const today = todayStr();
+
+  // Presupuesto: "Gastado" = solo gastos (no ahorro_meta), igual que InicioTab.
+  const spent = Object.values(expByCat).reduce((s, v) => s + v, 0);
+  const budgets = data.budgets.filter(b => b.limit > 0)
+    .map(b => ({ ...b, spent: expByCat[b.cat] || 0 }))
+    .sort((a, b) => (b.spent / b.limit) - (a.spent / a.limit));
+  const totalBudget = budgets.reduce((s, b) => s + b.limit, 0);
+
+  // Ahorros / Deudas: mismos cálculos que FinanzasApp (soporte USD con cotización).
+  const totalSavings = data.savings.reduce((s, g) => s + (g.currency === "usd" ? (g.current || 0) * (dolarRate || g.arsRate || 0) : (g.current || 0)), 0);
+  const savingsGoals = data.savings.length;
+  const savingsDone = data.savings.filter(g => g.target > 0 && (g.current || 0) >= g.target).length;
+  const totalDebt = data.debts.reduce((s, d) => s + (d.currency === "usd" ? (d.remainingUSD || 0) * (dolarRate || d.arsRate || 0) : d.remaining), 0);
+  const debtMonthly = data.debts.reduce((s, d) => s + (d.installment || 0), 0);
+
+  // Próximo a vencer: turnos futuros + vencimientos del mes en curso (a 14 días),
+  // fusionados y ordenados por fecha. Los eventos traen solo `day` (del mes
+  // seleccionado); se les arma una fecha para poder ordenar contra los turnos.
+  const upTurnos = (data.turnos || [])
+    .filter(t => t.date >= today && !t.cancelled)
+    .map(t => ({ id: "t" + t.id, color: COLORS.accent, label: t.description, when: t.date + (t.time ? ` · ${t.time}` : ""), ts: new Date(t.date).getTime() }));
+  const upVenc = isCurrentMonth ? (data.events || [])
+    .filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 14)
+    .map(e => ({ id: "e" + e.id, color: eventType(e.type).color, label: `${eventType(e.type).label} · ${e.title}`, when: e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay} día${e.day - todayDay === 1 ? "" : "s"}`, ts: new Date(data.selectedYear, data.selectedMonth, e.day).getTime() }))
+    : [];
+  const upcoming = [...upTurnos, ...upVenc].sort((a, b) => a.ts - b.ts).slice(0, 6);
+
+  // Últimos movimientos: 3 más recientes por fecha real (no por orden de inserción).
+  const lastTxs = [...data.transactions].reverse().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3);
+
+  const cardH = { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 };
+  const h2 = { fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 15 };
+  const link = (to, label) => (
+    <button onClick={() => onNavigate(to)} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{label} →</button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <h1 style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 22, letterSpacing: "-0.02em" }}>
+        {MONTH_FULL[data.selectedMonth]} de un vistazo
+      </h1>
+
+      <Card>
+        <div style={cardH}>
+          <h2 style={h2}>Presupuesto del mes</h2>
+          {link("presupuesto", "Ir a Presupuesto")}
+        </div>
+        {totalBudget > 0 ? (
+          <React.Fragment>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: COLORS.textMuted, marginBottom: 8 }}>
+              <span>Gastado</span>
+              <span><b style={{ color: COLORS.text }}>{formatFull(spent)}</b> de {formatFull(totalBudget)}</span>
+            </div>
+            <ProgressBar value={spent} max={totalBudget} height={8} />
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+              {budgets.map(b => (
+                <div key={b.cat} style={{ display: "grid", gridTemplateColumns: "130px 1fr auto", gap: 12, alignItems: "center", fontSize: 13 }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{catIcon(data, b.cat)} {b.cat}</span>
+                  <ProgressBar value={b.spent} max={b.limit} height={6} />
+                  <b style={{ fontVariantNumeric: "tabular-nums", color: COLORS.textMuted, fontWeight: 600 }}>{formatFull(b.spent)} / {formatFull(b.limit)}</b>
+                </div>
+              ))}
+            </div>
+          </React.Fragment>
+        ) : (
+          <div style={{ fontSize: 13, color: COLORS.textMuted }}>Todavía no definiste presupuestos por categoría.</div>
+        )}
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+        <Card>
+          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: COLORS.textDim, fontWeight: 700 }}>Ahorros</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 24, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>{formatFull(totalSavings)}</div>
+          <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+            {savingsGoals === 0 ? "Sin metas activas" : `${savingsGoals} meta${savingsGoals === 1 ? "" : "s"}${savingsDone > 0 ? ` · ${savingsDone} completada${savingsDone === 1 ? "" : "s"} 🎉` : ""}`}
+          </div>
+        </Card>
+        <Card>
+          <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: COLORS.textDim, fontWeight: 700 }}>Deudas</div>
+          <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 24, marginTop: 6, fontVariantNumeric: "tabular-nums" }}>{formatFull(totalDebt)}</div>
+          <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>
+            {debtMonthly > 0 ? `${formatFull(debtMonthly)} en cuotas este mes` : totalDebt > 0 ? "Sin cuotas mensuales cargadas" : "Sin deudas 🎉"}
+          </div>
+        </Card>
+      </div>
+
+      <Card>
+        <div style={cardH}>
+          <h2 style={h2}>Próximo a vencer</h2>
+          {link("calendario", "Ver calendario")}
+        </div>
+        {upcoming.length === 0 ? (
+          <div style={{ fontSize: 13, color: COLORS.textMuted }}>No hay turnos ni vencimientos próximos.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {upcoming.map((u, i) => (
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: i < upcoming.length - 1 ? `1px solid ${COLORS.border}` : "none", fontSize: 13 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: u.color, flexShrink: 0 }} />
+                <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.label}</span>
+                <span style={{ marginLeft: "auto", color: COLORS.textMuted, fontSize: 12, flexShrink: 0 }}>{u.when}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ ...cardH, marginBottom: 0, padding: "20px 24px 14px" }}>
+          <h2 style={h2}>Últimos movimientos</h2>
+          {link("movimientos", "Ver todos")}
+        </div>
+        {lastTxs.length === 0 ? (
+          <div style={{ padding: "0 24px 24px", fontSize: 13, color: COLORS.textMuted }}>Todavía no cargaste movimientos.</div>
+        ) : lastTxs.map(t => (
+          <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 24px", borderTop: `1px solid ${COLORS.border}` }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
+              <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red, fontVariantNumeric: "tabular-nums" }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+          </div>
+        ))}
+      </Card>
     </div>
   );
 }
