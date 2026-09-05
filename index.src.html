@@ -653,11 +653,11 @@ function BottomSheet({ title, onClose, children }) {
 
 // Fila Cancelar/Guardar lado a lado al pie de cada bottom sheet, calcada de
 // la app real: Cancelar en "soft" (menta), Guardar en primary (verde sólido).
-function SheetActions({ onCancel, onSave, saveLabel = "Guardar", cancelLabel = "Cancelar", saveDisabled = false }) {
+function SheetActions({ onCancel, onSave, saveLabel = "Guardar", cancelLabel = "Cancelar", saveDisabled = false, saveHighlight = false }) {
   return (
     <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
       <Button variant="soft" onClick={onCancel} style={{ flex: 1 }}>{cancelLabel}</Button>
-      <Button onClick={onSave} disabled={saveDisabled} style={{ flex: 1 }}>{saveLabel}</Button>
+      <Button onClick={onSave} disabled={saveDisabled} style={{ flex: 1, ...(saveHighlight ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 3 } : {}) }}>{saveLabel}</Button>
     </div>
   );
 }
@@ -2559,6 +2559,25 @@ function PerfilTab({ user, displayName, waPhone, onConnectWa, onLogout }) {
 // usuario cargara el monto o tocara Guardar. savePlain es SIEMPRE el save real
 // (no el que avanza el tour); por defecto es `save`, así los otros dos usos de
 // este componente (editar una transacción, fuera del tour) no cambian.
+// Copy del tour, un paso a la vez -- solo el campo del paso actual queda
+// resaltado. El paso avanza solo con lo que el usuario ya completó, sin botón
+// "Siguiente" (la descripción, que es opcional, tiene un "Seguir" propio).
+// Monto -> Descripción -> Categoría -> Guardar.
+const TOUR_STEPS_COPY = {
+  income: {
+    amount: '💡 Paso 1 de 4 · Escribí tu sueldo mensual, por ejemplo $500.000.',
+    description: '📝 Paso 2 de 4 · Poné una nota para acordarte (opcional), por ejemplo "Sueldo de septiembre".',
+    category: '👆 Paso 3 de 4 · Ninguna de estas categorías es para un ingreso. Creá una nueva acá abajo, por ejemplo "Sueldo mensual" o "Sueldo Trabajo".',
+    save: '👉 Paso 4 de 4 · Tocá Guardar para terminar.',
+  },
+  expense: {
+    amount: '💡 Paso 1 de 4 · Escribí cuánto gastaste.',
+    description: '📝 Paso 2 de 4 · Poné una nota para acordarte (opcional), por ejemplo "Compra del super".',
+    category: '👆 Paso 3 de 4 · Elegí una categoría, por ejemplo "Alimentación", o creá una nueva tocando "+ Nueva".',
+    save: '👉 Paso 4 de 4 · Tocá Guardar para terminar.',
+  },
+};
+
 function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing = null, initialType = "gasto", tourPhase = null }) {
   const catNames = Object.keys(data.categories);
   // Durante el tour (ingreso o gasto) la categoría es obligatoria -- no solo
@@ -2569,11 +2588,26 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
   const [form, setForm] = useState(editing
     ? { type: editing.type, amount: formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
     : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
-  // Para el paso de ingreso arranca con el form de "+ Nueva" ya abierto: como
-  // ninguna categoría existente sirve para un sueldo, ahorra el paso extra de
-  // tocar "+ Nueva" antes de ver el campo con el ejemplo.
-  const [showCatForm, setShowCatForm] = useState(tourPhase === "income");
+  const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  // La descripción es opcional: no se puede esperar a que la completen para
+  // avanzar. Este flag lo marca escribir algo o tocar "Seguir".
+  const [descDone, setDescDone] = useState(false);
+
+  // Paso actual del tour: el primer campo que todavía falta, en el orden en
+  // que aparecen en el formulario. null fuera del tour.
+  const tourStep = !requireCategoryChoice ? null
+    : !parseAmountInput(form.amount) ? "amount"
+    : (!form.description && !descDone && !form.category) ? "description"
+    : !form.category ? "category"
+    : "save";
+
+  // Al llegar al paso "categoría" del ingreso, abrir el "+ Nueva" solo: como
+  // ninguna categoría existente sirve para un sueldo, ahorra el toque extra y
+  // el usuario ve directo el campo con el ejemplo ("Sueldo mensual").
+  useEffect(() => {
+    if (tourPhase === "income" && tourStep === "category") setShowCatForm(true);
+  }, [tourPhase, tourStep]);
 
   // gasto/ingreso siempre; si se está editando una tx de un tipo que la web no
   // ofrece crear (ahorro_meta, sueldo...), se agrega como 3ª opción para no
@@ -2616,23 +2650,24 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           value={form.type}
           onChange={v => setForm({ ...form, type: v })}
         />
-        <div data-tour="amount-field" style={tourPhase === "income" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
-          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourPhase === "income" ? "Ej: 500000" : "0"} />
-          {tourPhase === "income" && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>💡 Probá con tu sueldo mensual, por ejemplo $500.000.</div>
-          )}
-          {/* Monto ya cargado pero falta la categoría (gasto): sin este aviso
-              el usuario no tiene ninguna pista de que falta algo más una vez
-              que ya escribió el monto -- toda la guía estaba solo abajo, en
-              la categoría, y podía pasarla de largo. */}
-          {tourPhase === "expense" && parseAmountInput(form.amount) > 0 && !form.category && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>👇 Ahora elegí una categoría abajo.</div>
+        <div data-tour="amount-field" style={tourStep === "amount" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
+          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" prefix="$" placeholder={tourStep === "amount" ? "Ej: 500000" : "0"} />
+          {tourStep === "amount" && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>{TOUR_STEPS_COPY[tourPhase].amount}</div>
           )}
         </div>
-        <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder="Ej: Supermercado, Netflix..." />
+        <div style={tourStep === "description" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
+          <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={tourPhase === "income" ? "Ej: Sueldo de septiembre" : "Ej: Supermercado, Netflix..."} />
+          {tourStep === "description" && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>
+              {TOUR_STEPS_COPY[tourPhase].description}
+              <button type="button" onClick={() => setDescDone(true)} style={{ display: "block", marginTop: 4, background: "none", border: "none", color: COLORS.accent, fontFamily: "inherit", fontSize: 12, fontWeight: 800, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Seguir sin nota →</button>
+            </div>
+          )}
+        </div>
         {/* Igual que la app real: las categorías se muestran siempre, sin
             filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
-        <div data-tour="category-picker" style={requireCategoryChoice ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
+        <div data-tour="category-picker" style={tourStep === "category" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
           <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
@@ -2644,19 +2679,8 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
               }}>{catIcon(data, c)} {c}</button>
             ))}
           </div>
-          {/* Ingreso: ninguna categoría default sirve para un sueldo -- se
-              sugiere crear una en vez de dejar que el usuario adivine. */}
-          {tourPhase === "income" && !form.category && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Ninguna de estas categorías es para un ingreso. Creá una nueva acá abajo, por ejemplo "Sueldo mensual" o "Sueldo Trabajo".</div>
-          )}
-          {tourPhase === "expense" && !form.category && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Podés elegir alguna de estas categorías, por ejemplo "Alimentación", o crear una nueva tocando "+ Nueva".</div>
-          )}
-          {requireCategoryChoice && form.category && !parseAmountInput(form.amount) && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👆 Ahora escribí el monto arriba, en "Monto".</div>
-          )}
-          {requireCategoryChoice && form.category && parseAmountInput(form.amount) > 0 && (
-            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>👍 Listo, tocá Guardar.</div>
+          {tourStep === "category" && (
+            <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>{TOUR_STEPS_COPY[tourPhase].category}</div>
           )}
           {showCatForm && (
             <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -2666,12 +2690,15 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           )}
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+        {tourStep === "save" && (
+          <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, textAlign: "center" }}>{TOUR_STEPS_COPY[tourPhase].save}</div>
+        )}
       </div>
       {/* Antes solo miraba la categoría: sin monto cargado, Guardar quedaba
           habilitado y tocarlo no hacía nada (add() corta en silencio si
           !form.amount). Ahora el botón refleja de verdad si hay algo para
           guardar -- vale para el tour y para el alta normal. */}
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} saveDisabled={!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category)} />
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : "Guardar"} saveDisabled={!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category)} saveHighlight={tourStep === "save"} />
     </BottomSheet>
   );
 }
