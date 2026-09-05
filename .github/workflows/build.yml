@@ -1,0 +1,46 @@
+name: Build
+
+# Cada push que toque la fuente regenera index.html y lo commitea de vuelta.
+# GitHub Pages (deploy from branch) toma el commit nuevo y redeploya.
+# El filtro `paths` hace que un commit que SOLO toca index.html no dispare
+# este workflow — no hay loop.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.src.html"
+      - "build.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Commit index.html si cambió
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "index.html sin cambios."
+          else
+            git config user.name "orbe-build[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "build: regenerar index.html [skip ci]"
+            git push
+          fi
