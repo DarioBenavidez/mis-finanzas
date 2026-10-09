@@ -2879,8 +2879,77 @@ function MobileFabMenu({ onPick, tourActive }) {
 // Card de balance del mes (en la columna izquierda del boceto): balance grande +
 // desglose Ingresos / Gastos / Ahorro con variación vs. el mes anterior y barra
 // apilada proporcional. Trae su propio toggle de ocultar montos.
-function BalanceCard({ data }) {
+// ---- Saldo que se arrastra de un mes al siguiente ----
+// El saldo de un mes es lo que sobró (o faltó) en ese mes: ingresos - gastos de bolsillo - ahorro
+// (mismo criterio que la card de Balance: las compras con tarjeta no cuentan hasta pagar el resumen).
+// El saldo que ARRASTRA un mes es la suma de los saldos de todos los meses anteriores, desde el
+// primer mes con ingresos (o desde el "saldo inicial" que cargó el usuario). Se calcula siempre a
+// partir de los movimientos: no se guarda ningún total, así que editar o borrar un movimiento viejo
+// corrige solo los meses siguientes. Único dato guardado: data.saldoInicial { year, month, amount }
+// = plata que tenía al empezar ese mes (antes de usar Orbe).
+const monthKey = (y, m) => y * 12 + m;
+function monthlyNet(data) {
+  const net = {}; let firstIncome = null;
+  (data.transactions || []).forEach(t => {
+    const pp = parseDateParts(t.date);
+    if (!pp || isNaN(pp.year)) return;
+    const k = monthKey(pp.year, pp.month);
+    let v = 0;
+    if (isIncomeType(t)) { v = t.amount; if (firstIncome === null || k < firstIncome) firstIncome = k; }
+    else if (t.type === "gasto" && !isCardPurchase(t)) v = -t.amount;
+    else if (t.type === "ahorro_meta") v = -t.amount;
+    if (v) net[k] = (net[k] || 0) + v;
+  });
+  return { net, firstIncome };
+}
+function carryOver(data, month, year, cache) {
+  const { net, firstIncome } = cache || monthlyNet(data);
+  const target = monthKey(year, month);
+  const ob = data.saldoInicial;
+  let start = null, amount = 0;
+  if (ob && typeof ob.amount === "number" && monthKey(ob.year, ob.month) <= target) { start = monthKey(ob.year, ob.month); amount = ob.amount; }
+  else if (firstIncome !== null) start = firstIncome;
+  if (start === null || start >= target) return { amount: start === target ? amount : 0, start };
+  for (let k = Math.max(start, target - 600); k < target; k++) amount += net[k] || 0;
+  return { amount, start };
+}
+
+function SaldoInicialSheet({ data, save, onClose }) {
+  const cache = monthlyNet(data);
+  const has = !!data.saldoInicial;
+  const startK = has ? monthKey(data.saldoInicial.year, data.saldoInicial.month) : (cache.firstIncome !== null ? cache.firstIncome : monthKey(currentYear, currentMonth));
+  const sy = Math.floor(startK / 12), sm = startK % 12;
+  const [val, setVal] = useState(has ? formatAmountInput(String(Math.abs(data.saldoInicial.amount))) : "");
+  const [debe, setDebe] = useState(has && data.saldoInicial.amount < 0);
+  const amount = (parseAmountInput(val) || 0) * (debe ? -1 : 1);
+  const preview = carryOver({ ...data, saldoInicial: { year: sy, month: sm, amount } }, data.selectedMonth, data.selectedYear, cache).amount;
+  const canSave = val !== "" || has;
+  const commit = () => { if (!canSave) return; save({ ...data, saldoInicial: { year: sy, month: sm, amount } }); onClose(); };
+  const remove = () => { const { saldoInicial, ...rest } = data; save(rest); onClose(); };
+  return (
+    <BottomSheet
+      title="Saldo inicial"
+      onClose={onClose}
+      footer={<SheetActions flush onCancel={onClose} onSave={commit} saveLabel="Guardar" saveDisabled={!canSave} />}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }} onKeyDown={e => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); commit(); } }}>
+        <div style={{ fontSize: 14, color: COLORS.textMuted, lineHeight: 1.5 }}>
+          Es la plata que tenías al empezar <strong style={{ color: COLORS.text }}>{MONTH_FULL[sm]} {sy}</strong>, antes de cargar tus movimientos en Orbe. Desde ahí Orbe suma mes a mes lo que te va sobrando o faltando y lo arrastra al mes siguiente.
+        </div>
+        <SegmentedControl options={[{ value: "tenia", label: "Tenía plata" }, { value: "debia", label: "Debía" }]} value={debe ? "debia" : "tenia"} onChange={v => setDebe(v === "debia")} />
+        <AmountField value={val} onChange={setVal} decimals={false} prefix="$" placeholder="0" autoFocus />
+        <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: COLORS.textMuted }}>
+          Con esto, el saldo que arrastrás a <strong style={{ color: COLORS.text }}>{MONTH_FULL[data.selectedMonth]}</strong> es <strong style={{ color: preview < 0 ? COLORS.red : COLORS.text }}>{formatFull(preview)}</strong>.
+        </div>
+        {has && <button type="button" className="orbe-linkbtn" style={{ alignSelf: "flex-start", padding: "6px 0", color: COLORS.red }} onClick={remove}>Quitar el saldo inicial</button>}
+      </div>
+    </BottomSheet>
+  );
+}
+
+function BalanceCard({ data, save }) {
   const [hide, setHide] = useState(false);
+  const [showSaldo, setShowSaldo] = useState(false);
   const MF = MONTH_FULL[data.selectedMonth];
   const inMo = (m, y) => data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === m && p.year === y; });
   const cur = inMo(data.selectedMonth, data.selectedYear);
@@ -2895,6 +2964,11 @@ function BalanceCard({ data }) {
   const pGas = prev.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0);
   const pAho = prev.filter(t => t.type === "ahorro_meta").reduce((s, t) => s + t.amount, 0);
   const pBal = pInc - pGas - pAho;
+  // Lo que arrastra el mes (saldo de meses anteriores) y el disponible total.
+  const netCache = monthlyNet(data);
+  const carry = carryOver(data, data.selectedMonth, data.selectedYear, netCache).amount;
+  const total = bal + carry;
+  const pTotal = pBal + carryOver(data, pm, py, netCache).amount;
   const chg = (c, p) => p > 0 ? Math.round(((c - p) / p) * 100) : null;
   const tri = inc + gas + aho || 1;
   const lastDay = new Date(data.selectedYear, data.selectedMonth + 1, 0).getDate();
@@ -2903,10 +2977,11 @@ function BalanceCard({ data }) {
     { k: "Gastos", v: gas, pct: chg(gas, pGas), up: false, color: COLORS.red },
     { k: "Ahorro", v: aho, pct: chg(aho, pAho), up: true, color: COLORS.gold },
   ];
-  const balPct = chg(bal, pBal);
+  const balPct = chg(total, pTotal);
   // Card verde (como la original del boceto), con el desglose de 3 columnas.
   const barCol = { Ingresos: "#4ADE80", Gastos: "#F87171", Ahorro: COLORS.goldL || "#E8C97A" };
   return (
+    <React.Fragment>
     <div style={{ flexShrink: 0, background: "linear-gradient(155deg, #005247 0%, #00332c 100%)", color: "#fff", borderRadius: 20, padding: 18, boxShadow: "0 16px 34px -18px rgba(13,31,28,0.4)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13 }}>Balance de {MF}</div>
@@ -2917,7 +2992,11 @@ function BalanceCard({ data }) {
           </button>
         </div>
       </div>
-      <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 27, letterSpacing: "-0.03em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{hide ? "••••••" : formatFull(bal)}</div>
+      <div style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 27, letterSpacing: "-0.03em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>{hide ? "••••••" : formatFull(total)}</div>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "2px 8px", marginTop: 3, fontSize: 11, color: "#ffffffc0" }}>
+        <span>{hide ? "Incluye ••••• del saldo anterior" : carry === 0 ? "Sin saldo anterior" : carry > 0 ? `Incluye ${formatFull(carry)} del saldo anterior` : `Incluye ${formatFull(carry)} del saldo anterior (lo que faltó)`}</span>
+        {save && <button type="button" onClick={() => setShowSaldo(true)} style={{ background: "none", border: "none", color: "#ffffffe6", fontFamily: "inherit", fontSize: 11, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", padding: 0 }}>Ajustar saldo inicial</button>}
+      </div>
       {balPct != null && !hide && (
         <div style={{ fontSize: 11, fontWeight: 700, marginTop: 2, color: balPct >= 0 ? "#8CE6B4" : "#F8A9A9" }}>{balPct >= 0 ? "▲" : "▼"} {Math.abs(balPct)}% vs. {MONTH_NAMES[pm]}</div>
       )}
@@ -2934,6 +3013,9 @@ function BalanceCard({ data }) {
         {cols.map(c => <div key={c.k} style={{ width: `${Math.round((c.v / tri) * 100)}%`, background: barCol[c.k] }} />)}
       </div>
     </div>
+    {/* Fuera de la card verde: el sheet es blanco y heredaría el texto blanco. */}
+    {showSaldo && save && <SaldoInicialSheet data={data} save={save} onClose={() => setShowSaldo(false)} />}
+    </React.Fragment>
   );
 }
 
@@ -2986,7 +3068,7 @@ function BocetoLayout({ section, onNavigate, data, save, dolarRate, expByCat, mo
         </div>
       </div>
       <div className="boceto-col">
-        <BalanceCard data={data} />
+        <BalanceCard data={data} save={save} />
 
         <div className="boceto-nav">
           {BOCETO_GROUPS.map(g => (
@@ -3336,7 +3418,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
 
         {/* Card de balance del mes (misma que la columna izquierda del boceto):
             balance grande + Ingresos / Gastos / Ahorro + barra apilada. */}
-        <BalanceCard data={data} />
+        <BalanceCard data={data} save={save} />
 
         {totalBudget > 0 && (
           <Card style={{ padding: 14 }}>
