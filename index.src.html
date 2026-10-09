@@ -684,7 +684,7 @@ function Button({ children, onClick, variant = "primary", size = "md", disabled 
 function Input({ label, value, onChange, type = "text", placeholder, prefix, options, decimals = false, style = {} }) {
   const inputStyle = {
     width: "100%", background: COLORS.pillBg, border: "none",
-    borderRadius: 999, padding: prefix ? "14px 16px 14px 30px" : "14px 18px",
+    borderRadius: 999, padding: prefix ? `14px 16px 14px ${16 + String(prefix).length * 10 + 4}px` : "14px 18px",
     color: COLORS.text, fontFamily: "inherit", fontSize: 15, fontWeight: 500, boxSizing: "border-box",
     outline: "none",
   };
@@ -2272,7 +2272,7 @@ const txCardLabel = (data, t) => {
   if (!isCardPurchase(t)) return null;
   const c = (data.cards || []).find(x => x.id === t.cardId);
   const n = Math.max(1, parseInt(t.installments) || 1);
-  return `💳 ${c ? c.name : "Tarjeta"}${n > 1 ? ` · ${n} cuotas` : ""}`;
+  return `💳 ${c ? c.name : "Tarjeta"}${n > 1 ? ` · ${n} cuotas` : ""}${t.currency === "usd" && t.amountUSD ? ` · US$ ${t.amountUSD}` : ""}`;
 };
 const txAmountColor = (t) => isIncomeType(t) ? COLORS.green : isCardPurchase(t) ? COLORS.goldText : COLORS.red;
 const TX_TYPE_LABELS = { gasto: "Gasto", ingreso: "Ingreso", ahorro_meta: "Ahorro", sueldo: "Sueldo" };
@@ -3181,12 +3181,13 @@ const TOUR_STEPS_COPY = {
 // compra no baja el saldo (va al resumen); si no hay tarjetas cargadas se crea una
 // ahí mismo, sin perder lo que ya escribiste.
 const cuotasOf = (cp) => Math.min(60, Math.max(1, parseInt(cp.cuotas === "otra" ? cp.otra : cp.cuotas) || 1));
-function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date }) {
+function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date, dolarRate, onCurrency }) {
   const cards = data.cards || [];
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState({ name: "", closingDay: "", dueDay: "" });
   const card = cards.find(c => c.id === cp.cardId) || null;
-  const total = parseAmountInput(amountStr || "0");
+  const rate = parseAmountInput(cp.rate);
+  const total = cp.usd ? Math.round(parseAmountInputUSD(amountStr) * rate) : parseAmountInput(amountStr || "0");
   const n = cuotasOf(cp);
   const period = card ? cardStatementPeriod(card, date) : null;
   const showCreate = creating || cards.length === 0;
@@ -3204,7 +3205,7 @@ function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <SegmentedControl label="¿Con qué pagaste?"
         options={[{ value: "otro", label: "Efectivo / débito" }, { value: "tarjeta", label: "Tarjeta de crédito" }]}
-        value={cp.on ? "tarjeta" : "otro"} onChange={v => setCp({ ...cp, on: v === "tarjeta" })} />
+        value={cp.on ? "tarjeta" : "otro"} onChange={v => { if (cp.usd && v !== "tarjeta") onCurrency && onCurrency(); setCp({ ...cp, on: v === "tarjeta" }); }} />
       {cp.on && (
         <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {cards.length === 0 && <InfoBanner>Todavía no cargaste ninguna tarjeta. Creala acá y la compra no te descuenta del saldo hasta que pagues el resumen.</InfoBanner>}
@@ -3234,6 +3235,21 @@ function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date }) {
           )}
           {card && (
             <React.Fragment>
+              <SegmentedControl label="Moneda"
+                options={[{ value: "ars", label: "Pesos" }, { value: "usd", label: "Dólares" }]}
+                value={cp.usd ? "usd" : "ars"}
+                onChange={v => {
+                  const usd = v === "usd";
+                  if (usd === !!cp.usd) return;
+                  setCp({ ...cp, usd, rate: usd && !cp.rate && dolarRate ? formatAmountInput(String(Math.round(dolarRate))) : cp.rate });
+                  onCurrency && onCurrency();   // ARS y USD se escriben distinto: se limpia el monto
+                }} />
+              {cp.usd && (
+                <div>
+                  <Input label="Cotización (pesos por dólar)" value={cp.rate} onChange={v => setCp({ ...cp, rate: v })} type="amount" prefix="$" placeholder="Ej: 1500" />
+                  <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 4 }}>Usá la que te cobra la tarjeta. {total > 0 ? <>Equivale a <strong style={{ color: COLORS.text }}>{formatFull(total)}</strong>; ese monto en pesos queda fijo.</> : "El monto en pesos queda fijo con esta cotización."}</div>
+                </div>
+              )}
               <SegmentedControl label="Cuotas"
                 options={[{ value: "1", label: "1 pago" }, { value: "3", label: "3" }, { value: "6", label: "6" }, { value: "12", label: "12" }, { value: "otra", label: "Otra" }]}
                 value={cp.cuotas} onChange={v => setCp({ ...cp, cuotas: v })} />
@@ -3267,7 +3283,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
   // en catNames[0] en silencio enseñaría mal. Se le pide crear una propia.
   const requireCategoryChoice = tourPhase === "income" || tourPhase === "expense";
   const [form, setForm] = useState(editing
-    ? { type: editing.type, amount: formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
+    ? { type: editing.type, amount: isCardPurchase(editing) && editing.currency === "usd" ? formatAmountInputUSD(String(editing.amountUSD || "")) : formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
     : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -3275,7 +3291,8 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
   const [cp, setCp] = useState(() => {
     const n = editing ? Math.max(1, parseInt(editing.installments) || 1) : 1;
     const preset = ["1", "3", "6", "12"].includes(String(n));
-    return { on: !!editing && isCardPurchase(editing), cardId: editing && editing.cardId != null ? editing.cardId : null, cuotas: preset ? String(n) : "otra", otra: preset ? "" : String(n) };
+    const usd = !!editing && isCardPurchase(editing) && editing.currency === "usd";
+    return { on: !!editing && isCardPurchase(editing), cardId: editing && editing.cardId != null ? editing.cardId : null, cuotas: preset ? String(n) : "otra", otra: preset ? "" : String(n), usd, rate: usd && editing.arsRate ? formatAmountInput(String(Math.round(editing.arsRate))) : "" };
   });
   // La descripción es opcional: no se puede esperar a que la completen para
   // avanzar. Este flag lo marca escribir algo o tocar "Seguir".
@@ -3305,6 +3322,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
     typeOptions.push({ value: editing.type, label: TX_TYPE_LABELS[editing.type] || editing.type });
   }
 
+  const cardUsd = form.type === "gasto" && cp.on && cp.usd;
   const esAhorro = !editing && form.type === "ahorro_meta";
   const meta = metas.find(m => m.id === savingsId) || null;
   const metaUsd = !!meta && meta.currency === "usd";
@@ -3320,18 +3338,28 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
       onClose();
       return;
     }
-    if (!form.amount || !parseAmountInput(form.amount)) return;
+    const usdMode = form.type === "gasto" && cp.on && cp.usd;
+    const usdAmt = usdMode ? parseAmountInputUSD(form.amount) : 0;
+    const rate = usdMode ? parseAmountInput(cp.rate) : 0;
+    const amount = usdMode ? Math.round(usdAmt * rate) : parseAmountInput(form.amount);
+    if (!form.amount || !(amount > 0)) return;
     if (requireCategoryChoice && !form.category) return;
-    const amount = parseAmountInput(form.amount);
     const card = form.type === "gasto" && cp.on ? (data.cards || []).find(c => c.id === cp.cardId) : null;
     if (cp.on && form.type === "gasto" && !card) return;
     const n = cuotasOf(cp);
-    const cardFields = card ? { cardId: card.id, cardPeriod: cardStatementPeriod(card, form.date), ...(n > 1 ? { installments: n } : {}) } : {};
+    const cardFields = card ? {
+      cardId: card.id, cardPeriod: cardStatementPeriod(card, form.date), ...(n > 1 ? { installments: n } : {}),
+      // En dólares: el monto en pesos queda fijo a la cotización del día de la compra.
+      ...(usdMode ? { currency: "usd", amountUSD: usdAmt, arsRate: rate } : {}),
+    } : {};
     if (editing) {
       const transactions = data.transactions.map(t => {
         if (t.id !== editing.id) return t;
-        const { cardId, cardPeriod, installments, ...rest } = t;   // se recalculan abajo
-        return { ...rest, ...form, amount, ...cardFields };
+        // Si era una compra con tarjeta, sus campos de tarjeta (y de dólares) se
+        // recalculan abajo; en otros movimientos no se toca nada.
+        const { cardId, cardPeriod, installments, ...rest0 } = t;
+        const { currency, amountUSD, arsRate, ...rest1 } = rest0;
+        return { ...(isCardPurchase(t) ? rest1 : rest0), ...form, amount, ...cardFields };
       });
       // Si era el pago de un resumen, el historial de Pagos con Tarjetas lo sigue.
       const cardPayments = (data.cardPayments || []).map(pp => pp.txId === editing.id ? { ...pp, amount, date: form.date } : pp);
@@ -3363,7 +3391,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           onChange={v => setForm({ ...form, type: v })}
         />
         <div data-tour="amount-field" style={tourStep === "amount" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
-          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" decimals={metaUsd} prefix={metaUsd ? "US$" : "$"} placeholder={tourStep === "amount" ? "Ej: 500000" : "0"} />
+          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" decimals={metaUsd || cardUsd} prefix={(metaUsd || cardUsd) ? "US$" : "$"} placeholder={tourStep === "amount" ? "Ej: 500000" : "0"} />
           {tourStep === "amount" && (
             <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>{TOUR_STEPS_COPY[tourPhase].amount}</div>
           )}
@@ -3432,7 +3460,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
         {form.type === "gasto" && !tourPhase && !(editing && isCardPayment(editing)) && (
-          <CardPurchaseFields data={data} savePlain={savePlain} cp={cp} setCp={setCp} amountStr={form.amount} date={form.date} />
+          <CardPurchaseFields data={data} savePlain={savePlain} cp={cp} setCp={setCp} amountStr={form.amount} date={form.date} dolarRate={dolarRate} onCurrency={() => setForm(f => ({ ...f, amount: "" }))} />
         )}
         {tourStep === "save" && (
           <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, textAlign: "center" }}>{TOUR_STEPS_COPY[tourPhase].save}</div>
@@ -3442,7 +3470,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           habilitado y tocarlo no hacía nada (add() corta en silencio si
           !form.amount). Ahora el botón refleja de verdad si hay algo para
           guardar -- vale para el tour y para el alta normal. */}
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : "Guardar"} saveDisabled={esAhorro ? !puedeGuardarAhorro : (!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category) || (form.type === "gasto" && cp.on && !(data.cards || []).some(c => c.id === cp.cardId)))} saveHighlight={tourStep === "save"} />
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : "Guardar"} saveDisabled={esAhorro ? !puedeGuardarAhorro : ((cardUsd ? !(parseAmountInputUSD(form.amount) > 0 && parseAmountInput(cp.rate) > 0) : !parseAmountInput(form.amount)) || (requireCategoryChoice && !form.category) || (form.type === "gasto" && cp.on && !(data.cards || []).some(c => c.id === cp.cardId)))} saveHighlight={tourStep === "save"} />
     </BottomSheet>
   );
 }
@@ -4209,6 +4237,7 @@ function PagosTarjetas({ data, save }) {
   const [cardSheet, setCardSheet] = useState(null); // null | "new" | id de la tarjeta a editar
   const [paySheet, setPaySheet] = useState(false);
   const [payForm, setPayForm] = useState(null);
+  const [editingPayId, setEditingPayId] = useState(null); // pago que se está editando (null = alta)
   const [filter, setFilter] = useState("all");
   const [openItems, setOpenItems] = useState({}); // tarjeta -> mostrar las compras del resumen
 
@@ -4268,7 +4297,22 @@ function PagosTarjetas({ data, save }) {
       minPayment: info.min ? formatAmountInput(String(info.min)) : "",
       amount: info.left ? formatAmountInput(String(info.left)) : "",
       date: todayStr(),
+      note: "",
     });
+    setEditingPayId(null);
+    setPaySheet(true);
+  };
+  // Editar un pago ya registrado: parte de lo guardado y, al guardar, actualiza también
+  // el gasto de Movimientos que generó.
+  const openEditPay = (pp) => {
+    setPayForm({
+      cardId: pp.cardId, period: pp.period,
+      statementTotal: pp.statementTotal ? formatAmountInput(String(pp.statementTotal)) : (() => { const i = cardPeriodInfo(data, pp.cardId, pp.period); return i.total ? formatAmountInput(String(i.total)) : ""; })(),
+      minPayment: pp.minPayment ? formatAmountInput(String(pp.minPayment)) : "",
+      amount: formatAmountInput(String(pp.amount || 0)),
+      date: pp.date, note: pp.note || "",
+    });
+    setEditingPayId(pp.id);
     setPaySheet(true);
   };
   // Al cambiar de tarjeta o de período se re-carga lo que ya se sabe de ese resumen.
@@ -4277,6 +4321,7 @@ function PagosTarjetas({ data, save }) {
     if (!c) return;
     const p = period || periodOf(dueOf(c));
     const info = cardPeriodInfo(data, cardId, p);
+    if (editingPayId) { setPayForm(f => ({ ...f, cardId, period: p })); return; }   // editando: no se pisan los montos
     setPayForm(f => ({
       ...f, cardId, period: p,
       statementTotal: info.total ? formatAmountInput(String(info.total)) : "",
@@ -4289,6 +4334,21 @@ function PagosTarjetas({ data, save }) {
     const card = cards.find(c => c.id === f.cardId);
     const amount = parseAmountInput(f.amount);
     if (!card || !(amount > 0) || !f.date) return;
+    // Solo se guarda como "corrección" si difiere de lo que suman las compras;
+    // si coincide queda en automático y sigue a las compras que se agreguen.
+    const typedTotal = parseAmountInput(f.statementTotal) || 0;
+    const override = typedTotal && typedTotal !== cardPeriodInfo(data, card.id, f.period).auto ? typedTotal : 0;
+    if (editingPayId) {
+      const old = payments.find(x => x.id === editingPayId);
+      if (!old) { setPaySheet(false); return; }
+      save({
+        ...data,
+        cardPayments: payments.map(x => x.id === old.id ? { ...x, cardId: card.id, cardName: card.name, period: f.period, statementTotal: override, minPayment: parseAmountInput(f.minPayment) || 0, amount, date: f.date, note: (f.note || "").trim() } : x),
+        transactions: data.transactions.map(t => t.id === old.txId ? { ...t, amount, date: f.date, description: `Pago tarjeta ${card.name}` } : t),
+      });
+      setPaySheet(false); setEditingPayId(null);
+      return;
+    }
     const id = Date.now();
     const catExistsAlready = !!findCatCI(data, CARD_CATEGORY);
     const category = findCatCI(data, CARD_CATEGORY) || CARD_CATEGORY;
@@ -4299,11 +4359,9 @@ function PagosTarjetas({ data, save }) {
       transactions: [...data.transactions, tx],
       cardPayments: [...payments, {
         id, cardId: card.id, cardName: card.name, period: f.period,
-        // Solo se guarda como "corrección" si difiere de lo que suman las compras;
-        // si coincide queda en automático y sigue a las compras que se agreguen.
-        statementTotal: (() => { const typed = parseAmountInput(f.statementTotal) || 0; return typed && typed !== cardPeriodInfo(data, card.id, f.period).auto ? typed : 0; })(),
+        statementTotal: override,
         minPayment: parseAmountInput(f.minPayment) || 0,
-        amount, date: f.date, txId: id,
+        amount, date: f.date, txId: id, note: (f.note || "").trim(),
       }],
     });
     setPaySheet(false);
@@ -4347,7 +4405,7 @@ function PagosTarjetas({ data, save }) {
   const sheetTotal = f ? parseAmountInput(f.statementTotal || "0") : 0;
   const sheetMin = f ? parseAmountInput(f.minPayment || "0") : 0;
   const sheetAmt = f ? parseAmountInput(f.amount || "0") : 0;
-  const sheetPaidBefore = f && sheetCard ? cardPeriodInfo(data, f.cardId, f.period).paid : 0;
+  const sheetPaidBefore = f && sheetCard ? cardPeriodInfo(data, f.cardId, f.period).list.filter(x => x.id !== editingPayId).reduce((acc, x) => acc + (x.amount || 0), 0) : 0;
   const sheetLeft = sheetTotal > 0 ? Math.max(0, sheetTotal - sheetPaidBefore - sheetAmt) : null;
 
   return (
@@ -4465,6 +4523,62 @@ function PagosTarjetas({ data, save }) {
         </div>
       )}
 
+      {payments.length > 0 && (() => {
+        const nowD = new Date();
+        const months6 = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date(nowD.getFullYear(), nowD.getMonth() - 5 + i, 1);
+          const key = periodOf(d);
+          return { key, label: MONTH_NAMES[d.getMonth()], total: payments.filter(pp => String(pp.date || "").slice(0, 7) === key).reduce((acc, pp) => acc + (pp.amount || 0), 0) };
+        });
+        const max6 = Math.max(...months6.map(m => m.total), 1);
+        const avg6 = months6.reduce((acc, m) => acc + m.total, 0) / 6;
+        const since12 = periodOf(new Date(nowD.getFullYear(), nowD.getMonth() - 11, 1));
+        const last12 = payments.filter(pp => String(pp.date || "").slice(0, 7) >= since12);
+        const total12 = last12.reduce((acc, pp) => acc + (pp.amount || 0), 0);
+        const perCard = cards.map(c => ({ c, total: last12.filter(pp => pp.cardId === c.id).reduce((acc, pp) => acc + (pp.amount || 0), 0) })).filter(x => x.total > 0).sort((a, b) => b.total - a.total);
+        // Recargos: lo que el banco sumó sobre tus compras (total corregido al pagar - compras cargadas).
+        const grupos = {};
+        [...payments].sort((a, b) => a.id - b.id).forEach(pp => { if (pp.statementTotal > 0) grupos[pp.cardId + "|" + pp.period] = pp; });
+        const recargos = Object.values(grupos).reduce((acc, pp) => { const auto = cardPeriodInfo(data, pp.cardId, pp.period).auto; return acc + (auto > 0 ? Math.max(0, pp.statementTotal - auto) : 0); }, 0);
+        const Kpi = ({ k, v, sub }) => (
+          <div style={{ flex: "1 1 150px", minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", marginBottom: 4 }}>{k}</div>
+            <div style={{ fontSize: 20, fontWeight: 300, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{v}</div>
+            {sub && <div style={{ fontSize: 11.5, color: COLORS.textMuted, marginTop: 2 }}>{sub}</div>}
+          </div>
+        );
+        return (
+          <Card>
+            <div style={{ fontWeight: 800, fontSize: 16, fontFamily: "'Nunito', sans-serif", color: COLORS.text, marginBottom: 14 }}>Estadísticas</div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+              <Kpi k="Promedio mensual" v={formatFull(Math.round(avg6))} sub="últimos 6 meses" />
+              <Kpi k="Pagado en 12 meses" v={formatFull(total12)} sub={`${last12.length} pago${last12.length === 1 ? "" : "s"}`} />
+              {recargos > 0 && <Kpi k="Recargos del banco" v={formatFull(recargos)} sub="intereses/impuestos que corregiste al pagar" />}
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 110, marginBottom: 6 }}>
+              {months6.map(m => (
+                <div key={m.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", gap: 4 }}>
+                  <div style={{ fontSize: 10.5, color: COLORS.textMuted, fontVariantNumeric: "tabular-nums" }}>{m.total > 0 ? formatFull(m.total) : ""}</div>
+                  <div style={{ width: "100%", maxWidth: 44, height: `${Math.max(m.total > 0 ? 4 : 0, (m.total / max6) * 70)}px`, background: m.key === periodOf(nowD) ? COLORS.accent : COLORS.gold, borderRadius: 6 }} />
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600 }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+            {perCard.length > 1 && (
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase" }}>Por tarjeta (12 meses)</div>
+                {perCard.map(x => (
+                  <div key={x.c.id}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 3 }}><span>{x.c.name}</span><strong>{formatFull(x.total)}</strong></div>
+                    <div style={{ background: "#e8f0ec", borderRadius: 99, height: 6, overflow: "hidden" }}><div style={{ width: `${(x.total / perCard[0].total) * 100}%`, height: "100%", background: COLORS.accent, borderRadius: 99 }} /></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      })()}
+
       {payments.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontWeight: 800, fontSize: 16, fontFamily: "'Nunito', sans-serif", color: COLORS.text }}>Historial de pagos</div>
@@ -4494,9 +4608,11 @@ function PagosTarjetas({ data, save }) {
                         <div style={{ fontSize: 12, color: COLORS.textMuted }}>
                           {d.day} {MONTH_NAMES[d.month]} · resumen {periodLabel(p.period)}
                         </div>
+                        {p.note && <div style={{ fontSize: 12, color: COLORS.textMuted, fontStyle: "italic", marginTop: 1 }}>“{p.note}”</div>}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, fontFamily: "'Nunito', sans-serif" }}>{formatFull(p.amount)}</div>
+                        <button onClick={() => openEditPay(p)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 12.5, fontWeight: 600, padding: 4 }}>Editar</button>
                         <button onClick={() => removePayment(p)} aria-label="Eliminar pago" style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 18, lineHeight: 1, padding: 4 }}>×</button>
                       </div>
                     </div>
@@ -4523,14 +4639,14 @@ function PagosTarjetas({ data, save }) {
       )}
 
       {paySheet && f && sheetCard && (
-        <BottomSheet title="Registrar pago" onClose={() => setPaySheet(false)}>
+        <BottomSheet title={editingPayId ? "Editar pago" : "Registrar pago"} onClose={() => { setPaySheet(false); setEditingPayId(null); }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {cards.length > 1 && (
               <SegmentedControl label="Tarjeta" options={cards.map(c => ({ value: String(c.id), label: c.name }))}
                 value={String(f.cardId)} onChange={v => retarget(cards.find(c => String(c.id) === v).id, null)} />
             )}
             <SegmentedControl label="Resumen de"
-              options={[-1, 0, 1].map(k => { const base = periodOf(dueOf(sheetCard)); const p = shiftPeriod(base, k); return { value: p, label: periodLabel(p) }; })}
+              options={[...new Set([...[-1, 0, 1].map(k => shiftPeriod(periodOf(dueOf(sheetCard)), k)), f.period])].sort().map(p => ({ value: p, label: periodLabel(p) }))}
               value={f.period} onChange={p => retarget(f.cardId, p)} />
             <Input label="Total del resumen" value={f.statementTotal} onChange={v => setPayForm({ ...f, statementTotal: v })} type="amount" prefix="$" placeholder="0" />
             {(() => { const ai = cardPeriodInfo(data, f.cardId, f.period); return ai.auto > 0 ? (
@@ -4545,6 +4661,7 @@ function PagosTarjetas({ data, save }) {
               </div>
             )}
             <Input label="Fecha de pago" value={f.date} onChange={v => setPayForm({ ...f, date: v })} type="date" />
+            <Input label="Nota (opcional)" value={f.note || ""} onChange={v => setPayForm({ ...f, note: v })} placeholder="Ej: transferencia desde Mercado Pago" />
             <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.textMuted }}>
               {sheetLeft === null
                 ? <>Se registra un gasto de <strong style={{ color: COLORS.text }}>{amountStr(f.amount)}</strong> el {f.date}.</>
@@ -4553,7 +4670,7 @@ function PagosTarjetas({ data, save }) {
                   : <>Gasto de <strong style={{ color: COLORS.text }}>{amountStr(f.amount)}</strong> el {f.date}. Con este pago el resumen queda <strong style={{ color: COLORS.green }}>pagado</strong>.</>}
             </div>
           </div>
-          <SheetActions onCancel={() => setPaySheet(false)} onSave={savePayment} saveLabel="Registrar pago" saveDisabled={!(sheetAmt > 0)} />
+          <SheetActions onCancel={() => { setPaySheet(false); setEditingPayId(null); }} onSave={savePayment} saveLabel={editingPayId ? "Guardar cambios" : "Registrar pago"} saveDisabled={!(sheetAmt > 0)} />
         </BottomSheet>
       )}
     </div>
