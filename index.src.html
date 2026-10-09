@@ -486,6 +486,22 @@ function makeDefaultData() {
 
 const isIncomeType = (t) => t.type === "ingreso" || t.type === "sueldo";
 const isExpenseType = (t) => t.type === "gasto" || t.type === "ahorro_meta";
+// Tarjeta de crédito: una compra no mueve plata hasta que se paga el resumen.
+//  - Compra con tarjeta (cardId): cuenta como CONSUMO el día de la compra (categorías,
+//    presupuesto, análisis) pero NO baja el saldo.
+//  - Pago del resumen (cardPaymentId): baja el saldo pero NO es consumo (la compra
+//    ya contó) -- si no, el mismo gasto se contaría dos veces.
+const isCardPurchase = (t) => t.type === "gasto" && t.cardId != null;
+const isCardPayment = (t) => t.cardPaymentId != null;
+const isCashExpense = (t) => isExpenseType(t) && !isCardPurchase(t);   // lo que baja el saldo
+const isSpend = (t) => isExpenseType(t) && !isCardPayment(t);          // consumo total del mes
+const isConsumption = (t) => t.type === "gasto" && !isCardPayment(t);  // para categorías / presupuesto
+// Borra un movimiento; si era el pago de un resumen, también su registro del historial.
+const withoutTx = (data, id) => ({
+  ...data,
+  transactions: data.transactions.filter(t => t.id !== id),
+  cardPayments: (data.cardPayments || []).filter(p => p.txId !== id),
+});
 const catIcon = (data, name) => (data.categories && data.categories[name]) || "📦";
 const catExists = (data, name) => !!(data.categories && data.categories[name]);
 // Igual que el backend: matching de categoría case-insensitive.
@@ -1816,10 +1832,10 @@ function FinanzasApp() {
     return p.month === data.selectedMonth && p.year === data.selectedYear;
   });
   const totalIncome = monthTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const totalExpense = monthTxs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+  const totalExpense = monthTxs.filter(isCashExpense).reduce((s, t) => s + t.amount, 0);
 
   const expByCat = {};
-  monthTxs.filter(t => t.type === "gasto").forEach(t => {
+  monthTxs.filter(isConsumption).forEach(t => {
     expByCat[t.category] = (expByCat[t.category] || 0) + t.amount;
   });
 
@@ -2117,7 +2133,7 @@ function MovimientosList({ data, save, monthTxs, showSnack }) {
   const listTxs = sortedTxs.slice(txPageClamped * TX_PAGE_SIZE, txPageClamped * TX_PAGE_SIZE + TX_PAGE_SIZE);
   const delTx = (id) => {
     const prevData = data;
-    save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+    save(withoutTx(data, id));
     showSnack && showSnack("Movimiento eliminado", () => save(prevData));
   };
   const editingTx = editingTxId != null ? data.transactions.find(t => t.id === editingTxId) : null;
@@ -2143,9 +2159,9 @@ function MovimientosList({ data, save, monthTxs, showSnack }) {
                 <div style={{ width: 32, height: 32, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, color: isIncomeType(t) ? COLORS.green : COLORS.red, display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={isIncomeType(t) ? "arrowIn" : "arrowOut"} size={16} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{t.description || t.category}</div>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}{txCardLabel(data, t) ? ` · ${txCardLabel(data, t)}` : ""}</div>
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red, fontVariantNumeric: "tabular-nums" }}>{isIncomeType(t) ? "+" : "−"}{formatFull(t.amount).replace(/^-/, "")}</div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: txAmountColor(t), fontVariantNumeric: "tabular-nums" }}>{isIncomeType(t) ? "+" : "−"}{formatFull(t.amount).replace(/^-/, "")}</div>
                 <button onClick={() => setEditingTxId(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
                 <button onClick={remove} aria-label={`Eliminar ${t.description || t.category}`} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 15, padding: 8, lineHeight: 1, display: "flex", alignItems: "center" }}>✕</button>
               </div>
@@ -2251,6 +2267,14 @@ function HeaderAnuncio({ onNavigate, openWa }) {
 // FAB de mobile para que no se desincronicen.
 // Nombres lindos para los tipos de movimiento que la web no ofrece crear pero
 // sí puede tener que mostrar al editar (los escribe el bot o la app).
+// "💳 Visa · 3 cuotas" para compras con tarjeta (null si no aplica).
+const txCardLabel = (data, t) => {
+  if (!isCardPurchase(t)) return null;
+  const c = (data.cards || []).find(x => x.id === t.cardId);
+  const n = Math.max(1, parseInt(t.installments) || 1);
+  return `💳 ${c ? c.name : "Tarjeta"}${n > 1 ? ` · ${n} cuotas` : ""}`;
+};
+const txAmountColor = (t) => isIncomeType(t) ? COLORS.green : isCardPurchase(t) ? COLORS.goldText : COLORS.red;
 const TX_TYPE_LABELS = { gasto: "Gasto", ingreso: "Ingreso", ahorro_meta: "Ahorro", sueldo: "Sueldo" };
 
 const NUEVA_CARGA_OPCIONES = [
@@ -2336,14 +2360,14 @@ function BalanceCard({ data }) {
   const inMo = (m, y) => data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === m && p.year === y; });
   const cur = inMo(data.selectedMonth, data.selectedYear);
   const inc = cur.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const gas = cur.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const gas = cur.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0);
   const aho = cur.filter(t => t.type === "ahorro_meta").reduce((s, t) => s + t.amount, 0);
   const bal = inc - gas - aho;
   let pm = data.selectedMonth - 1, py = data.selectedYear;
   if (pm < 0) { pm = 11; py--; }
   const prev = inMo(pm, py);
   const pInc = prev.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const pGas = prev.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const pGas = prev.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0);
   const pAho = prev.filter(t => t.type === "ahorro_meta").reduce((s, t) => s + t.amount, 0);
   const pBal = pInc - pGas - pAho;
   const chg = (c, p) => p > 0 ? Math.round(((c - p) / p) * 100) : null;
@@ -2482,12 +2506,12 @@ function InicioPanorama({ data, dolarRate, expByCat, onNavigate }) {
   const inMonth = (m, y) => data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === m && p.year === y; });
   const monthTxs2 = inMonth(data.selectedMonth, data.selectedYear);
   const mIncome = monthTxs2.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const mGasto = monthTxs2.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const mGasto = monthTxs2.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0);
   let pMonth = data.selectedMonth - 1, pYear = data.selectedYear;
   if (pMonth < 0) { pMonth = 11; pYear--; }
   const prevTxs = inMonth(pMonth, pYear);
   const pIncome = prevTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const pGasto = prevTxs.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const pGasto = prevTxs.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0);
   const pctChg = (cur, prev) => prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null;
 
   // 6 meses: ingresos vs. gastos (mismo criterio que AnalisisTab).
@@ -2495,7 +2519,7 @@ function InicioPanorama({ data, dolarRate, expByCat, onNavigate }) {
     let m = data.selectedMonth - 5 + i, y = data.selectedYear;
     while (m < 0) { m += 12; y--; }
     const txs = inMonth(m, y);
-    return { label: MONTH_NAMES[m], inc: txs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0), exp: txs.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0) };
+    return { label: MONTH_NAMES[m], inc: txs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0), exp: txs.filter(t => t.type === "gasto" && !isCardPurchase(t)).reduce((s, t) => s + t.amount, 0) };
   });
   const max6 = Math.max(...months6.flatMap(x => [x.inc, x.exp]), 1);
 
@@ -2555,9 +2579,9 @@ function InicioPanorama({ data, dolarRate, expByCat, onNavigate }) {
       <div style={{ width: 30, height: 30, borderRadius: 9, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 500, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.description || t.category}</div>
-        <div style={{ fontSize: 10.5, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+        <div style={{ fontSize: 10.5, color: COLORS.textMuted }}>{t.date} · {t.category}{txCardLabel(data, t) ? ` · ${txCardLabel(data, t)}` : ""}</div>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 12.5, color: isIncomeType(t) ? COLORS.green : COLORS.red, fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+      <div style={{ fontWeight: 700, fontSize: 12.5, color: txAmountColor(t), fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
     </div>
   );
   const deltaLine = (pct, up) => pct == null ? null : (
@@ -2717,7 +2741,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   })();
 
   const totalBudget = data.budgets.reduce((s, b) => s + b.limit, 0);
-  const spentThisMonth = monthTxs.filter(t => t.type === "gasto").reduce((s, t) => s + t.amount, 0);
+  const spentThisMonth = monthTxs.filter(isConsumption).reduce((s, t) => s + t.amount, 0);
 
   const today = todayStr();
   const proximosTurnos = (data.turnos || []).filter(t => t.date >= today && !t.cancelled).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
@@ -2754,7 +2778,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
   const listTxs = sortedTxs.slice(txPageClamped * TX_PAGE_SIZE, txPageClamped * TX_PAGE_SIZE + TX_PAGE_SIZE);
   const delTx = (id) => {
     const prevData = data;
-    save({ ...data, transactions: data.transactions.filter(t => t.id !== id) });
+    save(withoutTx(data, id));
     showSnack && showSnack("Movimiento eliminado", () => save(prevData));
   };
 
@@ -2868,9 +2892,9 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
                   <div style={{ width: 34, height: 34, borderRadius: 10, background: isIncomeType(t) ? COLORS.greenDim : COLORS.redDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{catIcon(data, t.category)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, fontSize: 13 }}>{t.description || t.category}</div>
-                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}</div>
+                    <div style={{ fontSize: 11, color: COLORS.textMuted }}>{t.date} · {t.category}{txCardLabel(data, t) ? ` · ${txCardLabel(data, t)}` : ""}</div>
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: isIncomeType(t) ? COLORS.green : COLORS.red }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: txAmountColor(t) }}>{isIncomeType(t) ? "+" : "-"}{formatFull(t.amount)}</div>
                   <button onClick={() => startEditTx(t)} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, fontSize: 13, fontWeight: 600, padding: 4 }}>Editar</button>
                   <button onClick={remove} aria-label={`Eliminar ${t.description || t.category}`} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textMuted, fontSize: 15, padding: 8, lineHeight: 1, display: "flex", alignItems: "center" }}>✕</button>
                 </div>
@@ -2901,16 +2925,16 @@ function AnalisisTab({ data }) {
     if (m < 0) { m += 12; y--; }
     const txs = data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === m && p.year === y; });
     const inc = txs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-    const exp = txs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+    const exp = txs.filter(isSpend).reduce((s, t) => s + t.amount, 0);
     return { m, y, label: MONTH_NAMES[m], inc, exp };
   });
   const maxVal = Math.max(...months.flatMap(mo => [mo.inc, mo.exp]), 1);
 
   const selMonthTxs = data.transactions.filter(t => { const p = parseDateParts(t.date); return p.month === data.selectedMonth && p.year === data.selectedYear; });
   const totalIncome = selMonthTxs.filter(isIncomeType).reduce((s, t) => s + t.amount, 0);
-  const totalExpense = selMonthTxs.filter(isExpenseType).reduce((s, t) => s + t.amount, 0);
+  const totalExpense = selMonthTxs.filter(isSpend).reduce((s, t) => s + t.amount, 0);
   const expByCat = {};
-  selMonthTxs.filter(t => t.type === "gasto").forEach(t => { expByCat[t.category] = (expByCat[t.category] || 0) + t.amount; });
+  selMonthTxs.filter(isConsumption).forEach(t => { expByCat[t.category] = (expByCat[t.category] || 0) + t.amount; });
   const topCats = Object.entries(expByCat).sort((a, b) => b[1] - a[1]);
   const maxCat = Math.max(...topCats.map(([, v]) => v), 1);
 
@@ -3134,6 +3158,81 @@ const TOUR_STEPS_COPY = {
   },
 };
 
+// Selector "¿Con qué pagaste?" del formulario de gasto. Con tarjeta de crédito la
+// compra no baja el saldo (va al resumen); si no hay tarjetas cargadas se crea una
+// ahí mismo, sin perder lo que ya escribiste.
+const cuotasOf = (cp) => Math.min(60, Math.max(1, parseInt(cp.cuotas === "otra" ? cp.otra : cp.cuotas) || 1));
+function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date }) {
+  const cards = data.cards || [];
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState({ name: "", closingDay: "", dueDay: "" });
+  const card = cards.find(c => c.id === cp.cardId) || null;
+  const total = parseAmountInput(amountStr || "0");
+  const n = cuotasOf(cp);
+  const period = card ? cardStatementPeriod(card, date) : null;
+  const showCreate = creating || cards.length === 0;
+  const createCard = () => {
+    const name = draft.name.trim(); const dueDay = parseInt(draft.dueDay);
+    if (!name || !(dueDay >= 1 && dueDay <= 31)) return;
+    const closingDay = parseInt(draft.closingDay);
+    const c = { id: Date.now(), name, dueDay, closingDay: closingDay >= 1 && closingDay <= 31 ? closingDay : 0 };
+    savePlain({ ...data, cards: [...cards, c] });
+    setCp({ ...cp, cardId: c.id });
+    setDraft({ name: "", closingDay: "", dueDay: "" });
+    setCreating(false);
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <SegmentedControl label="¿Con qué pagaste?"
+        options={[{ value: "otro", label: "Efectivo / débito" }, { value: "tarjeta", label: "Tarjeta de crédito" }]}
+        value={cp.on ? "tarjeta" : "otro"} onChange={v => setCp({ ...cp, on: v === "tarjeta" })} />
+      {cp.on && (
+        <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {cards.length === 0 && <InfoBanner>Todavía no cargaste ninguna tarjeta. Creala acá y la compra no te descuenta del saldo hasta que pagues el resumen.</InfoBanner>}
+          {cards.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {cards.map(c => (
+                <button key={c.id} type="button" onClick={() => setCp({ ...cp, cardId: c.id })} style={{
+                  background: cp.cardId === c.id ? COLORS.accent : COLORS.pillBg, color: cp.cardId === c.id ? "#fff" : COLORS.accent,
+                  border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                }}>💳 {c.name}</button>
+              ))}
+              <button type="button" onClick={() => setCreating(v => !v)} style={{ background: "none", border: `1px dashed ${COLORS.accent}`, color: COLORS.accent, borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva tarjeta</button>
+            </div>
+          )}
+          {showCreate && (
+            <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 10, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 12 }}>
+              <Input label="Nombre de la tarjeta" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} placeholder="Ej: Visa Galicia" />
+              <div className="form-grid-4" style={{ margin: 0 }}>
+                <Input label="Día de cierre" value={draft.closingDay} onChange={v => setDraft({ ...draft, closingDay: v })} type="number" placeholder="1-31" />
+                <Input label="Día de vencimiento" value={draft.dueDay} onChange={v => setDraft({ ...draft, dueDay: v })} type="number" placeholder="1-31" />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button onClick={createCard} variant="gold" disabled={!draft.name.trim() || !(parseInt(draft.dueDay) >= 1 && parseInt(draft.dueDay) <= 31)}>Crear tarjeta</Button>
+                {cards.length > 0 && <Button onClick={() => setCreating(false)} variant="ghost">Cancelar</Button>}
+              </div>
+            </div>
+          )}
+          {card && (
+            <React.Fragment>
+              <SegmentedControl label="Cuotas"
+                options={[{ value: "1", label: "1 pago" }, { value: "3", label: "3" }, { value: "6", label: "6" }, { value: "12", label: "12" }, { value: "otra", label: "Otra" }]}
+                value={cp.cuotas} onChange={v => setCp({ ...cp, cuotas: v })} />
+              {cp.cuotas === "otra" && <Input label="Cantidad de cuotas" value={cp.otra} onChange={v => setCp({ ...cp, otra: v })} type="number" placeholder="Ej: 18" />}
+              <div style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 10, padding: "10px 14px", fontSize: 13, color: COLORS.textMuted, lineHeight: 1.5 }}>
+                {n > 1 && total > 0 && <div><strong style={{ color: COLORS.text }}>{n} cuotas de {formatFull(installmentAmount(total, n, 0))}</strong> · la última en {periodLabel(shiftPeriod(period, n - 1))}</div>}
+                <div>Primera cuota en el resumen de <strong style={{ color: COLORS.text }}>{periodLabel(period)}</strong> (vence el {cardDueDate(card, period).getDate()} {MONTH_NAMES[cardDueDate(card, period).getMonth()]}).</div>
+                <div>No descuenta del saldo hasta que pagues la tarjeta.</div>
+                {!card.closingDay && <div style={{ color: COLORS.goldText }}>Esta tarjeta no tiene día de cierre: lo cargás en Pagos con Tarjetas → Editar.</div>}
+              </div>
+            </React.Fragment>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing = null, initialType = "gasto", tourPhase = null, dolarRate = 0 }) {
   const catNames = Object.keys(data.categories);
   // Alta de ahorro: elegir la meta y decir de dónde sale la plata. No se puede
@@ -3153,6 +3252,12 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
     : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  // Pago con tarjeta de crédito (solo gastos). Al editar se parte de lo ya guardado.
+  const [cp, setCp] = useState(() => {
+    const n = editing ? Math.max(1, parseInt(editing.installments) || 1) : 1;
+    const preset = ["1", "3", "6", "12"].includes(String(n));
+    return { on: !!editing && isCardPurchase(editing), cardId: editing && editing.cardId != null ? editing.cardId : null, cuotas: preset ? String(n) : "otra", otra: preset ? "" : String(n) };
+  });
   // La descripción es opcional: no se puede esperar a que la completen para
   // avanzar. Este flag lo marca escribir algo o tocar "Seguir".
   const [descDone, setDescDone] = useState(false);
@@ -3199,11 +3304,21 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
     if (!form.amount || !parseAmountInput(form.amount)) return;
     if (requireCategoryChoice && !form.category) return;
     const amount = parseAmountInput(form.amount);
+    const card = form.type === "gasto" && cp.on ? (data.cards || []).find(c => c.id === cp.cardId) : null;
+    if (cp.on && form.type === "gasto" && !card) return;
+    const n = cuotasOf(cp);
+    const cardFields = card ? { cardId: card.id, cardPeriod: cardStatementPeriod(card, form.date), ...(n > 1 ? { installments: n } : {}) } : {};
     if (editing) {
-      const transactions = data.transactions.map(t => t.id === editing.id ? { ...t, ...form, amount } : t);
-      save({ ...data, transactions });
+      const transactions = data.transactions.map(t => {
+        if (t.id !== editing.id) return t;
+        const { cardId, cardPeriod, installments, ...rest } = t;   // se recalculan abajo
+        return { ...rest, ...form, amount, ...cardFields };
+      });
+      // Si era el pago de un resumen, el historial de Pagos con Tarjetas lo sigue.
+      const cardPayments = (data.cardPayments || []).map(pp => pp.txId === editing.id ? { ...pp, amount, date: form.date } : pp);
+      save({ ...data, transactions, cardPayments });
     } else {
-      const tx = { ...form, amount, id: Date.now() };
+      const tx = { ...form, amount, id: Date.now(), ...cardFields };
       save({ ...data, transactions: [...data.transactions, tx] });
     }
     onClose();
@@ -3297,6 +3412,9 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           )}
         </div>
         <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+        {form.type === "gasto" && !tourPhase && !(editing && isCardPayment(editing)) && (
+          <CardPurchaseFields data={data} savePlain={savePlain} cp={cp} setCp={setCp} amountStr={form.amount} date={form.date} />
+        )}
         {tourStep === "save" && (
           <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, textAlign: "center" }}>{TOUR_STEPS_COPY[tourPhase].save}</div>
         )}
@@ -3305,7 +3423,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           habilitado y tocarlo no hacía nada (add() corta en silencio si
           !form.amount). Ahora el botón refleja de verdad si hay algo para
           guardar -- vale para el tour y para el alta normal. */}
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : "Guardar"} saveDisabled={esAhorro ? !puedeGuardarAhorro : (!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category))} saveHighlight={tourStep === "save"} />
+      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : "Guardar"} saveDisabled={esAhorro ? !puedeGuardarAhorro : (!parseAmountInput(form.amount) || (requireCategoryChoice && !form.category) || (form.type === "gasto" && cp.on && !(data.cards || []).some(c => c.id === cp.cardId)))} saveHighlight={tourStep === "save"} />
     </BottomSheet>
   );
 }
@@ -3999,13 +4117,51 @@ const cardNextDue = (card, from = new Date()) => {
   return d;
 };
 const daysUntil = (d) => { const t0 = new Date(); return Math.round((d - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate())) / 86400000); };
-// Total/mínimo del resumen de un período: el último valor cargado en algún pago.
-const cardPeriodInfo = (payments, cardId, period) => {
-  const list = payments.filter(p => p.cardId === cardId && p.period === period).sort((a, b) => b.id - a.id);
+const daysInMonth = (y, m0) => new Date(y, m0 + 1, 0).getDate();
+const monthsBetween = (a, b) => { const [ay, am] = String(a).split("-").map(Number); const [by, bm] = String(b).split("-").map(Number); return (by - ay) * 12 + (bm - am); };
+// Fecha de vencimiento del resumen de un período ("YYYY-MM" = mes del vencimiento).
+const cardDueDate = (card, period) => { const [y, m] = String(period).split("-").map(Number); return new Date(y, m - 1, Math.min(Math.max(1, parseInt(card.dueDay) || 1), daysInMonth(y, m - 1))); };
+// A qué resumen va una compra hecha el día `dateStr`. Hasta el día de cierre
+// (inclusive) entra en el resumen que cierra ese mes; después, en el siguiente. El
+// vencimiento es el primer `dueDay` posterior al cierre. Sin día de cierre cargado
+// se asume el próximo vencimiento a partir de la compra.
+const cardStatementPeriod = (card, dateStr) => {
+  const d = parseDateParts(dateStr);
+  const close = parseInt(card.closingDay) || 0;
+  const due = Math.min(31, Math.max(1, parseInt(card.dueDay) || 1));
+  if (!close) return periodOf(cardNextDue(card, new Date(d.year, d.month, d.day)));
+  const closeThis = Math.min(close, daysInMonth(d.year, d.month));
+  const closing = new Date(d.year, d.month + (d.day > closeThis ? 1 : 0), 1);
+  return periodOf(new Date(closing.getFullYear(), closing.getMonth() + (due > close ? 0 : 1), 1));
+};
+const txInstallments = (t) => Math.min(60, Math.max(1, parseInt(t.installments) || 1));
+// Reparto en cuotas enteras: todas iguales y la última absorbe el resto.
+const installmentAmount = (total, n, i) => { const base = Math.floor(total / n); return i === n - 1 ? total - base * (n - 1) : base; };
+// Compras (y cuotas) que caen en el resumen de una tarjeta para un período.
+const cardPeriodItems = (data, cardId, period) => {
+  const cards = data.cards || [];
+  const card = cards.find(c => c.id === cardId);
+  const items = [];
+  (data.transactions || []).forEach(t => {
+    if (t.cardId !== cardId || t.type !== "gasto") return;
+    const p0 = t.cardPeriod || (card ? cardStatementPeriod(card, t.date) : null);
+    if (!p0) return;
+    const n = txInstallments(t); const i = monthsBetween(p0, period);
+    if (i >= 0 && i < n) items.push({ tx: t, index: i, count: n, amount: installmentAmount(t.amount, n, i) });
+  });
+  return items.sort((a, b) => String(a.tx.date).localeCompare(String(b.tx.date)));
+};
+// Estado de un resumen: lo que suman las compras (auto), el total que corrigió el
+// usuario al pagar (override, p. ej. con intereses del banco), lo pagado y lo que falta.
+const cardPeriodInfo = (data, cardId, period) => {
+  const list = (data.cardPayments || []).filter(p => p.cardId === cardId && p.period === period).sort((a, b) => b.id - a.id);
   const paid = list.reduce((s, p) => s + (p.amount || 0), 0);
-  const total = (list.find(p => p.statementTotal > 0) || {}).statementTotal || 0;
+  const items = cardPeriodItems(data, cardId, period);
+  const auto = items.reduce((s, it) => s + it.amount, 0);
+  const override = (list.find(p => p.statementTotal > 0) || {}).statementTotal || 0;
+  const total = override || auto;
   const min = (list.find(p => p.minPayment > 0) || {}).minPayment || 0;
-  return { list, paid, total, min, left: Math.max(0, total - paid) };
+  return { list, paid, items, auto, override, total, min, left: Math.max(0, total - paid) };
 };
 
 function PagosTarjetas({ data, save }) {
@@ -4017,6 +4173,7 @@ function PagosTarjetas({ data, save }) {
   const [paySheet, setPaySheet] = useState(false);
   const [payForm, setPayForm] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [openItems, setOpenItems] = useState({}); // tarjeta -> mostrar las compras del resumen
 
   const dueOf = (c) => cardNextDue(c);
 
@@ -4046,11 +4203,20 @@ function PagosTarjetas({ data, save }) {
   };
   const removeCard = (c) => {
     const n = payments.filter(p => p.cardId === c.id).length;
-    const msg = n > 0
-      ? `¿Eliminar ${c.name}? Su historial (${n} pago${n === 1 ? "" : "s"}) se conserva; los movimientos de gasto no se tocan.`
-      : `¿Eliminar ${c.name}?`;
+    const compras = data.transactions.filter(t => t.cardId === c.id).length;
+    let msg = `¿Eliminar ${c.name}?`;
+    if (n > 0) msg += ` Su historial de pagos (${n}) se conserva.`;
+    if (compras > 0) msg += ` Sus ${compras} compra${compras === 1 ? "" : "s"} con tarjeta pasan a ser gastos comunes y van a descontar del saldo.`;
     if (!window.confirm(msg)) return;
-    save({ ...data, cards: cards.filter(x => x.id !== c.id) });
+    save({
+      ...data,
+      cards: cards.filter(x => x.id !== c.id),
+      transactions: data.transactions.map(t => {
+        if (t.cardId !== c.id) return t;
+        const { cardId, installments, cardPeriod, ...rest } = t;
+        return rest;
+      }),
+    });
   };
 
   // ---- pagos ----
@@ -4058,7 +4224,7 @@ function PagosTarjetas({ data, save }) {
     const c = card || cards[0];
     if (!c) return;
     const period = periodOf(dueOf(c));
-    const info = cardPeriodInfo(payments, c.id, period);
+    const info = cardPeriodInfo(data, c.id, period);
     setPayForm({
       cardId: c.id, period,
       statementTotal: info.total ? formatAmountInput(String(info.total)) : "",
@@ -4073,7 +4239,7 @@ function PagosTarjetas({ data, save }) {
     const c = cards.find(x => x.id === cardId);
     if (!c) return;
     const p = period || periodOf(dueOf(c));
-    const info = cardPeriodInfo(payments, cardId, p);
+    const info = cardPeriodInfo(data, cardId, p);
     setPayForm(f => ({
       ...f, cardId, period: p,
       statementTotal: info.total ? formatAmountInput(String(info.total)) : "",
@@ -4096,7 +4262,9 @@ function PagosTarjetas({ data, save }) {
       transactions: [...data.transactions, tx],
       cardPayments: [...payments, {
         id, cardId: card.id, cardName: card.name, period: f.period,
-        statementTotal: parseAmountInput(f.statementTotal) || 0,
+        // Solo se guarda como "corrección" si difiere de lo que suman las compras;
+        // si coincide queda en automático y sigue a las compras que se agreguen.
+        statementTotal: (() => { const typed = parseAmountInput(f.statementTotal) || 0; return typed && typed !== cardPeriodInfo(data, card.id, f.period).auto ? typed : 0; })(),
         minPayment: parseAmountInput(f.minPayment) || 0,
         amount, date: f.date, txId: id,
       }],
@@ -4128,8 +4296,8 @@ function PagosTarjetas({ data, save }) {
     g.items.push(p); g.total += p.amount || 0;
   });
   const payKind = (p) => {
-    if (!(p.statementTotal > 0)) return null;
-    const info = cardPeriodInfo(payments, p.cardId, p.period);
+    const info = cardPeriodInfo(data, p.cardId, p.period);
+    if (!(info.total > 0)) return null;
     const upTo = payments.filter(x => x.cardId === p.cardId && x.period === p.period && x.id <= p.id).reduce((s, x) => s + x.amount, 0);
     if (upTo >= info.total) return { label: "Total", color: COLORS.green };
     if (info.min > 0 && Math.abs(p.amount - info.min) <= info.min * 0.01) return { label: "Mínimo", color: COLORS.goldText };
@@ -4142,7 +4310,7 @@ function PagosTarjetas({ data, save }) {
   const sheetTotal = f ? parseAmountInput(f.statementTotal || "0") : 0;
   const sheetMin = f ? parseAmountInput(f.minPayment || "0") : 0;
   const sheetAmt = f ? parseAmountInput(f.amount || "0") : 0;
-  const sheetPaidBefore = f && sheetCard ? cardPeriodInfo(payments, f.cardId, f.period).paid : 0;
+  const sheetPaidBefore = f && sheetCard ? cardPeriodInfo(data, f.cardId, f.period).paid : 0;
   const sheetLeft = sheetTotal > 0 ? Math.max(0, sheetTotal - sheetPaidBefore - sheetAmt) : null;
 
   return (
@@ -4180,7 +4348,7 @@ function PagosTarjetas({ data, save }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {cards.map(c => {
             const due = dueOf(c); const n = daysUntil(due);
-            const info = cardPeriodInfo(payments, c.id, periodOf(due));
+            const info = cardPeriodInfo(data, c.id, periodOf(due));
             const settled = info.total > 0 && info.left === 0;
             return (
               <Card key={c.id}>
@@ -4199,18 +4367,56 @@ function PagosTarjetas({ data, save }) {
                     )}
                   </div>
                 </div>
-                {info.total > 0 && (
-                  <div style={{ marginTop: 12 }}>
-                    {/* Barra propia: ProgressBar se pone roja >90% (pensada para presupuestos) y acá llegar al 100% es lo bueno. */}
-                    <div style={{ background: "#e8f0ec", borderRadius: 99, height: 8, overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(100, (info.paid / info.total) * 100)}%`, height: "100%", background: settled ? COLORS.green : COLORS.accent, borderRadius: 99, transition: "width var(--dur-layout) var(--ease-standard)" }} />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12, color: COLORS.textMuted, marginTop: 6 }}>
-                      <span>Resumen {periodLabel(periodOf(due))}: <strong style={{ color: COLORS.text }}>{formatFull(info.total)}</strong>{info.min > 0 ? ` · mínimo ${formatFull(info.min)}` : ""}</span>
-                      <span>Pagado <strong style={{ color: COLORS.text }}>{formatFull(info.paid)}</strong>{info.left > 0 ? <> · Falta <strong style={{ color: COLORS.red }}>{formatFull(info.left)}</strong></> : ""}</span>
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  const period = periodOf(due);
+                  const proximos = [1, 2, 3].map(k => shiftPeriod(period, k))
+                    .map(pp => ({ pp, v: cardPeriodItems(data, c.id, pp).reduce((acc, it) => acc + it.amount, 0) }))
+                    .filter(x => x.v > 0);
+                  return (
+                    <React.Fragment>
+                      {info.total > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                          {/* Barra propia: ProgressBar se pone roja >90% (pensada para presupuestos) y acá llegar al 100% es lo bueno. */}
+                          <div style={{ background: "#e8f0ec", borderRadius: 99, height: 8, overflow: "hidden" }}>
+                            <div style={{ width: `${Math.min(100, (info.paid / info.total) * 100)}%`, height: "100%", background: settled ? COLORS.green : COLORS.accent, borderRadius: 99, transition: "width var(--dur-layout) var(--ease-standard)" }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12, color: COLORS.textMuted, marginTop: 6 }}>
+                            <span>Resumen {periodLabel(period)}: <strong style={{ color: COLORS.text }}>{formatFull(info.total)}</strong>{info.override > 0 && info.override !== info.auto ? " (corregido)" : ""}{info.min > 0 ? ` · mínimo ${formatFull(info.min)}` : ""}</span>
+                            <span>Pagado <strong style={{ color: COLORS.text }}>{formatFull(info.paid)}</strong>{info.left > 0 ? <> · Falta <strong style={{ color: COLORS.red }}>{formatFull(info.left)}</strong></> : ""}</span>
+                          </div>
+                        </div>
+                      )}
+                      {info.items.length > 0 && (
+                        <div style={{ marginTop: 10 }}>
+                          <button type="button" onClick={() => setOpenItems(o => ({ ...o, [c.id]: !o[c.id] }))} style={{ background: "none", border: "none", color: COLORS.accent, fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                            {openItems[c.id] ? "− Ocultar" : "+ Ver"} las {info.items.length} compra{info.items.length === 1 ? "" : "s"} de este resumen
+                          </button>
+                          {openItems[c.id] && (
+                            <div className="form-pop" style={{ marginTop: 8 }}>
+                              {info.items.map((it, k) => {
+                                const dd = parseDateParts(it.tx.date);
+                                return (
+                                  <div key={`${it.tx.id}-${k}`} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "7px 0", borderTop: `1px solid ${COLORS.border}`, fontSize: 13 }}>
+                                    <div style={{ minWidth: 0 }}>
+                                      <div style={{ color: COLORS.text, fontWeight: 600 }}>{catIcon(data, it.tx.category)} {it.tx.description || it.tx.category}</div>
+                                      <div style={{ fontSize: 11.5, color: COLORS.textMuted }}>{dd.day} {MONTH_NAMES[dd.month]}{it.count > 1 ? ` · cuota ${it.index + 1} de ${it.count}` : " · 1 pago"}</div>
+                                    </div>
+                                    <div style={{ fontWeight: 700, color: COLORS.text, fontVariantNumeric: "tabular-nums" }}>{formatFull(it.amount)}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {proximos.length > 0 && (
+                        <div style={{ marginTop: 10, fontSize: 12, color: COLORS.textMuted }}>
+                          Ya comprometido: {proximos.map(x => <span key={x.pp} style={{ marginRight: 10 }}>{periodLabel(x.pp)} <strong style={{ color: COLORS.text }}>{formatFull(x.v)}</strong></span>)}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })()}
                 <div className="inline-edit-actions" style={{ marginTop: 14 }}>
                   <Button onClick={() => openPay(c)} size="sm">Registrar pago</Button>
                   <Button onClick={() => openCard(c)} variant="ghost" size="sm">Editar</Button>
@@ -4289,7 +4495,10 @@ function PagosTarjetas({ data, save }) {
             <SegmentedControl label="Resumen de"
               options={[-1, 0, 1].map(k => { const base = periodOf(dueOf(sheetCard)); const p = shiftPeriod(base, k); return { value: p, label: periodLabel(p) }; })}
               value={f.period} onChange={p => retarget(f.cardId, p)} />
-            <Input label="Total del resumen (opcional)" value={f.statementTotal} onChange={v => setPayForm({ ...f, statementTotal: v })} type="amount" prefix="$" placeholder="0" />
+            <Input label="Total del resumen" value={f.statementTotal} onChange={v => setPayForm({ ...f, statementTotal: v })} type="amount" prefix="$" placeholder="0" />
+            {(() => { const ai = cardPeriodInfo(data, f.cardId, f.period); return ai.auto > 0 ? (
+              <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: -6 }}>Suma de tus {ai.items.length} compra{ai.items.length === 1 ? "" : "s"} del período: <strong style={{ color: COLORS.text }}>{formatFull(ai.auto)}</strong>. Corregilo si el banco suma intereses o impuestos.</div>
+            ) : null; })()}
             <Input label="Pago mínimo (opcional)" value={f.minPayment} onChange={v => setPayForm({ ...f, minPayment: v })} type="amount" prefix="$" placeholder="0" />
             <Input label="Monto a pagar" value={f.amount} onChange={v => setPayForm({ ...f, amount: v })} type="amount" prefix="$" placeholder="0" />
             {(sheetTotal > 0 || sheetMin > 0) && (
