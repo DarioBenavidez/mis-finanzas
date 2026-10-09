@@ -1999,7 +1999,7 @@ function FinanzasApp() {
             {panel === "prestamos" && <Prestamos data={data} save={save} dolarRate={dolarRate} />}
             {panel === "tarjetas" && <PagosTarjetas data={data} save={save} />}
             {panel === "turnos" && <Turnos data={data} save={save} />}
-            {panel === "calendario" && <Calendario data={data} save={save} />}
+            {panel === "calendario" && <Calendario data={data} save={save} onOpenCards={() => setPanel("tarjetas")} />}
             {panel === "proyeccion" && <Proyeccion data={data} save={save} />}
             {panel === "suscripciones" && <Suscripciones data={data} save={save} />}
             {panel === "gastosfijos" && <GastosFijos data={data} save={save} />}
@@ -2428,7 +2428,7 @@ function BocetoLayout({ section, onNavigate, data, save, dolarRate, expByCat, mo
       case "gastosfijos": return <GastosFijos data={data} save={save} />;
       case "suscripciones": return <Suscripciones data={data} save={save} />;
       case "turnos": return <Turnos data={data} save={save} />;
-      case "calendario": return <Calendario data={data} save={save} />;
+      case "calendario": return <Calendario data={data} save={save} onOpenCards={() => onNavigate("tarjetas")} />;
       case "proyeccion": return <Proyeccion data={data} save={save} />;
       case "analisis": return <AnalisisTab data={data} />;
       case "perfil": return <PerfilTab user={user} displayName={displayName} waPhone={waPhone} onConnectWa={openWa} onLogout={logout} />;
@@ -2555,7 +2555,9 @@ function InicioPanorama({ data, dolarRate, expByCat, onNavigate }) {
     .filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 14)
     .map(e => ({ id: "e" + e.id, color: eventType(e.type).color, label: `${eventType(e.type).label} · ${e.title}`, when: e.day - todayDay === 0 ? "hoy" : `en ${e.day - todayDay} día${e.day - todayDay === 1 ? "" : "s"}`, ts: new Date(data.selectedYear, data.selectedMonth, e.day).getTime() }))
     : [];
-  const upcoming = [...upTurnos, ...upVenc].sort((a, b) => a.ts - b.ts).slice(0, 4);
+  const upCards = cardDueEntries(data).filter(e => e.days <= 14)
+    .map(e => ({ id: "c" + e.card.id + e.period, color: cardDueColor(e.days), label: `💳 ${e.card.name} · resumen ${periodLabel(e.period)}`, when: `${cardDueWhen(e.days)} · ${formatFull(e.amount)}`, ts: e.due.getTime() }));
+  const upcoming = [...upTurnos, ...upVenc, ...upCards].sort((a, b) => a.ts - b.ts).slice(0, 5);
 
   // Movimientos recientes, por fecha real.
   const byDateDesc = (a, b) => b.date.localeCompare(a.date);
@@ -2748,6 +2750,7 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
 
   const isCurrentMonth = data.selectedMonth === currentMonth && data.selectedYear === currentYear;
   const todayDay = new Date().getDate();
+  const proximosTarjetas = cardDueEntries(data).filter(e => e.days <= 7);
   const proximosVencimientos = isCurrentMonth ? (data.events || []).filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 7).sort((a, b) => a.day - b.day) : [];
 
   let filteredTxs;
@@ -2832,8 +2835,24 @@ function InicioTab({ data, save, displayName, monthTxs, totalIncome, totalExpens
           ))}
         </div>
 
-        {(proximosTurnos.length > 0 || proximosVencimientos.length > 0) && (
+        {(proximosTurnos.length > 0 || proximosVencimientos.length > 0 || proximosTarjetas.length > 0) && (
           <div className="inicio-upcoming">
+            {proximosTarjetas.length > 0 && (
+              <Card style={{ padding: 18 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, display: "flex", alignItems: "center", gap: 7 }}><Icon name="wallet" size={15} /> Tarjetas por pagar</div>
+                  <button onClick={() => onOpenPanel("tarjetas")} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Ver todos</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {proximosTarjetas.map(e => (
+                    <div key={e.card.id + e.period} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
+                      <span style={{ minWidth: 0 }}>{e.card.name} <strong>{formatFull(e.amount)}</strong></span>
+                      <span style={{ color: cardDueColor(e.days), fontWeight: 600, flexShrink: 0 }}>{cardDueWhen(e.days)}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
             {proximosTurnos.length > 0 && (
               <Card style={{ padding: 18 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -4164,6 +4183,24 @@ const cardPeriodInfo = (data, cardId, period) => {
   return { list, paid, items, auto, override, total, min, left: Math.max(0, total - paid) };
 };
 
+// Resúmenes con plata por pagar: el del próximo vencimiento y, si quedó sin pagar, el
+// anterior (vencido). Lo usan Inicio, Calendario y Pagos con Tarjetas.
+const cardDueEntries = (data) => {
+  const out = [];
+  (data.cards || []).forEach(c => {
+    const nextPeriod = periodOf(cardNextDue(c));
+    [shiftPeriod(nextPeriod, -1), nextPeriod].forEach(period => {
+      const info = cardPeriodInfo(data, c.id, period);
+      if (!(info.left > 0)) return;
+      const due = cardDueDate(c, period);
+      out.push({ card: c, period, due, days: daysUntil(due), amount: info.left, total: info.total });
+    });
+  });
+  return out.sort((a, b) => a.due - b.due);
+};
+const cardDueWhen = (days) => days < 0 ? `vencido hace ${-days} día${days === -1 ? "" : "s"}` : days === 0 ? "vence hoy" : days === 1 ? "vence mañana" : `en ${days} días`;
+const cardDueColor = (days) => days <= 3 ? COLORS.red : COLORS.goldText;
+
 function PagosTarjetas({ data, save }) {
   const cards = data.cards || [];
   const payments = data.cardPayments || [];
@@ -5146,7 +5183,7 @@ const EVENT_TYPES = {
 // data real compartida). Nunca acceder EVENT_TYPES[x] directo con x de datos.
 const eventType = (t) => EVENT_TYPES[t] || { label: "Evento", icon: "cal", color: "#5E7D74" };
 
-function Calendario({ data, save }) {
+function Calendario({ data, save, onOpenCards }) {
   const emptyForm = { title: "", day: "1", type: "vencimiento", notifyDaysBefore: "3" };
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
@@ -5194,6 +5231,8 @@ function Calendario({ data, save }) {
     setPayAmt("");
   };
 
+  // Vencimientos de tarjeta: se repiten todos los meses en su día de vencimiento.
+  const calCards = (data.cards || []).map(c => ({ c, day: Math.min(Math.max(1, parseInt(c.dueDay) || 1), daysInMonth), period: `${data.selectedYear}-${String(data.selectedMonth + 1).padStart(2, "0")}` }));
   const grouped = Object.keys(EVENT_TYPES).map(type => ({ type, items: events.filter(e => e.type === type).sort((a, b) => a.day - b.day) }));
 
   return (
@@ -5225,17 +5264,19 @@ function Calendario({ data, save }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
             const dayEvents = events.filter(e => e.day === day);
+            const dayCards = calCards.filter(x => x.day === day);
+            const dotColors = [...dayEvents.map(e => eventType(e.type).color), ...dayCards.map(() => COLORS.gold)];
             const isToday = isCurrentMonth && day === todayDay;
             return (
               <div key={day} style={{
                 aspectRatio: "1", borderRadius: 8, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: isToday ? COLORS.accent : dayEvents.length > 0 ? (eventType(dayEvents[0].type).color + "22") : COLORS.bg,
+                background: isToday ? COLORS.accent : dotColors.length > 0 ? (dotColors[0] + "22") : COLORS.bg,
                 border: isToday ? "none" : `1px solid ${COLORS.border}`, fontSize: 12, gap: 2,
               }}>
                 <span style={{ color: isToday ? "#fff" : COLORS.text, fontWeight: isToday ? 700 : 400 }}>{day}</span>
-                {dayEvents.length > 0 && (
+                {dotColors.length > 0 && (
                   <div style={{ display: "flex", gap: 2 }}>
-                    {dayEvents.slice(0, 3).map(e => <div key={e.id} style={{ width: 5, height: 5, borderRadius: "50%", background: isToday ? "#fff" : eventType(e.type).color }} />)}
+                    {dotColors.slice(0, 3).map((col, k) => <div key={k} style={{ width: 5, height: 5, borderRadius: "50%", background: isToday ? "#fff" : col }} />)}
                   </div>
                 )}
               </div>
@@ -5244,14 +5285,47 @@ function Calendario({ data, save }) {
         </div>
       </Card>
 
+      {/* Tarjetas de crédito del mes */}
+      {calCards.length > 0 && (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${COLORS.border}`, fontWeight: 700, fontSize: 15, color: COLORS.goldText, display: "flex", alignItems: "center", gap: 8, justifyContent: "space-between", flexWrap: "wrap" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Icon name="wallet" size={16} /> Tarjetas de crédito</span>
+            {onOpenCards && <button onClick={onOpenCards} style={{ background: "none", border: "none", color: COLORS.accent, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Pagos con Tarjetas →</button>}
+          </div>
+          {calCards.map(({ c, day, period }) => {
+            const info = cardPeriodInfo(data, c.id, period);
+            const settled = info.total > 0 && info.left === 0;
+            return (
+              <div key={c.id} style={{ padding: "14px 20px", borderBottom: `1px solid ${COLORS.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{c.name}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textMuted }}>Vence el {day}{c.closingDay ? ` · cierra el ${c.closingDay}` : ""}</div>
+                </div>
+                <div style={{ textAlign: "right", fontSize: 13 }}>
+                  {info.total > 0 ? (
+                    <React.Fragment>
+                      <div style={{ fontWeight: 700 }}>{formatFull(info.total)}</div>
+                      <div style={{ fontSize: 11.5, color: settled ? COLORS.green : COLORS.textMuted }}>{settled ? "Pagado" : `Falta ${formatFull(info.left)}`}</div>
+                    </React.Fragment>
+                  ) : <div style={{ fontSize: 12, color: COLORS.textMuted }}>Sin resumen cargado</div>}
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
       {/* Próximos a vencer */}
       {isCurrentMonth && (() => {
-        const proximos = events.filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 7);
+        const proximos = [
+          ...events.filter(e => e.day - todayDay >= 0 && e.day - todayDay <= 7).map(e => ({ text: `${e.title} vence en ${e.day - todayDay === 0 ? "hoy" : `${e.day - todayDay} día(s)`}` })),
+          ...cardDueEntries(data).filter(e => e.days <= 7).map(e => ({ text: `${e.card.name} (${formatFull(e.amount)}) ${cardDueWhen(e.days)}` })),
+        ];
         return proximos.length > 0 ? (
           <InfoBanner>
             <span style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
               <span style={{ display: "flex", flexShrink: 0, marginTop: 1 }}><Icon name="clock" size={15} /></span>
-              <span>{proximos.map(e => `${e.title} vence en ${e.day - todayDay === 0 ? "hoy" : `${e.day - todayDay} día(s)`}`).join(" · ")}</span>
+              <span>{proximos.map(e => e.text).join(" · ")}</span>
             </span>
           </InfoBanner>
         ) : null;
@@ -5362,9 +5436,24 @@ function Proyeccion({ data, save }) {
       })
       .filter(c => c.amount > 0);
     const totalCuotas = cuotas.reduce((s, c) => s + c.amount, 0);
-    const totalGasto = budgetTotal + gastosFijosTotal + totalCuotas;
+    // Resúmenes de tarjeta que vencen ese mes y todavía no se pagaron: solo lo que ya
+    // está cargado (compras y cuotas). El gasto nuevo del mes sigue en el presupuesto.
+    // En el mes actual también entra el resumen anterior si quedó vencido sin pagar.
+    const periodo = `${y}-${String(m + 1).padStart(2, "0")}`;
+    const tarjetas = (data.cards || []).flatMap(c => {
+      const rows = [];
+      const cur = cardPeriodInfo(data, c.id, periodo);
+      if (cur.left > 0) rows.push({ name: c.name, amount: cur.left, overdue: false });
+      if (i === 0) {
+        const prev = cardPeriodInfo(data, c.id, shiftPeriod(periodo, -1));
+        if (prev.left > 0) rows.push({ name: `${c.name} (vencido)`, amount: prev.left, overdue: true });
+      }
+      return rows;
+    });
+    const totalTarjetas = tarjetas.reduce((s, c) => s + c.amount, 0);
+    const totalGasto = budgetTotal + gastosFijosTotal + totalCuotas + totalTarjetas;
     const balance = income - totalGasto;
-    return { m, y, label: MONTH_NAMES[m], year: y, income, cuotas, totalCuotas, budgetTotal, gastosFijosTotal, totalGasto, balance };
+    return { m, y, label: MONTH_NAMES[m], year: y, income, cuotas, totalCuotas, tarjetas, totalTarjetas, budgetTotal, gastosFijosTotal, totalGasto, balance };
   });
 
   const maxGasto = Math.max(...months.map(mo => mo.totalGasto), avgIncome, 1);
@@ -5378,7 +5467,8 @@ function Proyeccion({ data, save }) {
           { label: "Ingreso estimado", value: months[0].income, color: COLORS.text, sub: avgIncome > 0 || months[0].income !== avgIncome ? "Prom. últimos 3 meses / ajustes" : "Sin ingresos registrados" },
           { label: "Gastos fijos + presup.", value: budgetTotal + gastosFijosTotal, color: COLORS.text, sub: `${budgetItems.length} categorías` },
           { label: "Cuotas este mes", value: months[0].totalCuotas, color: COLORS.text, sub: `${months[0].cuotas.length} cuota(s)` },
-          { label: "Compromiso total", value: months[0].totalGasto, color: COLORS.text, sub: "Fijos + cuotas" },
+          ...((data.cards || []).length > 0 ? [{ label: "Tarjetas este mes", value: months[0].totalTarjetas, color: COLORS.text, sub: months[0].tarjetas.length > 0 ? `${months[0].tarjetas.length} resumen(es) por pagar` : "Sin resúmenes pendientes" }] : []),
+          { label: "Compromiso total", value: months[0].totalGasto, color: COLORS.text, sub: (data.cards || []).length > 0 ? "Fijos + cuotas + tarjetas" : "Fijos + cuotas" },
           ...(months[0].income > 0 ? [{ label: "Balance estimado", value: months[0].balance, color: months[0].balance >= 0 ? COLORS.green : COLORS.red, sub: months[0].balance >= 0 ? "Superávit" : "Déficit" }] : []),
         ].map(k => (
           <Card key={k.label} style={{ padding: 18 }}>
@@ -5416,6 +5506,11 @@ function Proyeccion({ data, save }) {
  ({formatFull(d.installment)}/mes · {d.remainingInstallments}c restantes)
             </span>
           ))}
+          {months.some(mo => mo.totalTarjetas > 0) && (
+            <span style={{ background: COLORS.gold+"33", color: COLORS.goldText, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
+              Tarjetas (resúmenes cargados)
+            </span>
+          )}
           {avgIncome > 0 && (
             <span style={{ background: COLORS.green+"22", color: COLORS.green, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
               Ingreso prom. {formatFull(avgIncome)}
@@ -5471,6 +5566,9 @@ function Proyeccion({ data, save }) {
                           transition: "width var(--dur-layout) var(--ease-standard)",
                         }} />
                       ))}
+                      {mo.tarjetas.map((c) => (
+                        <div key={"t" + c.name} style={{ width: `${(c.amount / maxGasto) * 100}%`, background: COLORS.gold, opacity: 0.9, transition: "width var(--dur-layout) var(--ease-standard)" }} />
+                      ))}
                     </div>
                     {mo.income > 0 && (
                       <div style={{ position: "relative", height: 2 }}>
@@ -5488,9 +5586,9 @@ function Proyeccion({ data, save }) {
                         {mo.balance >= 0 ? "▲ +" : "▼ "}{formatFull(mo.balance)}
                       </div>
                     )}
-                    {mo.cuotas.length > 0 && (
+                    {(mo.cuotas.length > 0 || mo.tarjetas.length > 0) && (
                       <div style={{ fontSize: 10, color: COLORS.textMuted, marginTop: 2 }}>
-                        {mo.cuotas.length} cuota{mo.cuotas.length > 1 ? "s" : ""}
+                        {[mo.cuotas.length > 0 ? `${mo.cuotas.length} cuota${mo.cuotas.length > 1 ? "s" : ""}` : null, mo.tarjetas.length > 0 ? `${mo.tarjetas.length} tarjeta${mo.tarjetas.length > 1 ? "s" : ""}` : null].filter(Boolean).join(" · ")}
                       </div>
                     )}
                   </div>
@@ -5556,6 +5654,28 @@ function Proyeccion({ data, save }) {
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, borderTop: `1px solid ${COLORS.border}`, paddingTop: 8, marginTop: 2 }}>
                           <span style={{ color: COLORS.text, fontWeight: 600 }}>Subtotal cuotas</span>
                           <span style={{ color: COLORS.text, fontWeight: 700 }}>{formatFull(mo.totalCuotas)}</span>
+                        </div>
+                      </>
+                    )}
+
+                    {mo.tarjetas.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 4, marginTop: 12 }}>
+                          Resúmenes de tarjeta
+                        </div>
+                        {mo.tarjetas.map((c) => (
+                          <div key={c.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: COLORS.gold, flexShrink: 0 }} />
+                              <span style={{ color: c.overdue ? COLORS.red : COLORS.textMuted }}>{c.name}</span>
+                            </div>
+                            <span style={{ color: COLORS.goldText, fontWeight: 600 }}>{formatFull(c.amount)}</span>
+                          </div>
+                        ))}
+                        <div style={{ fontSize: 11.5, color: COLORS.textMuted }}>Compras y cuotas ya cargadas; lo que compres de acá en más está dentro del presupuesto.</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, borderTop: `1px solid ${COLORS.border}`, paddingTop: 8, marginTop: 2 }}>
+                          <span style={{ color: COLORS.text, fontWeight: 600 }}>Subtotal tarjetas</span>
+                          <span style={{ color: COLORS.text, fontWeight: 700 }}>{formatFull(mo.totalTarjetas)}</span>
                         </div>
                       </>
                     )}
