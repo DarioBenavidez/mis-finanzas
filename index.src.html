@@ -195,10 +195,34 @@
     @media (min-width: 1024px) {
       .boceto-panel.orbe-chat-host { display: flex; flex-direction: column; padding: 0 !important; overflow: hidden; min-height: 560px; max-height: calc(100vh - 140px); }
     }
+    /* Formulario de carga (Nuevo movimiento): monto grande, categorías, "Más detalles" y Guardar fijo */
+    .sheet-card.has-footer { display: flex; flex-direction: column; overflow: hidden; max-height: min(88vh, var(--sheet-vv, 88vh)); }
+    .sheet-card.has-footer .sheet-handle, .sheet-card.has-footer .sheet-header { flex-shrink: 0; }
+    .sheet-card.has-footer .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 20px; }
+    .sheet-footer { flex-shrink: 0; padding: 12px 24px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid #E1EEE8; background: #fff; }
+    .amount-hero label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #005247; margin-bottom: 6px; }
+    .amount-hero-prefix { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); font-size: 26px; font-weight: 800; color: #4A6B62; pointer-events: none; }
+    .amount-hero input { width: 100%; box-sizing: border-box; height: 64px; border: 2px solid transparent; border-radius: 20px; background: #DCEEE3; color: #0D1F1C; font-family: 'Nunito', sans-serif; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; outline: none; padding-right: 18px; transition: background .15s, border-color .15s; }
+    .amount-hero input::placeholder { color: #7C968E; font-weight: 700; }
+    .amount-hero input:focus { background: #fff; border-color: #005247; box-shadow: 0 0 0 3px rgba(0,82,71,.14); }
+    .cat-chip { border: none; border-radius: 999px; padding: 9px 15px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; background: #DCEEE3; color: #005247; transition: background .15s, color .15s; }
+    .cat-chip:hover { background: #CBE5D7; }
+    .cat-chip[data-on="1"] { background: #005247; color: #fff; }
+    .cat-chip-new { background: transparent; border: 1.5px dashed #005247; padding: 7.5px 14px; }
+    .cat-chip-new:hover { background: #E9F6F0; }
+    .cat-suggest { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding: 8px 12px; border: none; border-radius: 12px; background: #FBF4DC; color: #5C4710; font-family: inherit; font-size: 13px; text-align: left; cursor: pointer; width: 100%; }
+    .cat-suggest b { color: #3F3008; } .cat-suggest u { margin-left: auto; font-weight: 700; color: #005247; text-underline-offset: 2px; }
+    .more-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 16px; border: 1px solid #C8DDD6; border-radius: 16px; background: #fff; font-family: inherit; text-align: left; cursor: pointer; transition: background .15s, border-color .15s; }
+    .more-row:hover { background: #F4FAF7; border-color: #9CC7B8; }
+    .more-row-main { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+    .more-row-main b { font-size: 14px; font-weight: 800; color: #0D1F1C; }
+    .more-row-main i { font-style: normal; font-size: 13px; color: #4A6B62; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .more-row-chev { display: grid; place-items: center; color: #005247; flex-shrink: 0; transition: transform .2s cubic-bezier(.16,1,.3,1); }
     .sheet-body { padding: 16px 24px 24px; }
     @media (min-width: 1024px) {
       .sheet-overlay { align-items: center; padding: 40px; }
       .sheet-card { border-radius: 24px; max-height: 85vh; animation: modalIn var(--dur-layout) var(--ease-standard); }
+      .sheet-card.has-footer { align-self: flex-start; margin-top: 6vh; max-height: min(86vh, var(--sheet-vv, 86vh)); }
       .sheet-card.sheet-closing { animation: modalOut var(--dur-fast) var(--ease-in) forwards; }
       .sheet-handle { display: none; }
     }
@@ -866,16 +890,22 @@ function OrigenAhorro({ origen, onOrigen, detalle, onDetalle }) {
 // <style>). Reemplaza el patrón anterior de sección inline expandida dentro
 // del panel: ahora es un overlay real, con su propia animación de
 // entrada/salida vía useClosable igual que PanelModal.
-function BottomSheet({ title, onClose, children }) {
+// `footer` (opcional): fila de acciones fija abajo; el cuerpo scrollea solo. En mobile el sheet
+// sigue al viewport visual para que el teclado no tape el botón Guardar.
+function BottomSheet({ title, onClose, children, footer }) {
   const { closing, requestClose } = useClosable(onClose);
   const cardRef = useRef(null);
+  const vv = useVisualViewportBox(!!footer);
   useModalA11y(requestClose, cardRef);
   return (
-    <div className={`sheet-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose}>
-      <div ref={cardRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : "Diálogo"} className={`sheet-card ${closing ? "sheet-closing" : ""}`} onClick={e => e.stopPropagation()}>
+    <div className={`sheet-overlay overlay-anim ${closing ? "is-closing" : ""}`} onClick={requestClose}
+      style={footer && vv ? { height: vv.h, top: vv.top, bottom: "auto" } : undefined}>
+      <div ref={cardRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : "Diálogo"} className={`sheet-card ${footer ? "has-footer" : ""} ${closing ? "sheet-closing" : ""}`} onClick={e => e.stopPropagation()}
+        style={footer && vv ? { "--sheet-vv": Math.max(260, vv.h - 12) + "px" } : undefined}>
         <div className="sheet-handle" />
         <div className="sheet-header">{title}</div>
         <div className="sheet-body">{children}</div>
+        {footer && <div className="sheet-footer">{footer}</div>}
       </div>
     </div>
   );
@@ -883,9 +913,9 @@ function BottomSheet({ title, onClose, children }) {
 
 // Fila Cancelar/Guardar lado a lado al pie de cada bottom sheet, calcada de
 // la app real: Cancelar en "soft" (menta), Guardar en primary (verde sólido).
-function SheetActions({ onCancel, onSave, saveLabel = "Guardar", cancelLabel = "Cancelar", saveDisabled = false, saveHighlight = false }) {
+function SheetActions({ onCancel, onSave, saveLabel = "Guardar", cancelLabel = "Cancelar", saveDisabled = false, saveHighlight = false, flush = false }) {
   return (
-    <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+    <div style={{ display: "flex", gap: 10, marginTop: flush ? 0 : 22 }}>
       <Button variant="soft" onClick={onCancel} style={{ flex: 1 }}>{cancelLabel}</Button>
       <Button onClick={onSave} disabled={saveDisabled} style={{ flex: 1, ...(saveHighlight ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 3 } : {}) }}>{saveLabel}</Button>
     </div>
@@ -1153,6 +1183,7 @@ const ICON_PATHS = {
   chat:   "M4 5h16v11H8l-4 4V5ZM8 9h8M8 12h5",
   mic:    "M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3ZM6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6",
   close:  "M6 6l12 12M18 6 6 18",
+  chevron: "M6 9l6 6 6-6",
   back:   "M15 5l-7 7 7 7",
   briefcase: "M4 8h16v12H4zM9 8V5h6v3M4 13h16",
   // Tipos de turno (Turnos) y de evento (Calendario) — antes eran emoji.
@@ -1776,16 +1807,16 @@ function OrbeChatPanel({ chat, autoMic = false, compact = false }) {
 
 // El teclado de Android no achica el viewport de layout: el overlay sigue al viewport
 // visual para que el campo nunca quede tapado.
-function useVisualViewportBox() {
+function useVisualViewportBox(enabled = true) {
   const [box, setBox] = useState(null);
   useEffect(() => {
     const vv = window.visualViewport;
-    if (!vv) return;
+    if (!enabled || !vv) return;
     const upd = () => setBox({ h: Math.round(vv.height), top: Math.round(vv.offsetTop) });
     upd();
     vv.addEventListener("resize", upd); vv.addEventListener("scroll", upd);
     return () => { vv.removeEventListener("resize", upd); vv.removeEventListener("scroll", upd); };
-  }, []);
+  }, [enabled]);
   return box;
 }
 
@@ -3767,6 +3798,51 @@ function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date, dolar
   );
 }
 
+// ---- Ayudas del formulario de carga (sugerencia de categoría y medio de pago recordado) ----
+// Todo sale de los propios movimientos del usuario: no se manda nada a ningún servicio.
+const normTxt = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9ñ ]/g, " ");
+const SUGGEST_STOP = new Set(["gaste", "gasto", "pague", "pago", "compre", "compra", "cobre", "con", "del", "los", "las", "una", "uno", "por", "para", "hoy", "ayer", "mes", "que", "mas"]);
+const descTokens = (s) => normTxt(s).split(/\s+/).filter(t => t.length >= 3 && !SUGGEST_STOP.has(t));
+const tokenMatch = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
+// Categoría que el usuario ya usó para descripciones parecidas ("super" ~ "supermercado").
+function suggestCategory(data, description, type) {
+  const toks = descTokens(description);
+  if (toks.length === 0) return null;
+  const wantIncome = type === "ingreso";
+  const score = {};
+  (data.transactions || []).forEach(t => {
+    if (!t.description || !t.category || !(data.categories || {})[t.category]) return;
+    if (isCardPayment(t) || t.type === "ahorro_meta") return;
+    if (wantIncome ? !isIncomeType(t) : t.type !== "gasto") return;
+    const tt = descTokens(t.description);
+    const shared = toks.filter(a => tt.some(b => tokenMatch(a, b))).length;
+    if (shared > 0) score[t.category] = (score[t.category] || 0) + shared;
+  });
+  let best = null, bestScore = 0;
+  Object.entries(score).forEach(([c, v]) => { if (v > bestScore) { best = c; bestScore = v; } });
+  return best;
+}
+// Categoría con la que parte el formulario: la última que se usó para ese tipo de movimiento
+// (gasto/ingreso); si no hay historial, "Otros"; y si tampoco existe, la primera.
+function defaultCategoryFor(data, type) {
+  const cats = data.categories || {};
+  const wantIncome = type === "ingreso";
+  const last = [...(data.transactions || [])]
+    .filter(t => t.category && cats[t.category] && !isCardPayment(t) && t.type !== "ahorro_meta" && (wantIncome ? isIncomeType(t) : t.type === "gasto"))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(b.id) || 0) - (Number(a.id) || 0))[0];
+  if (last) return last.category;
+  return Object.keys(cats).find(c => c.toLowerCase() === "otros") || Object.keys(cats)[0] || "Otros";
+}
+// Si el último gasto fue con una tarjeta que todavía existe, el próximo parte con esa tarjeta.
+function lastCardDefault(data) {
+  const cards = data.cards || [];
+  if (cards.length === 0) return null;
+  const last = [...(data.transactions || [])]
+    .filter(t => t.type === "gasto" && !isCardPayment(t))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(b.id) || 0) - (Number(a.id) || 0))[0];
+  return last && last.cardId != null && cards.some(c => c.id === last.cardId) ? { cardId: last.cardId } : null;
+}
+
 function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing = null, initialType = "gasto", tourPhase = null, dolarRate = 0 }) {
   const catNames = Object.keys(data.categories);
   // Alta de ahorro: elegir la meta y decir de dónde sale la plata. No se puede
@@ -3783,7 +3859,9 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
   const requireCategoryChoice = tourPhase === "income" || tourPhase === "expense";
   const [form, setForm] = useState(editing
     ? { type: editing.type, amount: isCardPurchase(editing) && editing.currency === "usd" ? formatAmountInputUSD(String(editing.amountUSD || "")) : formatAmountInput(editing.amount), category: editing.category || catNames[0] || "Otros", description: editing.description || "", date: editing.date }
-    : { type: initialType, amount: "", category: requireCategoryChoice ? "" : (catNames[0] || "Otros"), description: "", date: todayStr() });
+    : { type: initialType, amount: "", category: requireCategoryChoice ? "" : defaultCategoryFor(data, initialType), description: "", date: todayStr() });
+  // Mientras el usuario no elige categoría a mano, al cambiar Gasto/Ingreso se cambia también la de partida.
+  const [catTouched, setCatTouched] = useState(false);
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   // Pago con tarjeta de crédito (solo gastos). Al editar se parte de lo ya guardado.
@@ -3791,11 +3869,22 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
     const n = editing ? Math.max(1, parseInt(editing.installments) || 1) : 1;
     const preset = ["1", "3", "6", "12"].includes(String(n));
     const usd = !!editing && isCardPurchase(editing) && editing.currency === "usd";
-    return { on: !!editing && isCardPurchase(editing), cardId: editing && editing.cardId != null ? editing.cardId : null, cuotas: preset ? String(n) : "otra", otra: preset ? "" : String(n), usd, rate: usd && editing.arsRate ? formatAmountInput(String(Math.round(editing.arsRate))) : "" };
+    // Alta de un gasto: parte con la tarjeta del último gasto (si fue con tarjeta); el resumen de
+    // "Más detalles" lo muestra siempre para que no se cargue con tarjeta sin querer.
+    const lp = !editing && initialType === "gasto" && !requireCategoryChoice ? lastCardDefault(data) : null;
+    return { on: editing ? isCardPurchase(editing) : !!lp, cardId: editing && editing.cardId != null ? editing.cardId : (lp ? lp.cardId : null), cuotas: preset ? String(n) : "otra", otra: preset ? "" : String(n), usd, rate: usd && editing.arsRate ? formatAmountInput(String(Math.round(editing.arsRate))) : "" };
   });
   // La descripción es opcional: no se puede esperar a que la completen para
   // avanzar. Este flag lo marca escribir algo o tocar "Seguir".
   const [descDone, setDescDone] = useState(false);
+  // Lo plegado ("Más detalles": fecha y medio de pago) arranca cerrado salvo que al editar
+  // haya algo distinto de lo habitual.
+  const [showMore, setShowMore] = useState(() => !!editing && (editing.date !== todayStr() || isCardPurchase(editing)));
+  const sortedCats = React.useMemo(() => [...catNames].sort((a, b) => a.localeCompare(b, "es")), [data.categories]);
+  const suggestedCat = React.useMemo(
+    () => (!editing && form.description.trim().length >= 3) ? suggestCategory(data, form.description, form.type) : null,
+    [form.description, form.type, data.transactions, data.categories]
+  );
 
   // Paso actual del tour: el primer campo que todavía falta, en el orden en
   // que aparecen en el formulario. null fuera del tour.
@@ -3876,21 +3965,56 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
     const categories = { ...data.categories, [name]: "📦" };
     const budgets = [...data.budgets, { cat: name, limit: 0 }];
     savePlain({ ...data, categories, budgets });
+    setCatTouched(true);
     setForm(f => ({ ...f, category: name }));
     setNewCatName("");
     setShowCatForm(false);
   };
 
+  // Estado de "guardar": refleja de verdad si hay algo para guardar (vale para el tour y el alta normal).
+  const cardMissing = form.type === "gasto" && cp.on && !(data.cards || []).some(c => c.id === cp.cardId);
+  const saveDisabled = esAhorro
+    ? !puedeGuardarAhorro
+    : ((cardUsd ? !(parseAmountInputUSD(form.amount) > 0 && parseAmountInput(cp.rate) > 0) : !parseAmountInput(form.amount)) || (requireCategoryChoice && !form.category) || cardMissing);
+
+  // Resumen de lo que queda plegado: así nunca se guarda con una fecha o un medio de pago sin verlos.
+  const selCard = (data.cards || []).find(c => c.id === cp.cardId) || null;
+  const dateLabel = form.date === todayStr() ? "Hoy" : (() => { const p = parseDateParts(form.date); return `${p.day} ${MONTH_NAMES[p.month]}`; })();
+  const payLabel = form.type !== "gasto" || esAhorro ? null
+    : cp.on ? (selCard ? `💳 ${selCard.name}${cuotasOf(cp) > 1 ? ` · ${cuotasOf(cp)} cuotas` : ""}${cp.usd ? " · US$" : ""}` : "Elegí una tarjeta")
+    : "Efectivo / débito";
+  const detailsSummary = `${dateLabel}${payLabel ? " · " + payLabel : ""}`;
+  const saveLabel = editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : form.type === "ingreso" ? "Guardar ingreso" : "Guardar gasto";
+
   return (
-    <BottomSheet title={editing ? "Editar movimiento" : esAhorro ? "Guardar en una meta" : "Nuevo movimiento"} onClose={onClose}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <BottomSheet
+      title={editing ? "Editar movimiento" : esAhorro ? "Guardar en una meta" : "Nuevo movimiento"}
+      onClose={onClose}
+      footer={<SheetActions flush onCancel={onClose} onSave={add} saveLabel={saveLabel} saveDisabled={saveDisabled} saveHighlight={tourStep === "save"} />}
+    >
+      {/* Enter en cualquier campo de texto guarda (si se puede): cargar un gasto sin soltar el teclado. */}
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        onKeyDown={e => {
+          if (e.key !== "Enter" || e.target.tagName !== "INPUT" || e.target.type === "date" || e.target.dataset.enter === "local") return;
+          e.preventDefault();
+          if (!saveDisabled) add();
+        }}
+      >
         <SegmentedControl
           options={typeOptions}
           value={form.type}
-          onChange={v => setForm({ ...form, type: v })}
+          onChange={v => setForm(f => ({ ...f, type: v, category: (catTouched || editing || requireCategoryChoice || v === "ahorro_meta") ? f.category : defaultCategoryFor(data, v) }))}
         />
         <div data-tour="amount-field" style={tourStep === "amount" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : undefined}>
-          <Input label="Monto" value={form.amount} onChange={v => setForm({ ...form, amount: v })} type="amount" decimals={metaUsd || cardUsd} prefix={(metaUsd || cardUsd) ? "US$" : "$"} placeholder={tourStep === "amount" ? "Ej: 500000" : "0"} />
+          <AmountField
+            value={form.amount}
+            onChange={v => setForm({ ...form, amount: v })}
+            decimals={metaUsd || cardUsd}
+            prefix={(metaUsd || cardUsd) ? "US$" : "$"}
+            placeholder={tourStep === "amount" ? "Ej: 500000" : "0"}
+            autoFocus={!editing && !tourPhase}
+          />
           {tourStep === "amount" && (
             <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>{TOUR_STEPS_COPY[tourPhase].amount}</div>
           )}
@@ -3925,7 +4049,14 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
           )
         )}
         <div style={{ ...(tourStep === "description" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : {}), ...(esAhorro ? { display: "none" } : {}) }}>
-          <Input label="Descripción" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={tourPhase === "income" ? "Ej: Sueldo de septiembre" : "Ej: Supermercado, Netflix..."} />
+          <Input label="Descripción (opcional)" value={form.description} onChange={v => setForm({ ...form, description: v })} placeholder={tourPhase === "income" ? "Ej: Sueldo de septiembre" : "Ej: Supermercado, Netflix…"} />
+          <div aria-live="polite">
+          {suggestedCat && suggestedCat !== form.category && !tourPhase && (
+            <button type="button" className="cat-suggest" onClick={() => { setCatTouched(true); setForm(f => ({ ...f, category: suggestedCat })); }}>
+              <span>Categoría sugerida:</span> <b>{catIcon(data, suggestedCat)} {suggestedCat}</b> <u>Usar</u>
+            </button>
+          )}
+          </div>
           {tourStep === "description" && (
             <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 4 }}>
               {TOUR_STEPS_COPY[tourPhase].description}
@@ -3933,44 +4064,70 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
             </div>
           )}
         </div>
-        {/* Igual que la app real: las categorías se muestran siempre, sin
-            filtrar por Gasto/Ingreso -- es una lista plana compartida. */}
+        {/* Igual que la app real: las categorías son una lista plana compartida
+            (sin filtrar por Gasto/Ingreso); acá van en orden alfabético. */}
         <div data-tour="category-picker" style={{ ...(tourStep === "category" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : {}), ...(esAhorro ? { display: "none" } : {}) }}>
           <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            <button onClick={() => setShowCatForm(s => !s)} style={{ background: COLORS.accent, color: "#fff", border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>+ Nueva</button>
-            {catNames.map(c => (
-              <button key={c} onClick={() => setForm({ ...form, category: c })} style={{
-                background: form.category === c ? COLORS.accent : COLORS.pillBg,
-                color: form.category === c ? "#fff" : COLORS.accent,
-                border: "none", borderRadius: 999, padding: "9px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-              }}>{catIcon(data, c)} {c}</button>
+          <div role="radiogroup" aria-label="Categoría" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {sortedCats.map(c => (
+              <button key={c} type="button" role="radio" aria-checked={form.category === c} onClick={() => { setCatTouched(true); setForm({ ...form, category: c }); }} className="cat-chip" data-on={form.category === c ? "1" : "0"}>{catIcon(data, c)} {c}</button>
             ))}
+            <button type="button" className="cat-chip cat-chip-new" onClick={() => setShowCatForm(s => !s)} aria-expanded={showCatForm}>+ Nueva</button>
           </div>
           {tourStep === "category" && (
             <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>{TOUR_STEPS_COPY[tourPhase].category}</div>
           )}
           {showCatForm && (
             <div className="form-pop" style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder={tourPhase === "income" ? 'Ej: "Sueldo mensual"' : "Nombre de categoría"} style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
+              <input data-enter="local" value={newCatName} onChange={e => setNewCatName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCategoryQuick(); } }} placeholder={tourPhase === "income" ? 'Ej: "Sueldo mensual"' : "Nombre de categoría"} style={{ flex: 1, minWidth: 0, background: COLORS.pillBg, border: "none", borderRadius: 999, padding: "10px 16px", fontFamily: "inherit", fontSize: 14, color: COLORS.text, outline: "none" }} />
               <Button onClick={addCategoryQuick} variant="gold" style={{ flexShrink: 0 }}>Agregar</Button>
             </div>
           )}
         </div>
-        <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
-        {form.type === "gasto" && !tourPhase && !(editing && isCardPayment(editing)) && (
-          <CardPurchaseFields data={data} savePlain={savePlain} cp={cp} setCp={setCp} amountStr={form.amount} date={form.date} dolarRate={dolarRate} onCurrency={() => setForm(f => ({ ...f, amount: "" }))} />
-        )}
+        <div>
+          <button type="button" className="more-row" onClick={() => setShowMore(v => !v)} aria-expanded={showMore}>
+            <span className="more-row-main">
+              <b>Más detalles</b>
+              <i style={cardMissing ? { color: COLORS.red, fontWeight: 700 } : undefined}>{detailsSummary}</i>
+            </span>
+            <span className="more-row-chev" style={{ transform: showMore ? "rotate(180deg)" : "none" }}><Icon name="chevron" size={18} /></span>
+          </button>
+          {showMore && (
+            <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
+              <Input label="Fecha" value={form.date} onChange={v => setForm({ ...form, date: v })} type="date" />
+              {form.type === "gasto" && !tourPhase && !(editing && isCardPayment(editing)) && (
+                <CardPurchaseFields data={data} savePlain={savePlain} cp={cp} setCp={setCp} amountStr={form.amount} date={form.date} dolarRate={dolarRate} onCurrency={() => setForm(f => ({ ...f, amount: "" }))} />
+              )}
+            </div>
+          )}
+        </div>
         {tourStep === "save" && (
           <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, textAlign: "center" }}>{TOUR_STEPS_COPY[tourPhase].save}</div>
         )}
       </div>
-      {/* Antes solo miraba la categoría: sin monto cargado, Guardar quedaba
-          habilitado y tocarlo no hacía nada (add() corta en silencio si
-          !form.amount). Ahora el botón refleja de verdad si hay algo para
-          guardar -- vale para el tour y para el alta normal. */}
-      <SheetActions onCancel={onClose} onSave={add} saveLabel={editing ? "Guardar cambios" : esAhorro ? "Guardar ahorro" : "Guardar"} saveDisabled={esAhorro ? !puedeGuardarAhorro : ((cardUsd ? !(parseAmountInputUSD(form.amount) > 0 && parseAmountInput(cp.rate) > 0) : !parseAmountInput(form.amount)) || (requireCategoryChoice && !form.category) || (form.type === "gasto" && cp.on && !(data.cards || []).some(c => c.id === cp.cardId)))} saveHighlight={tourStep === "save"} />
     </BottomSheet>
+  );
+}
+
+// Monto grande (es lo primero que se escribe): foco automático al abrir.
+function AmountField({ value, onChange, decimals, prefix, placeholder, autoFocus }) {
+  const ref = useRef(null);
+  // El gestor del modal enfoca la tarjeta al abrir; se enfoca el monto un instante después.
+  useEffect(() => {
+    if (!autoFocus) return;
+    const t = setTimeout(() => { if (ref.current) ref.current.focus(); }, 160);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="amount-hero">
+      <label>Monto</label>
+      <div style={{ position: "relative" }}>
+        <span className="amount-hero-prefix">{prefix}</span>
+        <input ref={ref} type="text" inputMode={decimals ? "decimal" : "numeric"} autoComplete="off" value={value}
+          onChange={e => onChange((decimals ? formatAmountInputUSD : formatAmountInput)(e.target.value))}
+          placeholder={placeholder} aria-label="Monto" style={{ paddingLeft: 24 + String(prefix).length * 13 }} />
+      </div>
+    </div>
   );
 }
 
