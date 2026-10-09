@@ -1590,6 +1590,8 @@ function useOrbeChat({ onRefreshData, onBeforeChat, getTransactions, iconFor, on
         body: JSON.stringify({ message: text }),
       });
       const body = await resp.json().catch(() => ({}));
+      // 404 = el servidor todavía no tiene el chat activado: se avisa claro y no se ofrece reintentar.
+      if (resp.status === 404) { const e = new Error("El chat de Orbe todavía no está disponible. Lo estamos activando: probá de nuevo más tarde."); e.fromServer = true; e.noRetry = true; throw e; }
       if (!resp.ok) { const e = new Error(body.error || "No pude hablar con Orbe. Probá de nuevo."); e.fromServer = true; throw e; }
       // La respuesta aparece enseguida; los movimientos que el bot anotó se suman cuando
       // la web termina de recargar los datos (se detectan comparando con lo que había).
@@ -1610,7 +1612,7 @@ function useOrbeChat({ onRefreshData, onBeforeChat, getTransactions, iconFor, on
       const msg = err.fromServer || /Sesión expirada/.test(err.message || "")
         ? err.message
         : "No pude conectarme con Orbe. Revisá tu conexión y reintentá.";
-      setMessages(prev => [...prev, { role: "bot", text: msg, error: true, retryText: text, mid: ++chatMsgSeq }]);
+      setMessages(prev => [...prev, { role: "bot", text: msg, error: true, retryText: err.noRetry ? undefined : text, mid: ++chatMsgSeq }]);
     }
     busy.current = false;
     setSending(false);
