@@ -5403,7 +5403,7 @@ function PagosTarjetas({ data, save }) {
         <BottomSheet title={cardSheet === "new" ? "Nueva tarjeta" : "Editar tarjeta"} onClose={() => setCardSheet(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <Input label="Nombre" value={cardForm.name} onChange={v => setCardForm({ ...cardForm, name: v })} placeholder="Ej: Visa Galicia" />
-            <div className="form-grid-4" style={{ margin: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "end" }}>
               <Input label="Día de cierre" value={cardForm.closingDay} onChange={v => setCardForm({ ...cardForm, closingDay: v })} type="number" placeholder="1-31" />
               <Input label="Día de vencimiento" value={cardForm.dueDay} onChange={v => setCardForm({ ...cardForm, dueDay: v })} type="number" placeholder="1-31" />
             </div>
