@@ -273,6 +273,16 @@
        apretados e ilegibles. Nombre genérico porque lo comparten Ahorros y
        Deudas (antes era ".ahorros-form-grid", solo para Ahorros). */
     .form-grid-4 { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px; }
+    /* Pares y tríos de campos cortos (día de cierre/vencimiento, cuotas, interés): columnas iguales en cualquier ancho.
+       form-grid-4 se estiraba a 4 columnas en escritorio con solo 2-3 campos y las etiquetas se partían. */
+    .form-grid-2, .form-grid-3 { display: grid; gap: 12px; align-items: end; }
+    .form-grid-2 { grid-template-columns: 1fr 1fr; }
+    .form-grid-3 { grid-template-columns: 1fr 1fr; }
+    .form-grid-3 > :last-child:nth-child(3) { grid-column: 1 / -1; }
+    @media (min-width: 560px) {
+      .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+      .form-grid-3 > :last-child:nth-child(3) { grid-column: auto; }
+    }
     @media (min-width: 640px) {
       .form-grid-4 { grid-template-columns: 1fr 1fr; }
     }
@@ -3854,9 +3864,9 @@ function CardPurchaseFields({ data, savePlain, cp, setCp, amountStr, date, dolar
           {showCreate && (
             <div className="form-pop" style={{ display: "flex", flexDirection: "column", gap: 10, background: COLORS.bg, border: `1px solid ${COLORS.border}`, borderRadius: 14, padding: 12 }}>
               <Input label="Nombre de la tarjeta" value={draft.name} onChange={v => setDraft({ ...draft, name: v })} placeholder="Ej: Visa Galicia" />
-              <div className="form-grid-4" style={{ margin: 0 }}>
-                <Input label="Día de cierre" value={draft.closingDay} onChange={v => setDraft({ ...draft, closingDay: v })} type="number" placeholder="1-31" />
-                <Input label="Día de vencimiento" value={draft.dueDay} onChange={v => setDraft({ ...draft, dueDay: v })} type="number" placeholder="1-31" />
+              <div className="form-grid-2" style={{ margin: 0 }}>
+                <Input label="Día de cierre" value={draft.closingDay} onChange={v => setDraft({ ...draft, closingDay: v })} type="number" placeholder="Ej: 28" />
+                <Input label="Día de vencimiento" value={draft.dueDay} onChange={v => setDraft({ ...draft, dueDay: v })} type="number" placeholder="Ej: 10" />
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <Button onClick={createCard} variant="gold" disabled={!draft.name.trim() || !(parseInt(draft.dueDay) >= 1 && parseInt(draft.dueDay) <= 31)}>Crear tarjeta</Button>
@@ -4804,13 +4814,13 @@ function Deudas({ data, save, dolarRate }) {
                   onChange={v => setForm({ ...form, currency: v })}
                 />
                 <Input label="Deuda total original" value={form.total} onChange={v => setForm({ ...form, total: v })} type="amount" prefix={form.currency === "usd" ? "US$" : "$"} placeholder="0" />
-                <div className="form-grid-4" style={{ margin: 0 }}>
+                <div className="form-grid-3" style={{ margin: 0 }}>
                   <Input label="Cuotas restantes" value={form.remainingInstallments} onChange={v => {
                     const next = { ...form, remainingInstallments: v };
                     if (!installmentEdited) next.installment = autoInstallment(form.remaining, v);
                     setForm(next);
                   }} type="number" placeholder="Ej: 9" />
-                  <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="1-31" />
+                  <Input label="Día de vencimiento" value={form.dueDay} onChange={v => setForm({ ...form, dueDay: v })} type="number" placeholder="Ej: 10" />
                   <Input label="Interés mensual (%)" value={form.interest} onChange={v => setForm({ ...form, interest: v })} type="number" placeholder="0" />
                 </div>
               </div>
@@ -4848,7 +4858,7 @@ function Deudas({ data, save, dolarRate }) {
                       <input type="text" inputMode="numeric" value={editForm.remaining} onChange={e => setEditForm({ ...editForm, remaining: formatAmountInput(e.target.value) })} placeholder="Monto pendiente" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                       <input type="text" inputMode="numeric" value={editForm.total} onChange={e => setEditForm({ ...editForm, total: formatAmountInput(e.target.value) })} placeholder="Deuda total original" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                       <input type="text" inputMode="numeric" value={editForm.installment} onChange={e => setEditForm({ ...editForm, installment: formatAmountInput(e.target.value) })} placeholder="Cuota mensual" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
-                      <div className="form-grid-4" style={{ margin: 0 }}>
+                      <div className="form-grid-3" style={{ margin: 0 }}>
                         <input type="number" value={editForm.remainingInstallments} onChange={e => setEditForm({ ...editForm, remainingInstallments: e.target.value })} placeholder="Cuotas restantes" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                         <input type="number" value={editForm.dueDay} onChange={e => setEditForm({ ...editForm, dueDay: e.target.value })} placeholder="Día de vencimiento" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
                         <input type="number" value={editForm.interest} onChange={e => setEditForm({ ...editForm, interest: e.target.value })} placeholder="Interés mensual (%)" style={{ background: "#f8faf8", border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: "7px 10px", color: COLORS.text, fontFamily: "inherit", fontSize: 13, outline: "none" }} />
