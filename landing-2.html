@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orbe — Tu asistente financiero personal</title>
+  <meta name="description" content="Orbe organiza tu balance, ingresos, gastos, presupuesto, ahorros y deudas en un panel claro. La misma cuenta en la app, la web y WhatsApp." />
+  <link rel="icon" type="image/png" href="assets/orbe-icon-64.png" />
+  <meta name="theme-color" content="#FBFCFC" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --canvas:#FBFCFD; --canvas-2:#F4F7F8; --surface:#FFFFFF;
+      --line:#E6ECEC; --line-2:#EDF2F2;
+      --ink:#0E2420; --muted:#5C6E69; --dim:#8A9B96;
+      --green:#005247; --green-600:#00695A; --green-050:#EAF4F1;
+      --accent:#0FB57E; --accent-050:#E7F8F1;
+      --gold:#B98F2E;
+      --slate:#334A45;
+      --pos:#0FB57E; --neg:#E0554E; --warn:#D9A93A;
+      --shadow-sm:0 1px 2px rgba(14,36,32,.04), 0 8px 24px -14px rgba(14,36,32,.12);
+      --shadow-md:0 2px 6px rgba(14,36,32,.05), 0 30px 60px -28px rgba(14,36,32,.22);
+      --r:14px; --r-lg:20px;
+      --ease:cubic-bezier(.22,.61,.36,1);
+    }
+    *,*::before,*::after{ box-sizing:border-box; margin:0; padding:0; }
+    html{ scroll-behavior:smooth; }
+    body{ background:var(--canvas); color:var(--ink); font-family:"DM Sans",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+    a{ color:inherit; text-decoration:none; }
+    img{ max-width:100%; display:block; }
+    h1,h2,h3{ font-family:"Nunito",sans-serif; letter-spacing:-.02em; color:var(--ink); font-weight:800; }
+    .wrap{ max-width:1140px; margin:0 auto; padding:0 28px; }
+    .eyebrow{ font-family:"DM Sans"; font-weight:600; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
+    .num{ font-variant-numeric:tabular-nums; }
+
+    .btn{ display:inline-flex; align-items:center; gap:8px; font-family:"Nunito"; font-weight:800; font-size:14.5px; padding:12px 22px; border-radius:10px; transition:transform .15s var(--ease), box-shadow .15s var(--ease); }
+    .btn:hover{ transform:translateY(-1px); }
+    .btn-primary{ background:var(--green); color:#fff; box-shadow:0 10px 24px -12px rgba(0,82,71,.5); }
+    .btn-primary:hover{ box-shadow:0 16px 32px -14px rgba(0,82,71,.55); }
+    .btn-soft{ background:var(--green-050); color:var(--green); }
+    .btn-ghost{ color:var(--green); }
+    .btn-ghost svg{ width:15px; height:15px; stroke:currentColor; }
+
+    /* ---------- NAV ---------- */
+    .nav{ position:sticky; top:0; z-index:50; background:rgba(251,252,253,.82); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); }
+    .nav .wrap{ height:64px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand{ display:flex; align-items:center; gap:10px; }
+    .brand img{ width:30px; height:30px; border-radius:8px; }
+    .brand span{ font-family:"Nunito"; font-weight:800; font-size:19px; color:var(--green); letter-spacing:-.03em; }
+    .nav .links{ display:flex; gap:28px; font-size:14px; font-weight:500; color:var(--muted); }
+    .nav .links a:hover{ color:var(--ink); }
+    .nav .r{ display:flex; align-items:center; gap:16px; }
+    .nav .signin{ font-family:"Nunito"; font-weight:700; font-size:14px; color:var(--green); }
+
+    /* ---------- HERO ---------- */
+    .hero{ position:relative; overflow:hidden; }
+    .hero::before{ content:""; position:absolute; inset:-40% -20% auto -20%; height:620px; z-index:0;
+      background:
+        radial-gradient(40% 60% at 20% 20%, rgba(15,181,126,.16), transparent 70%),
+        radial-gradient(45% 55% at 82% 10%, rgba(0,105,90,.16), transparent 72%),
+        radial-gradient(40% 50% at 60% 60%, rgba(185,143,46,.10), transparent 70%);
+      filter:blur(10px); animation:drift 22s ease-in-out infinite alternate; }
+    @keyframes drift{ from{ transform:translate3d(0,0,0) scale(1); } to{ transform:translate3d(-4%,3%,0) scale(1.08); } }
+    .hero .wrap{ position:relative; z-index:1; display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; padding-top:72px; padding-bottom:80px; }
+    .hero h1{ font-size:clamp(34px,4.6vw,50px); line-height:1.06; margin-top:16px; }
+    .hero p.lead{ margin-top:18px; font-size:17px; color:var(--muted); max-width:440px; }
+    .hero .cta{ display:flex; gap:14px; margin-top:30px; flex-wrap:wrap; align-items:center; }
+    .hero .assure{ display:flex; align-items:center; gap:8px; margin-top:22px; font-size:12.5px; color:var(--dim); }
+    .hero .assure svg{ width:14px; height:14px; stroke:var(--dim); }
+
+    /* dashboard mock */
+    .dash{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+    .dash .bar{ height:38px; display:flex; align-items:center; gap:6px; padding:0 14px; border-bottom:1px solid var(--line-2); }
+    .dash .bar i{ width:9px; height:9px; border-radius:50%; background:var(--line); }
+    .dash .body{ padding:22px; }
+    .dash .row1{ display:flex; align-items:flex-end; justify-content:space-between; }
+    .dash .bal .k{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+    .dash .bal .v{ font-family:"Nunito"; font-weight:800; font-size:32px; letter-spacing:-.03em; margin-top:2px; }
+    .dash .delta{ font-size:12px; font-weight:600; color:var(--pos); background:var(--accent-050); padding:4px 9px; border-radius:999px; }
+    .dash .spark{ display:flex; align-items:flex-end; gap:5px; height:44px; margin-top:16px; }
+    .dash .spark i{ flex:1; background:var(--green-050); border-radius:3px 3px 0 0; }
+    .dash .spark i.on{ background:var(--accent); }
+    .dash .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .dash .tile{ background:var(--canvas-2); border:1px solid var(--line-2); border-radius:10px; padding:12px; }
+    .dash .tile .k{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+    .dash .tile .v{ font-family:"Nunito"; font-weight:800; font-size:16px; margin-top:3px; }
+    .dash .goal{ margin-top:16px; }
+    .dash .goal .g-h{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:7px; }
+    .dash .goal .track{ height:7px; border-radius:99px; background:var(--green-050); overflow:hidden; }
+    .dash .goal .track i{ display:block; height:100%; width:43%; border-radius:99px; background:var(--accent); }
+    .dash .cats{ margin-top:16px; display:flex; flex-direction:column; gap:9px; }
+    .dash .c{ display:grid; grid-template-columns:80px 1fr 40px; gap:10px; align-items:center; font-size:11.5px; color:var(--muted); }
+    .dash .c .cb{ height:5px; border-radius:99px; background:var(--green-050); overflow:hidden; }
+    .dash .c .cb i{ display:block; height:100%; border-radius:99px; }
+    .dash .c b{ text-align:right; color:var(--ink); font-weight:600; }
+
+    /* ---------- TRUST STRIP ---------- */
+    .tstrip{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--surface); }
+    .tstrip .wrap{ padding:18px 28px; display:flex; align-items:center; justify-content:center; gap:16px 40px; flex-wrap:wrap; }
+    .tstrip span{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:500; color:var(--muted); }
+    .tstrip svg{ width:16px; height:16px; stroke:var(--green); }
+
+    /* ---------- SECTION ---------- */
+    section{ padding:76px 0; }
+    .head{ max-width:620px; }
+    .head.center{ margin:0 auto; text-align:center; }
+    .head h2{ font-size:clamp(25px,3vw,34px); margin-top:10px; }
+    .head p{ color:var(--muted); font-size:16px; margin-top:12px; }
+
+    /* feature grid — superficies limpias */
+    .fgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; margin-top:48px; }
+    .f{ padding:4px 0; }
+    .f .ic{ width:38px; height:38px; border-radius:10px; background:var(--green-050); display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+    .f .ic svg{ width:19px; height:19px; stroke:var(--green); }
+    .f h3{ font-size:16px; }
+    .f p{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+    /* panel showcase */
+    .showcase{ background:var(--canvas-2); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .showcase .wrap{ display:grid; grid-template-columns:.92fr 1.08fr; gap:56px; align-items:center; }
+    .showcase ul{ list-style:none; margin-top:22px; display:flex; flex-direction:column; gap:14px; }
+    .showcase li{ display:flex; gap:12px; font-size:14.5px; color:var(--muted); }
+    .showcase li svg{ width:18px; height:18px; stroke:var(--accent); flex:none; margin-top:2px; }
+    .panelbig{ background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md); padding:22px; }
+    .panelbig .ph{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .panelbig .ph h4{ font-family:"Nunito"; font-weight:800; font-size:15px; }
+    .panelbig .ph .tag{ font-size:11px; color:var(--dim); }
+    .panelbig .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .panelbig .box{ border:1px solid var(--line-2); border-radius:12px; padding:14px; }
+    .panelbig .box .k{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+    .panelbig .box .v{ font-family:"Nunito"; font-weight:800; font-size:19px; margin-top:4px; }
+    .panelbig .box .s{ font-size:11.5px; color:var(--muted); margin-top:3px; }
+    .panelbig .list{ margin-top:12px; border:1px solid var(--line-2); border-radius:12px; padding:6px 14px; }
+    .panelbig .list .li{ display:flex; align-items:center; gap:10px; font-size:12.5px; padding:9px 0; border-bottom:1px solid var(--line-2); }
+    .panelbig .list .li:last-child{ border:none; }
+    .panelbig .list .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
+    .panelbig .list .amt{ margin-left:auto; font-weight:600; font-variant-numeric:tabular-nums; }
+
+    /* security band */
+    .sec{ background:var(--green); color:#fff; padding:0; }
+    .sec .wrap{ padding:66px 28px; }
+    .sec .eyebrow{ color:#8FE9CC; }
+    .sec h2{ color:#fff; font-size:clamp(23px,2.8vw,30px); margin-top:10px; max-width:22ch; }
+    .sec .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:24px; margin-top:36px; }
+    .sec .item svg{ width:22px; height:22px; stroke:#8FE9CC; }
+    .sec .item h3{ color:#fff; font-size:14.5px; margin-top:12px; }
+    .sec .item p{ font-size:13px; color:rgba(255,255,255,.72); margin-top:5px; }
+
+    /* how */
+    .how{ padding-bottom:36px; }
+    .how .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:44px; counter-reset:s; }
+    .how .step{ border-top:2px solid var(--green-050); padding-top:18px; }
+    .how .step::before{ counter-increment:s; content:"0" counter(s); font-family:"Nunito"; font-weight:800; font-size:13px; color:var(--accent); }
+    .how .step h3{ font-size:16px; margin-top:8px; }
+    .how .step p{ font-size:14px; color:var(--muted); margin-top:6px; }
+
+    /* final */
+    .final{ text-align:center; padding:60px 0 76px; }
+    .final .card{ background:var(--surface); border:1px solid var(--line); border-radius:24px; box-shadow:var(--shadow-md); padding:56px 32px; max-width:760px; margin:0 auto; position:relative; overflow:hidden; }
+    .final .card::before{ content:""; position:absolute; inset:auto -30% -60% -30%; height:220px; background:radial-gradient(50% 100% at 50% 100%, rgba(15,181,126,.14), transparent 70%); }
+    .final h2{ font-size:clamp(26px,3.2vw,34px); position:relative; }
+    .final p{ color:var(--muted); margin-top:12px; font-size:15.5px; position:relative; }
+    .final .btn{ margin-top:26px; position:relative; }
+    .final .mini{ margin-top:14px; font-size:12.5px; color:var(--dim); position:relative; }
+
+    /* footer */
+    footer{ border-top:1px solid var(--line); background:var(--surface); }
+    footer .fwrap{ max-width:1140px; margin:0 auto; padding:52px 28px 30px; display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:36px; }
+    footer .about{ margin-top:14px; font-size:13px; color:var(--muted); max-width:320px; line-height:1.7; }
+    footer h4{ font-family:"Nunito"; font-weight:800; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink); margin-bottom:13px; }
+    footer ul{ list-style:none; display:flex; flex-direction:column; gap:10px; font-size:13.5px; color:var(--muted); }
+    footer ul a:hover{ color:var(--ink); }
+    footer .legal{ max-width:1140px; margin:0 auto; padding:18px 28px 44px; border-top:1px solid var(--line); font-size:11.5px; color:var(--dim); line-height:1.7; }
+    footer .legal a{ color:var(--green); }
+
+    @media (max-width:920px){
+      .nav .links{ display:none; }
+      .hero .wrap,.showcase .wrap{ grid-template-columns:1fr; gap:40px; }
+      section{ padding:60px 0; }
+      .fgrid,.sec .grid,.how .steps{ grid-template-columns:1fr 1fr; }
+      footer .fwrap{ grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:560px){
+      .fgrid,.sec .grid,.how .steps,.dash .tiles,.footer .fwrap{ grid-template-columns:1fr; }
+      footer .fwrap{ grid-template-columns:1fr; }
+    }
+    @media (prefers-reduced-motion:reduce){ html{ scroll-behavior:auto; } .hero::before{ animation:none; } }
+  </style>
+</head>
+<body>
+
+  <!-- ================= NAV ================= -->
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="/"><img src="assets/orbe-icon-64.png" alt="" /><span>Orbe</span></a>
+      <div class="links">
+        <a href="#producto">Producto</a>
+        <a href="#panel">El panel</a>
+        <a href="#seguridad">Seguridad</a>
+        <a href="#como">Cómo funciona</a>
+      </div>
+      <div class="r">
+        <a class="signin" href="/">Ingresar</a>
+        <a class="btn btn-primary" href="/?registro">Crear cuenta</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Finanzas personales</span>
+        <h1>Tu dinero del mes, claro en una pantalla.</h1>
+        <p class="lead">Registrás lo que entra y sale en segundos. Orbe lo organiza en un panel simple: balance, presupuesto, ahorros y deudas, siempre al día.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="/?registro">Crear cuenta gratis</a>
+          <a class="btn btn-ghost" href="#como">Ver cómo funciona
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <div class="assure">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          Datos privados y cifrados · gratis · sin tarjeta
+        </div>
+      </div>
+
+      <div class="dash" aria-hidden="true">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="body">
+          <div class="row1">
+            <div class="bal">
+              <div class="k">Balance · septiembre</div>
+              <div class="v num">$632.000</div>
+            </div>
+            <div class="delta num">▲ 12,3%</div>
+          </div>
+          <div class="spark">
+            <i style="height:38%"></i><i style="height:54%"></i><i style="height:46%"></i>
+            <i style="height:70%"></i><i style="height:58%"></i><i style="height:82%"></i>
+            <i class="on" style="height:64%"></i>
+          </div>
+          <div class="tiles">
+            <div class="tile"><div class="k">Ingresos</div><div class="v num">$650.000</div></div>
+            <div class="tile"><div class="k">Gastos</div><div class="v num">$18.000</div></div>
+          </div>
+          <div class="goal">
+            <div class="g-h"><span>Objetivo · Vacaciones</span><span class="num">$640.000 / $1.500.000</span></div>
+            <div class="track"><i></i></div>
+          </div>
+          <div class="cats">
+            <div class="c"><span>Alimentación</span><span class="cb"><i style="width:66%;background:var(--accent)"></i></span><b class="num">66%</b></div>
+            <div class="c"><span>Vivienda</span><span class="cb"><i style="width:91%;background:var(--neg)"></i></span><b class="num">91%</b></div>
+            <div class="c"><span>Transporte</span><span class="cb"><i style="width:40%;background:var(--green-600)"></i></span><b class="num">40%</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= TRUST STRIP ================= -->
+  <div class="tstrip">
+    <div class="wrap">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg> App móvil</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg> Web</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.5-4A8 8 0 1 1 9 18.5L4 20Z"/></svg> WhatsApp</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5M20 12a8 8 0 0 1-14 5M18 4v4h-4M6 20v-4h4"/></svg> Se sincroniza solo</span>
+    </div>
+  </div>
+
+  <!-- ================= PRODUCTO / FEATURES ================= -->
+  <section id="producto">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Producto</span>
+        <h2>Todo lo que necesitás para ordenarte, en superficies limpias.</h2>
+        <p>Cada parte de tu situación en su propia vista, fácil de leer y siempre actualizada.</p>
+      </div>
+      <div class="fgrid">
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h3>Gastos e ingresos</h3><p>Anotá cada movimiento en segundos y clasificalo por categoría.</p></div>
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4h10l-2 4 2 4H6"/></svg></div><h3>Presupuesto por categoría</h3><p>Poné un límite mensual y Orbe te avisa cuando te acercás al tope.</p></div>
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3ZM5 7v10c0 1.7 3.1 3 7 3s7-1.3 7-3V7"/></svg></div><h3>Metas de ahorro</h3><p>Definí un objetivo y seguí, con números claros, cuánto te falta.</p></div>
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg></div><h3>Deudas y cuotas</h3><p>Cargá tus deudas y mirá exactamente cuándo terminás de pagarlas.</p></div>
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 3 3 8-8M17 4h4v4"/></svg></div><h3>Proyección de saldo</h3><p>Cómo queda tu mes con los gastos fijos y las cuotas ya descontados.</p></div>
+        <div class="f"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></div><h3>Calendario y turnos</h3><p>Vencimientos y recordatorios, con aviso por WhatsApp.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PANEL SHOWCASE ================= -->
+  <section class="showcase" id="panel">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">El panel</span>
+        <h2 style="font-size:clamp(24px,3vw,32px);margin-top:10px">Tu mes de un vistazo, sin abrir diez pantallas.</h2>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Balance, presupuesto, ahorros y próximos vencimientos en una sola vista.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Números grandes y legibles; el detalle, a un clic.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg> Lo mismo en la app, la web y WhatsApp — sin exportar ni retipear.</li>
+        </ul>
+        <a class="btn btn-soft" href="/?registro" style="margin-top:24px">Crear cuenta gratis</a>
+      </div>
+      <div class="panelbig" aria-hidden="true">
+        <div class="ph"><h4>Septiembre de un vistazo</h4><span class="tag">actualizado hoy</span></div>
+        <div class="grid2">
+          <div class="box"><div class="k">Ahorros</div><div class="v num">$3.640.000</div><div class="s">2 metas · 1 completada</div></div>
+          <div class="box"><div class="k">Deudas</div><div class="v num">$1.700.000</div><div class="s">$260.000 en cuotas este mes</div></div>
+        </div>
+        <div class="list">
+          <div class="li"><span class="dot" style="background:var(--neg)"></span> Vencimiento luz <span class="amt">en 3 días</span></div>
+          <div class="li"><span class="dot" style="background:var(--accent)"></span> Cuota gimnasio <span class="amt">en 5 días</span></div>
+          <div class="li"><span class="dot" style="background:var(--green)"></span> Turno · Dentista <span class="amt">24 sep</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SEGURIDAD / CONFIANZA ================= -->
+  <section class="sec" id="seguridad">
+    <div class="wrap">
+      <span class="eyebrow">Seguridad y privacidad</span>
+      <h2>Tus datos son tuyos. Punto.</h2>
+      <div class="grid">
+        <div class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <h3>Conexión cifrada</h3>
+          <p>Todo viaja por HTTPS y se guarda en una base con acceso restringido.</p>
+        </div>
+        <div class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z"/></svg>
+          <h3>Solo vos los ves</h3>
+          <p>Tu información no se comparte con terceros ni se usa para publicidad.</p>
+        </div>
+        <div class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+          <h3>Borrás cuando querés</h3>
+          <p>Pedís la eliminación de tu cuenta por email y se elimina, sin vueltas.</p>
+        </div>
+        <div class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9l6 3M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"/></svg>
+          <h3>Sin costo</h3>
+          <p>Creás la cuenta con tu email o con Google. Nada de tarjeta.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CÓMO FUNCIONA ================= -->
+  <section class="how" id="como">
+    <div class="wrap">
+      <div class="head">
+        <span class="eyebrow">Cómo funciona</span>
+        <h2>De cero a tu panel en tres pasos.</h2>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>Creás tu cuenta</h3><p>Con tu email o con Google. Nada de tarjeta.</p></div>
+        <div class="step"><h3>Cargás lo que entra y sale</h3><p>Ingresos y gastos del día a día, por la app, la web o WhatsApp.</p></div>
+        <div class="step"><h3>Ves el panorama</h3><p>Balance, categorías, ahorro y deudas — todo en un lugar y al día.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FINAL ================= -->
+  <section class="final">
+    <div class="wrap">
+      <div class="card">
+        <h2>Empezá hoy. Es gratis.</h2>
+        <p>Tené tu balance del mes claro en cinco minutos.</p>
+        <a class="btn btn-primary" href="/?registro">Crear cuenta gratis</a>
+        <div class="mini">Con tu email o con Google · sin tarjeta</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer>
+    <div class="fwrap">
+      <div>
+        <a class="brand" href="/"><img src="assets/orbe-icon-64.png" alt="" style="width:28px;height:28px" /><span>Orbe</span></a>
+        <p class="about">Tu asistente de finanzas personales: gastos, ingresos, presupuesto, ahorros, deudas y proyección — en la app, la web y WhatsApp.</p>
+      </div>
+      <div>
+        <h4>Producto</h4>
+        <ul>
+          <li><a href="/">Ingresar</a></li>
+          <li><a href="/?registro">Crear cuenta</a></li>
+          <li><a href="#producto">Qué incluye</a></li>
+          <li><a href="#como">Cómo funciona</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Legales</h4>
+        <ul>
+          <li><a href="privacy.html">Política de Privacidad</a></li>
+          <li><a href="terms.html">Términos del Servicio</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal">
+      Tus datos son privados y solo vos podés verlos. Podés pedir la eliminación de tu cuenta
+      cuando quieras escribiendo a <a href="mailto:darappdeploying@gmail.com">darappdeploying@gmail.com</a>.
+      Orbe es una herramienta de registro y organización de finanzas personales; no ofrece
+      servicios de inversión ni asesoramiento financiero.
+    </div>
+  </footer>
+
+</body>
+</html>
