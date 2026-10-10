@@ -3946,6 +3946,9 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
   const [catTouched, setCatTouched] = useState(false);
   const [showCatForm, setShowCatForm] = useState(false);
   const [newCatName, setNewCatName] = useState("");
+  // Categorías y metas van plegadas (ocupan mucho); se abren al tocar la fila o si falta elegir.
+  const [catsOpen, setCatsOpen] = useState(false);
+  const [metasOpen, setMetasOpen] = useState(false);
   // Pago con tarjeta de crédito (solo gastos). Al editar se parte de lo ya guardado.
   const [cp, setCp] = useState(() => {
     const n = editing ? Math.max(1, parseInt(editing.installments) || 1) : 1;
@@ -4106,8 +4109,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
             <InfoBanner>Todavía no tenés metas de ahorro. Creá una en <strong>Ahorros</strong> y después vas a poder guardar plata desde acá.</InfoBanner>
           ) : (
             <React.Fragment>
-              <div>
-                <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>¿A qué meta?</label>
+              <PickerRow label="¿A qué meta?" summary={(() => { const m = metas.find(x => x.id === savingsId); return m ? `${m.name}${m.currency === "usd" ? " (US$)" : ""}` : "Elegí una meta"; })()} missing={!savingsId} open={metasOpen || !savingsId} onToggle={() => setMetasOpen(o => !o)}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {metas.map(m => (
                     <button key={m.id} type="button" onClick={() => {
@@ -4117,6 +4119,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
                       const anterior = metas.find(x => x.id === savingsId);
                       const cambiaMoneda = (anterior ? anterior.currency === "usd" : false) !== (m.currency === "usd");
                       setSavingsId(m.id);
+                      setMetasOpen(false);
                       if (cambiaMoneda) setForm(f => ({ ...f, amount: "" }));
                     }} style={{
                       background: savingsId === m.id ? COLORS.accent : COLORS.pillBg,
@@ -4125,7 +4128,7 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
                     }}>{m.name}{m.currency === "usd" ? " (US$)" : ""}</button>
                   ))}
                 </div>
-              </div>
+              </PickerRow>
               <OrigenAhorro origen={origen} onOrigen={setOrigen} detalle={detalleExtra} onDetalle={setDetalleExtra} />
             </React.Fragment>
           )
@@ -4149,13 +4152,14 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
         {/* Igual que la app real: las categorías son una lista plana compartida
             (sin filtrar por Gasto/Ingreso); acá van en orden alfabético. */}
         <div data-tour="category-picker" style={{ ...(tourStep === "category" ? { outline: `3px solid ${COLORS.gold}`, outlineOffset: 4, borderRadius: 16 } : {}), ...(esAhorro ? { display: "none" } : {}) }}>
-          <label style={{ fontSize: 11, color: COLORS.accent, fontWeight: 700, letterSpacing: "0.8px", textTransform: "uppercase", display: "block", marginBottom: 8 }}>Categoría *</label>
+          <PickerRow label="Categoría *" summary={form.category ? `${catIcon(data, form.category)} ${form.category}` : "Elegí una categoría"} missing={!form.category} open={catsOpen || !form.category || showCatForm} onToggle={() => { setCatsOpen(o => !o); setShowCatForm(false); }}>
           <div role="radiogroup" aria-label="Categoría" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {sortedCats.map(c => (
-              <button key={c} type="button" role="radio" aria-checked={form.category === c} onClick={() => { setCatTouched(true); setForm({ ...form, category: c }); }} className="cat-chip" data-on={form.category === c ? "1" : "0"}>{catIcon(data, c)} {c}</button>
+              <button key={c} type="button" role="radio" aria-checked={form.category === c} onClick={() => { setCatTouched(true); setForm({ ...form, category: c }); setCatsOpen(false); }} className="cat-chip" data-on={form.category === c ? "1" : "0"}>{catIcon(data, c)} {c}</button>
             ))}
-            <button type="button" className="cat-chip cat-chip-new" onClick={() => setShowCatForm(s => !s)} aria-expanded={showCatForm}>+ Nueva</button>
+            <button type="button" className="cat-chip cat-chip-new" onClick={() => { setCatsOpen(true); setShowCatForm(s => !s); }} aria-expanded={showCatForm}>+ Nueva</button>
           </div>
+          </PickerRow>
           {tourStep === "category" && (
             <div style={{ fontSize: 12, color: COLORS.goldText, fontWeight: 700, marginTop: 8 }}>{TOUR_STEPS_COPY[tourPhase].category}</div>
           )}
@@ -4188,6 +4192,22 @@ function NuevaTransaccionSheet({ data, save, savePlain = save, onClose, editing 
         )}
       </div>
     </BottomSheet>
+  );
+}
+
+// Fila plegable (misma estética que "Más detalles"): muestra lo elegido y despliega las opciones.
+function PickerRow({ label, summary, missing, open, onToggle, children }) {
+  return (
+    <div>
+      <button type="button" className="more-row" onClick={onToggle} aria-expanded={open}>
+        <span className="more-row-main">
+          <b>{label}</b>
+          <i style={missing ? { color: COLORS.red, fontWeight: 700 } : undefined}>{summary}</i>
+        </span>
+        <span className="more-row-chev" style={{ transform: open ? "rotate(180deg)" : "none" }}><Icon name="chevron" size={18} /></span>
+      </button>
+      {open && <div className="form-pop" style={{ marginTop: 10 }}>{children}</div>}
+    </div>
   );
 }
 
