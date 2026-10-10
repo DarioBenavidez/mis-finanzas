@@ -2297,7 +2297,9 @@ function FinanzasApp() {
     if (!user) return null;
     try {
       const d = await loadData(user.id);
-      if (d) setData(d);
+      // Se conserva el mes/año que el usuario está mirando: el guardado en el servidor puede ser de una
+      // navegación vieja y el panel saltaba a otro mes al escribirle al bot.
+      if (d) setData(prev => prev ? { ...d, selectedMonth: prev.selectedMonth, selectedYear: prev.selectedYear } : d);
       return d || null;
     } catch { return null; }
   };
