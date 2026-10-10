@@ -1638,11 +1638,14 @@ function useOrbeChat({ onRefreshData, onBeforeChat, getTransactions, iconFor, on
       const body = await resp.json().catch(() => ({}));
       // 404 = el servidor todavía no tiene el chat activado: se avisa claro y no se ofrece reintentar.
       if (resp.status === 404) { const e = new Error("El chat de Orbe todavía no está disponible. Lo estamos activando: probá de nuevo más tarde."); e.fromServer = true; e.noRetry = true; throw e; }
-      if (!resp.ok) { const e = new Error(body.error || "No pude hablar con Orbe. Probá de nuevo."); e.fromServer = true; throw e; }
+      if (!resp.ok) { const e = new Error(body.error || "No pude hablar con Orbe. Probá de nuevo."); e.fromServer = true; if (body.code === "daily_limit") e.noRetry = true; throw e; }
       // La respuesta aparece enseguida; los movimientos que el bot anotó se suman cuando
       // la web termina de recargar los datos (se detectan comparando con lo que había).
       const mid = ++chatMsgSeq;
-      setMessages(prev => [...prev, { role: "bot", text: body.reply || "Listo.", mid, txs: [] }]);
+      // Aviso suave cuando quedan pocos mensajes del día (el límite lo cuenta el servidor).
+      const left = body.usage ? body.usage.limit - body.usage.used : null;
+      const hint = left !== null && left <= 3 ? `\n\n(Te ${left === 1 ? "queda 1 mensaje" : `quedan ${left} mensajes`} hoy)` : "";
+      setMessages(prev => [...prev, { role: "bot", text: (body.reply || "Listo.") + hint, mid, txs: [] }]);
       setSending(false);
       if (typeof onRefreshData === "function") {
         const fresh = await onRefreshData();
